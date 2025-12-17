@@ -35,10 +35,10 @@ def Embedding( data, columns = None, E = 2, tau = -1,
     # Create embeddings of columns
     # There will be redundancies vis V1(t-0), V1(t+0)
     if plusminus :
-        embed_minus = Embed( dataFrame = data, E = E, tau = tau,
-                             columns = columns )
-        embed_plus = Embed( dataFrame = data, E = E, tau = abs( tau ),
-                            columns = columns )
+        embed_minus = Embed(data = data, embeddingDimensions = E, stepSize = tau,
+                            columns = columns)
+        embed_plus = Embed(data = data, embeddingDimensions = E, stepSize = abs(tau),
+                           columns = columns)
         df = concat( [ timeSeries, embed_minus, embed_plus ], axis = 1 )
 
         # Remove *(t+0) columns redundant with *(t-0)
@@ -46,8 +46,8 @@ def Embedding( data, columns = None, E = 2, tau = -1,
         df = df.drop( columns = cols_tplus0 )
 
     else :
-        embed_ = Embed( dataFrame = data, E = E, tau = tau,
-                        columns = columns )
+        embed_ = Embed(data = data, embeddingDimensions = E, stepSize = tau,
+                       columns = columns)
         df = concat( [ timeSeries, embed_ ], axis = 1 )
 
     # Rename *(t+0) to original column names

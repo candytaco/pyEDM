@@ -62,8 +62,8 @@ class EDM:
             print( f'{self.name}: EmbedData()' )
 
         if not self.embedded :
-            self.Embedding = pyEDM.Embed.Embed(dataFrame = self.Data, E = self.E,
-                                               tau = self.tau, columns = self.columns)
+            self.Embedding = pyEDM.Embed.Embed(dataFrame = self.Data, embeddingDimensions = self.E,
+                                               stepSize = self.tau, columns = self.columns)
         else :
             self.Embedding = self.Data[ self.columns ] # Already an embedding 
 

@@ -216,7 +216,7 @@ class Multiview:
             comboCols = self.columns
 
         # Embed Data
-        self.Embedding = pyEDM.Embed.Embed(self.Data, E = self.E, tau = self.tau,
+        self.Embedding = pyEDM.Embed.Embed(self.Data, embeddingDimensions = self.E, stepSize = self.tau,
                                            columns = comboCols)
 
         # Combinations of possible embedding vectors, D at-a-time

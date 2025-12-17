@@ -146,7 +146,7 @@ class test_EDM( unittest.TestCase ):
         '''Embed from file'''
         if self.verbose : print ( "--- Embed from file ---" )
         df  = pyEDM.Embed.Embed(pathIn = '../data/', dataFile = 'circle.csv',
-                                E = 3, tau = -1, columns = ['x', 'y'])
+                                embeddingDimensions = 3, stepSize = -1, columns = ['x', 'y'])
 
     #------------------------------------------------------------
     # Simplex
