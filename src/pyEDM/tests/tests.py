@@ -7,6 +7,8 @@ from   warnings import filterwarnings, catch_warnings
 from numpy  import nan, array, array_equal, allclose
 from pandas import DataFrame, read_csv
 import pyEDM as EDM
+import pyEDM.Embed
+
 
 #----------------------------------------------------------------
 # Suite of tests
@@ -126,25 +128,25 @@ class test_EDM( unittest.TestCase ):
         '''Embed'''
         if self.verbose : print ( "--- Embed ---" )
         df_ = EDM.sampleData['circle']
-        df  = EDM.Embed( df_, 3, -1, "x", False )
+        df  = pyEDM.Embed.Embed(df_, 3, -1, "x", False)
 
     def test_embed2( self ):
         '''Embed multivariate'''
         if self.verbose : print ( "--- Embed multivariate ---" )
         df_ = EDM.sampleData['circle']
-        df  = EDM.Embed( df_, 3, -1, ['x', 'y'], False )
+        df  = pyEDM.Embed.Embed(df_, 3, -1, ['x', 'y'], False)
 
     def test_embed2( self ):
         '''Embed multivariate'''
         if self.verbose : print ( "--- Embed includeTime ---" )
         df_ = EDM.sampleData['circle']
-        df  = EDM.Embed( df_, 3, -1, ['x', 'y'], True )
+        df  = pyEDM.Embed.Embed(df_, 3, -1, ['x', 'y'], True)
 
     def test_embed3( self ):
         '''Embed from file'''
         if self.verbose : print ( "--- Embed from file ---" )
-        df  = EDM.Embed( pathIn = '../data/', dataFile = 'circle.csv',
-                         E = 3, tau = -1, columns = ['x', 'y'] )
+        df  = pyEDM.Embed.Embed(pathIn = '../data/', dataFile = 'circle.csv',
+                                E = 3, tau = -1, columns = ['x', 'y'])
 
     #------------------------------------------------------------
     # Simplex

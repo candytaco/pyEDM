@@ -9,6 +9,7 @@ from numpy  import any, append, array, concatenate, isnan, zeros
 
 # local modules
 import pyEDM.API
+import pyEDM.Embed
 from .AuxFunc import IsIterable
 from .NeighborFinder import KDTreeNeighborFinder, PairwiseDistanceNeighborFinder
 
@@ -61,8 +62,8 @@ class EDM:
             print( f'{self.name}: EmbedData()' )
 
         if not self.embedded :
-            self.Embedding = pyEDM.API.Embed( dataFrame = self.Data, E = self.E,
-                                        tau = self.tau, columns = self.columns )
+            self.Embedding = pyEDM.Embed.Embed(dataFrame = self.Data, E = self.E,
+                                               tau = self.tau, columns = self.columns)
         else :
             self.Embedding = self.Data[ self.columns ] # Already an embedding 
 

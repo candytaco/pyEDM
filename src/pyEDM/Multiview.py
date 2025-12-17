@@ -8,6 +8,7 @@ from itertools import combinations, repeat
 # package modules
 from numpy import argsort, array
 
+import pyEDM.Embed
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .AuxFunc import ComputeError, IsIterable
@@ -215,8 +216,8 @@ class Multiview:
             comboCols = self.columns
 
         # Embed Data
-        self.Embedding = API.Embed( self.Data, E = self.E, tau = self.tau,
-                                    columns = comboCols )
+        self.Embedding = pyEDM.Embed.Embed(self.Data, E = self.E, tau = self.tau,
+                                           columns = comboCols)
 
         # Combinations of possible embedding vectors, D at-a-time
         self.combos = list( combinations( self.Embedding.columns, self.D ) )
