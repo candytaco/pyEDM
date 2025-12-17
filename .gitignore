@@ -5,3 +5,4 @@ __pycache__
 src/pyEDM.egg-info
 src/pyEDM/__pycache__
 src/pyEDM/tests/__pycache__
+/apps/
