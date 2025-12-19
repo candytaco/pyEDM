@@ -1,4 +1,4 @@
-from pyEDM import sampleData
+from .LoadData import sampleData
 
 
 def Examples():
