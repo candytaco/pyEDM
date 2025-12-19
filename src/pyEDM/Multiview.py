@@ -45,22 +45,22 @@ class Multiview:
              in-sample predictions can be made from arbitrary non-
              constant, non-oscillatory vectors. Therefore, some attention
              may be warranted to filter prospective embedding vectors.
-             The trainLib flag disables this default behavior (pred == lib)
+             The trainLib flag disables this default behavior (test == train)
              so that the top k rankings are done using the specified
-             lib and pred. 
+             train and test. 
     '''
 
     def __init__( self,
                   data            = None,
                   columns         = None,
                   target          = None,
-                  lib             = "",
-                  pred            = "",
+                  train             = "",
+                  test            = "",
                   D               = 0,
-                  E               = 1,
-                  Tp              = 1,
+                  embedDimensions = 1,
+                  predictionHorizon              = 1,
                   knn             = 0,
-                  tau             = -1,
+                  step             = -1,
                   multiview       = 0,
                   exclusionRadius = 0,
                   trainLib        = True,
@@ -78,13 +78,13 @@ class Multiview:
         self.Data            = data
         self.columns         = columns
         self.target          = target
-        self.lib             = lib
-        self.pred            = pred
+        self.train             = train
+        self.test            = test
         self.D               = D
-        self.E               = E
-        self.Tp              = Tp
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon              = predictionHorizon
         self.knn             = knn
-        self.tau             = tau
+        self.step             = step
         self.multiview       = multiview
         self.exclusionRadius = exclusionRadius
         self.trainLib        = trainLib
@@ -118,19 +118,19 @@ class Multiview:
             print( f'{self.name}: Rank()' )
 
         args = { 'target'          : self.target, 
-                 'lib'             : self.lib,
-                 'pred'            : self.pred,
-                 'E'               : self.D,
-                 'Tp'              : self.Tp,
-                 'tau'             : self.tau,
+                 'train'             : self.train,
+                 'test'            : self.test,
+                 'embedDims'               : self.D,
+                 'predictionHorizon'              : self.predictionHorizon,
+                 'step'             : self.step,
                  'exclusionRadius' : self.exclusionRadius,
                  'embedded'        : True,
                  'noTime'          : True,
                  'ignoreNan'       : self.ignoreNan }
 
         if self.trainLib :
-            # Set pred = lib for in-sample training 
-            args['pred'] = self.lib
+            # Set test = train for in-sample training 
+            args['test'] = self.train
 
         # Create iterable for Pool.starmap, repeated copies of data, args
         poolArgs = zip( self.combos, repeat( self.Embedding ), repeat( args ) )
@@ -157,11 +157,11 @@ class Multiview:
             print( f'{self.name}: Project()' )
 
         args = { 'target'          : self.target, 
-                 'lib'             : self.lib,
-                 'pred'            : self.pred,
-                 'E'               : self.D,
-                 'Tp'              : self.Tp,
-                 'tau'             : self.tau,
+                 'train'             : self.train,
+                 'test'            : self.test,
+                 'embedDims'               : self.D,
+                 'predictionHorizon'              : self.predictionHorizon,
+                 'step'             : self.step,
                  'exclusionRadius' : self.exclusionRadius,
                  'embedded'        : True,
                  'noTime'          : True,
@@ -181,17 +181,17 @@ class Multiview:
     #--------------------------------------------------------------------
     def Setup( self ):
     #--------------------------------------------------------------------
-        '''Set D, lib, pred, combos. Embed Data.
+        '''Set D, train, test, combos. Embed Data.
         '''
         if self.verbose:
             print( f'{self.name}: Setup()' )
 
-        # Set default lib & pred if not provided
+        # Set default train & test if not provided
         if self.trainLib :
-            if not len( self.pred ) and not len( self.lib ) :
-                # Set lib & pred for ranking : lib, pred = 1/2 data
-                self.lib  = [ 1, floor( self.Data.shape[0]/2 ) ]
-                self.pred = [ floor( self.Data.shape[0]/2 ) + 1,
+            if not len( self.test ) and not len( self.train ) :
+                # Set train & test for ranking : train, test = 1/2 data
+                self.train  = [ 1, floor( self.Data.shape[0]/2 ) ]
+                self.test = [ floor( self.Data.shape[0]/2 ) + 1,
                               self.Data.shape[0]]
 
         # Establish state-space dimension D
@@ -200,8 +200,8 @@ class Multiview:
             self.D = len( self.columns )
 
         # Check D is not greater than number of embedding columns
-        if self.D > len( self.columns ) * self.E :
-            newD = len( self.columns ) * self.E
+        if self.D > len( self.columns ) * self.embedDimensions :
+            newD = len( self.columns ) * self.embedDimensions
             msg = f'Validate() {self.name}: D = {self.D}'      +\
                 ' exceeds number of columns in the embedding: {newD}.' +\
                 f' D set to {newD}'
@@ -218,8 +218,8 @@ class Multiview:
         # Embed Data - returns numpy array
         self.Embedding = Embed(self.Data,
                                columns = comboCols,
-                               embeddingDimensions = self.E,
-                               stepSize = self.tau,
+                               embeddingDimensions = self.embedDimensions,
+                               stepSize = self.step,
                                includeTime = False)
 
         # Map target from original column index to embedded column index
@@ -228,7 +228,7 @@ class Multiview:
         if self.target[0] in comboCols:
             target_pos = comboCols.index(self.target[0])
             # In embedding, this variable's t-0 lag is at index: target_pos * E
-            self.target = [target_pos * self.E]
+            self.target = [target_pos * self.embedDimensions]
         else:
             # Target was excluded, use first embedded column
             self.target = [0]
@@ -275,12 +275,12 @@ class Multiview:
             self.target = [self.target]
 
         if not self.trainLib :
-            if not len( self.lib ) :
+            if not len( self.train ) :
                 msg = f'{self.name}: Validate(): trainLib False requires' +\
-                       ' lib specification.'
+                       ' train specification.'
                 raise RuntimeError( msg )
 
-            if not len( self.pred ) :
+            if not len( self.test ) :
                 msg = f'{self.name}: Validate(): trainLib False requires' +\
-                       ' pred specification.'
+                       ' test specification.'
                 raise RuntimeError( msg )

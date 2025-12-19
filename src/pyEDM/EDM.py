@@ -41,7 +41,7 @@ class EDM:
 		self.pred_i_all = None  # ndarray prediction indices : nan included
 		self.predList = []  # list of disjoint pred_i_all
 		self.disjointLib = False  # True if disjoint library
-		self.libOverlap = False  # True if lib & pred overlap
+		self.libOverlap = False  # True if train & test overlap
 		self.ignoreNan = True  # Remove nan from embedding
 		self.xRadKnnFactor = 5  # exlcusionRadius knn factor
 
@@ -71,18 +71,18 @@ class EDM:
 		   a simple shift by lib_i[0]. If the library has disjoint segments
 		   or unordered indices, a mapping is needed from KDTree to lib_i.
 
-		   If there are degenerate lib & pred indices the first nn will
+		   If there are degenerate train & test indices the first nn will
 		   be the prediction vector itself with distance 0. These are removed
 		   to implement "leave-one-out" prediction validation. In this case
 		   self.libOverlap is set True and the value of knn is increased
 		   by 1 to return an additional nn. The first nn is relplaced by
 		   shifting the j = 1:knn+1 knn columns into the j = 0:knn columns.
 
-		   If exlcusionRadius > 0, and, there are degenerate lib & pred
-		   indices, or, if there are not degnerate lib & pred but the
-		   distance in rows between the lib & pred gap is less than
+		   If exlcusionRadius > 0, and, there are degenerate train & test
+		   indices, or, if there are not degnerate train & test but the
+		   distance in rows between the train & test gap is less than
 		   exlcusionRadius, knn_neighbors have to be selected for each
-		   pred row to exclude library neighbors within exlcusionRadius.
+		   test row to exclude library neighbors within exlcusionRadius.
 		   This is done by increasing knn to KDTree.query by a factor of
 		   self.xRadKnnFactor, then selecting valid nn.
 
@@ -104,15 +104,15 @@ class EDM:
 				exclusionRadius_knn = True
 			else:
 				# If no libOverlap and exclusionRadius is less than the
-				# distance in rows between lib : pred, no library neighbor
+				# distance in rows between train : test, no library neighbor
 				# exclusion needed.
-				# Find row span between lib & pred
+				# Find row span between train & test
 				excludeRow = 0
 				if self.testIndices[0] > self.trainIndices[-1]:
-					# pred start is beyond lib end
+					# test start is beyond train end
 					excludeRow = self.testIndices[0] - self.trainIndices[-1]
 				elif self.trainIndices[0] > self.testIndices[-1]:
-					# lib start row is beyond pred end
+					# train start row is beyond test end
 					excludeRow = self.trainIndices[0] - self.testIndices[-1]
 				if self.exclusionRadius >= excludeRow:
 					exclusionRadius_knn = True
@@ -184,10 +184,10 @@ class EDM:
 		# KDTree.query returns knn referenced to embedding[self.lib_i,:]
 		# where returned knn_neighbors are indexed from 0 : len( lib_i ).
 		# Generally, these are different from the knn that refer to prediction
-		# library rows since generally lib != pred. Adjust knn from 0-offset
+		# library rows since generally train != test. Adjust knn from 0-offset
 		# returned by KDTree.query to EDM knn with respect to  embedding rows.
 		#
-		# If there is only one lib segment with contiguous values, a single
+		# If there is only one train segment with contiguous values, a single
 		# adjustment to knn_neighbors based on lib_i[0] suffices
 		if not self.disjointLib and \
 				self.trainIndices[-1] - self.trainIndices[0] + 1 == len(self.trainIndices):
@@ -258,7 +258,7 @@ class EDM:
 				self.knn_neighbors = delete(self.knn_neighbors, self.knn, axis = 1)
 
 		if exclusionRadius_knn:
-			# For each pred row find k nn outside exclusionRadius
+			# For each test row find k nn outside exclusionRadius
 
 			# -----------------------------------------------------------
 			# Function to select knn from each row of self.knn_neighbors
@@ -354,7 +354,7 @@ class EDM:
 		# Create array of indices into self.targetVec for observations
 		obs_i = array([], dtype = int)
 
-		# Process each pred segment in self.predList
+		# Process each test segment in self.predList
 		for pred_i in self.predList:
 			N_pred = len(pred_i)
 			outSize_i = N_pred + Tp_magnitude
@@ -362,18 +362,18 @@ class EDM:
 			append_i = array([], dtype = int)
 
 			if N_pred == 0:
-				# No prediction made for this pred segment
+				# No prediction made for this test segment
 				if self.verbose:
 					msg = f'{self.name} FormatProjection(): No prediction made ' + \
-					      f'for empty pred in {self.predList}. ' + \
-					      'Examine pred, E, tau, Tp parameters and/or nan.'
+					      f'for empty test in {self.predList}. ' + \
+					      'Examine test, E, step, predictionHorizon parameters and/or nan.'
 					print(msg)
 				continue
 
-			if self.predictionHorizon == 0:  # Tp = 0
+			if self.predictionHorizon == 0:  # predictionHorizon = 0
 				append_i = pred_i.copy()
 
-			elif self.predictionHorizon > 0:  # Positive Tp
+			elif self.predictionHorizon > 0:  # Positive predictionHorizon
 				if pred_i[-1] + self.predictionHorizon < self.targetVec.shape[0]:
 					# targetVec data available before end of targetVec
 					append_i = append(append_i, pred_i)
@@ -384,7 +384,7 @@ class EDM:
 					# targetVec data not available at prediction end
 					append_i = append(append_i, pred_i)
 
-			else:  # Negative Tp
+			else:  # Negative predictionHorizon
 				if pred_i[0] + self.predictionHorizon > -1:
 					# targetVec data available after begin of pred_i[0]
 					append_i = append(append_i, pred_i)
@@ -406,13 +406,13 @@ class EDM:
 		predOut_i = array([], dtype = int)
 		predOut_0 = 0
 
-		# Process each pred segment in self.predList for predOut_i
+		# Process each test segment in self.predList for predOut_i
 		for pred_i in self.predList:
 			N_pred = len(pred_i)
 			outSize_i = N_pred + Tp_magnitude
 
 			if N_pred == 0:
-				# No prediction made for this pred segment
+				# No prediction made for this test segment
 				continue
 
 			if self.predictionHorizon == 0:
@@ -420,25 +420,25 @@ class EDM:
 				predOut_i = append(predOut_i, array(Tp_i, dtype = int))
 				predOut_0 = predOut_i[-1] + 1
 
-			elif self.predictionHorizon > 0:  # Positive Tp
+			elif self.predictionHorizon > 0:  # Positive predictionHorizon
 				Tp_i = [i for i in range(predOut_0 + self.predictionHorizon,
 				                         predOut_0 + self.predictionHorizon + N_pred)]
 				predOut_i = append(predOut_i, array(Tp_i, dtype = int))
 				predOut_0 = predOut_i[-1] + 1
 
-			else:  # Negative Tp
+			else:  # Negative predictionHorizon
 				Tp_i = [i for i in range(predOut_0, predOut_0 + N_pred)]
 				predOut_i = append(predOut_i, array(Tp_i, dtype = int))
 				predOut_0 = predOut_i[-1] + Tp_magnitude + 1
 
 		# If nan are present, the foregoing can be wrong since it is not
-		# known before prediction what lib vectors will produce pred
-		# If len( pred_i ) != len( predOut_i ), nan resulted in missing pred
+		# known before prediction what train vectors will produce test
+		# If len( pred_i ) != len( predOut_i ), nan resulted in missing test
 		# Create a map between pred_i_all : predOut_i to create a new/shorter
 		# predOut_i mapping pred_i to the output vector predOut_i
 		if len(self.testIndices) != len(predOut_i):
 			# Map the last predOut_i values since embed shift near data begining
-			# can have (E-1)*tau na, but still listed in pred_i_all
+			# can have (E-1)*step na, but still listed in pred_i_all
 			N_ = len(predOut_i)
 
 			if self.embedStep < 0:
@@ -450,16 +450,16 @@ class EDM:
 			predOut_i = [D[i] for i in self.testIndices]
 
 		# Create obsOut_i indices for output vectors in DataFrame
-		if self.predictionHorizon > 0:  # Positive Tp
+		if self.predictionHorizon > 0:  # Positive predictionHorizon
 			if obs_i[-1] + self.predictionHorizon > self.Data.shape[0] - 1:
-				# Edge case of end of data with positive Tp
+				# Edge case of end of data with positive predictionHorizon
 				obsOut_i = [i for i in range(len(obs_i))]
 			else:
 				obsOut_i = [i for i in range(outSize)]
 
-		elif self.predictionHorizon < 1:  # Negative or Zero Tp
+		elif self.predictionHorizon < 1:  # Negative or Zero predictionHorizon
 			if self.testIndices[0] + self.predictionHorizon < 0:
-				# Edge case of start of data with negative Tp
+				# Edge case of start of data with negative predictionHorizon
 				obsOut_i = [i for i in range(len(obs_i))]
 
 				# Shift obsOut_i values based on leading nan
@@ -579,7 +579,7 @@ class EDM:
 	def AddTime(self, Tp_magnitude, outSize, obs_i, obsOut_i):
 		# -------------------------------------------------------------------
 		'''Prepend or append time values to self.time if needed
-		   Return timeOut vector with additional Tp points
+		   Return timeOut vector with additional predictionHorizon points
 		'''
 		if self.verbose:
 			print(f'{self.name}: AddTime()')
@@ -603,7 +603,7 @@ class EDM:
 		newTimes = full(Tp_magnitude, nan, dtype = time_dtype)
 
 		if self.predictionHorizon > 0:
-			# Tp introduces time values beyond the range of time
+			# predictionHorizon introduces time values beyond the range of time
 			# Generate future times
 			lastTime = self.time[max_pred_i_all]
 			newTimes[0] = lastTime + deltaT
@@ -614,7 +614,7 @@ class EDM:
 			timeOut[-self.predictionHorizon:] = newTimes
 
 		else:
-			# Tp introduces time values before the range of time
+			# predictionHorizon introduces time values before the range of time
 			# Generate past times
 			newTimes[0] = self.time[min_pred_i] - deltaT
 			for i in range(1, Tp_magnitude):
@@ -680,16 +680,16 @@ class EDM:
 		   where each pair is start:stop span of data rows.
 		'''
 
-		# Convert self.lib from flat list to list of (start, stop) pairs
-		if len(self.lib) % 2:
-			# Odd number of lib elements
-			msg = f'{self.name}: CreateIndices() lib must be an even ' + \
-			      'number of elements. Lib start : stop pairs'
+		# Convert self.train from flat list to list of (start, stop) pairs
+		if len(self.train) % 2:
+			# Odd number of train elements
+			msg = f'{self.name}: CreateIndices() train must be an even ' + \
+			      'number of elements. train start : stop pairs'
 			raise RuntimeError(msg)
 
-		libPairs = []  # List of 2-tuples of lib indices
-		for i in range(0, len(self.lib), 2):
-			libPairs.append((self.lib[i], self.lib[i+1]))
+		libPairs = []  # List of 2-tuples of train indices
+		for i in range(0, len(self.train), 2):
+			libPairs.append((self.train[i], self.train[i+1]))
 
 		# Validate end > start
 		for libPair in libPairs:
@@ -702,9 +702,9 @@ class EDM:
 			# Disallow indices < 1, the user may have specified 0 start
 			assert libStart >= 0 and libEnd >= 0
 
-		# Loop over each lib pair
+		# Loop over each train pair
 		# Add rows for library segments, disallowing vectors
-		# in disjoint library gap accommodating embedding and Tp
+		# in disjoint library gap accommodating embedding and predictionHorizon
 		embedShift = abs(self.embedStep) * (self.embedDimensions - 1)
 		lib_i_list = list()
 
@@ -735,7 +735,7 @@ class EDM:
 		if len(lib_i_list) > 1: self.disjointLib = True
 
 		# ------------------------------------------------
-		# Validate lib_i: E, tau, Tp combination
+		# Validate lib_i: E, step, predictionHorizon combination
 		# ------------------------------------------------
 		if self.name in ['Simplex', 'SMap', 'CCM', 'Multiview']:
 			if self.isEmbedded:
@@ -748,18 +748,18 @@ class EDM:
 				assert vectorLength <= len(self.trainIndices)
 
 		# ------------------------------------------------
-		# pred_i from pred
+		# pred_i from test
 		# ------------------------------------------------
-		# Convert self.pred from flat list to list of (start, stop) pairs
-		if len(self.pred) % 2:
-			# Odd number of pred elements
-			msg = f'{self.name}: CreateIndices() pred must be an even ' + \
-			      'number of elements. Pred start : stop pairs'
+		# Convert self.test from flat list to list of (start, stop) pairs
+		if len(self.test) % 2:
+			# Odd number of test elements
+			msg = f'{self.name}: CreateIndices() test must be an even ' + \
+			      'number of elements. test start : stop pairs'
 			raise RuntimeError(msg)
 
-		predPairs = []  # List of 2-tuples of pred indices
-		for i in range(0, len(self.pred), 2):
-			predPairs.append((self.pred[i], self.pred[i+1]))
+		predPairs = []  # List of 2-tuples of test indices
+		for i in range(0, len(self.test), 2):
+			predPairs.append((self.test[i], self.test[i+1]))
 
 		if len(predPairs) > 1: self.disjointPred = True
 
@@ -770,13 +770,13 @@ class EDM:
 			if self.name in ['Simplex', 'SMap', 'Multiview']:
 				# Don't check CCM since default of "1 1" is used.
 				if predStart >= predEnd:
-					msg = f'{self.name}: CreateIndices() pred start ' + \
-					      f' {predStart} exceeds pred end {predEnd}.'
+					msg = f'{self.name}: CreateIndices() test start ' + \
+					      f' {predStart} exceeds test end {predEnd}.'
 					raise RuntimeError(msg)
 
 			# Disallow indices < 1, the user may have specified 0 start
 			if predStart < 1 or predEnd < 1:
-				msg = f'{self.name}: CreateIndices() pred indices ' + \
+				msg = f'{self.name}: CreateIndices() test indices ' + \
 				      ' less than 1 not allowed.'
 				raise RuntimeError(msg)
 
@@ -809,8 +809,8 @@ class EDM:
 		#        self.pred_i is redefined to remove all nan in RemoveNan()
 		#        at the API level.
 		if not self.isEmbedded:
-			# If [0, 1, ... embedShift] nan (negative tau) or
-			# [N - embedShift, ... N-1, N]  (positive tau) nan
+			# If [0, 1, ... embedShift] nan (negative step) or
+			# [N - embedShift, ... N-1, N]  (positive step) nan
 			# are in pred_i delete elements
 			nan_i_start = [i for i in range(embedShift)]
 			nan_i_end = [self.Data.shape[0] - 1 - i for i in range(embedShift)]
@@ -834,13 +834,13 @@ class EDM:
 		assert self.testIndices[-1] < self.Data.shape[0]
 
 		# ---------------------------------------------------
-		# Check for lib : pred overlap for knn leave-one-out
+		# Check for train : test overlap for knn leave-one-out
 		# ---------------------------------------------------
 		if len(set(self.trainIndices).intersection(set(self.testIndices))):
 			self.libOverlap = True
 
 		if self.name == 'SMap':
-			if self.knn < 1:  # default knn = 0, set knn value to full lib
+			if self.knn < 1:  # default knn = 0, set knn value to full train
 				self.knn = len(self.trainIndices) - 1
 
 				if self.verbose:
@@ -906,23 +906,23 @@ class EDM:
 		if not self.isEmbedded:
 			if self.embedStep == 0:
 				raise RuntimeError(f'Validate() {self.name}:' + \
-				                   ' tau must be non-zero.')
+				                   ' step must be non-zero.')
 			if self.embedDimensions < 1:
 				raise RuntimeError(f'Validate() {self.name}:' + \
 				                   f' E = {self.embedDimensions} is invalid.')
 
 		if self.name != 'CCM':
-			if not len(self.lib):
-				raise RuntimeError(f'Validate() {self.name}: lib required.')
-			if not IsIterable(self.lib):
-				self.lib = [int(i) for i in self.lib.split()]
+			if not len(self.train):
+				raise RuntimeError(f'Validate() {self.name}: train required.')
+			if not IsIterable(self.train):
+				self.train = [int(i) for i in self.train.split()]
 
-			if not len(self.pred):
-				raise RuntimeError(f'Validate() {self.name}: pred required.')
-			if not IsIterable(self.pred):
-				self.pred = [int(i) for i in self.pred.split()]
+			if not len(self.test):
+				raise RuntimeError(f'Validate() {self.name}: test required.')
+			if not IsIterable(self.test):
+				self.test = [int(i) for i in self.test.split()]
 
-		# Set knn default based on E and lib size, E embedded on num columns
+		# Set knn default based on E and train size, E embedded on num columns
 		if self.name in ['Simplex', 'CCM', 'Multiview']:
 			# embedded = true: Set E to number of columns
 			if self.isEmbedded:

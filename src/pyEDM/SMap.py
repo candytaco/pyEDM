@@ -18,12 +18,12 @@ class SMap( EDMClass ):
                  data       = None,
                  columns         = "",
                  target          = "",
-                 lib             = "",
-                 pred            = "",
-                 E               = 0,
-                 Tp              = 1,
+                 train             = "",
+                 test            = "",
+                 embedDimensions = 0,
+                 predictionHorizon              = 1,
                  knn             = 0,
-                 tau             = -1,
+                 step             = -1,
                  theta           = 0.,
                  exclusionRadius = 0,
                  solver          = None,
@@ -44,12 +44,12 @@ class SMap( EDMClass ):
         # Assign parameters from API arguments
         self.columns         = columns
         self.target          = target
-        self.lib             = lib
-        self.pred            = pred
-        self.E               = E
-        self.Tp              = Tp
+        self.train             = train
+        self.test            = test
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon              = predictionHorizon
         self.knn             = knn
-        self.tau             = tau
+        self.step             = step
         self.theta           = theta
         self.exclusionRadius = exclusionRadius
         self.solver          = solver
@@ -62,9 +62,8 @@ class SMap( EDMClass ):
         self.verbose         = verbose
 
         # Map API parameter names to EDM base class names
-        self.embedDimensions   = E
-        self.predictionHorizon = Tp
-        self.embedStep         = tau
+        self.predictionHorizon = predictionHorizon
+        self.embedStep         = step
         self.isEmbedded        = embedded
 
         # SMap storage
@@ -121,7 +120,7 @@ class SMap( EDMClass ):
             print( f'{self.name}: Project()' )
 
         N_pred = len(self.testIndices)
-        N_dim  = self.E + 1
+        N_dim  = self.embedDimensions + 1
 
         self.projection     = full( N_pred, nan, dtype = float )
         self.variance       = full( N_pred, nan, dtype = float )
@@ -130,7 +129,7 @@ class SMap( EDMClass ):
 
         embedding = self.Embedding # reference to ndarray
 
-        # Compute average distance for knn pred rows into a vector
+        # Compute average distance for knn test rows into a vector
         distRowMean = mean( self.knn_distances, axis = 1 )
 
         # Weight matrix of row vectors
@@ -140,20 +139,20 @@ class SMap( EDMClass ):
             distRowScale = self.theta / distRowMean
             W = exp( -distRowScale[:,None] * self.knn_distances )
 
-        # knn_neighbors + Tp
-        knn_neighbors_Tp = self.knn_neighbors + self.Tp # N_pred x knn
+        # knn_neighbors + predictionHorizon
+        knn_neighbors_Tp = self.knn_neighbors + self.predictionHorizon # N_pred x knn
 
         # Function to select targetVec for rows of Boundary condition matrix
         def GetTargetRow( knn_neighbor_row ) :
             return self.targetVec[ knn_neighbor_row ][:,0]
 
-        # Boundary condition matrix of knn + Tp targets : N_pred x knn
+        # Boundary condition matrix of knn + predictionHorizon targets : N_pred x knn
         B = apply_along_axis( GetTargetRow, 1, knn_neighbors_Tp )
 
         if self.targetVecNan :
             # If there are nan in the targetVec need to remove them
             # from B since Solver returns nan. B_valid is matrix of
-            # B row booleans of valid data for pred rows
+            # B row booleans of valid data for test rows
             # Function to apply isfinite to rows
             def FiniteRow( B_row ) :
                 return isfinite( B_row )
@@ -246,7 +245,7 @@ class SMap( EDMClass ):
     def Generate( self ) :
     #-------------------------------------------------------------------
         '''SMap Generation
-           Given lib: override pred to be single prediction at end of lib
+           Given train: override test to be single prediction at end of train
            Replace self.Projection with G.Projection
 
            Note: Generation with datetime time values fails: incompatible
@@ -259,12 +258,12 @@ class SMap( EDMClass ):
         N      = self.Data.shape[0]
         column = self.columns[0]
         target = self.target[0]
-        lib    = self.lib
+        train    = self.train
 
-        # Override pred for single prediction at end of lib
-        pred = [ lib[-1] - 1, lib[-1] ]
+        # Override test for single prediction at end of train
+        test = [ train[-1] - 1, train[-1] ]
         if self.verbose:
-            print(f'{self.name}: Generate(): pred overriden to {pred}')
+            print(f'{self.name}: Generate(): test overriden to {test}')
 
         # Output numpy arrays to replace self.Projection, self.Coefficients...
         nOutRows  = self.generateSteps
@@ -275,11 +274,11 @@ class SMap( EDMClass ):
 
         # Coefficients array: shape (n_samples, E+2)
         # Column 0: Time, Column 1: C0, Columns 2-E+1: coefficients
-        genCoeff = full( (nOutRows, self.E + 2), nan )
+        genCoeff = full((nOutRows, self.embedDimensions + 2), nan)
 
         # SingularValues array: shape (n_samples, E+2)
         # Column 0: Time, Columns 1-E+1: singular values
-        genSV = full( (nOutRows, self.E + 2), nan )
+        genSV = full((nOutRows, self.embedDimensions + 2), nan)
 
         # Allocate vector for univariate column data
         # At each iteration the prediction is stored in columnData
@@ -310,12 +309,12 @@ class SMap( EDMClass ):
             G = SMap(data = newData,
                      columns         = column,
                      target          = target,
-                     lib             = lib,
-                     pred            = pred,
-                     E               = self.E,
-                     Tp              = self.Tp,
+                     train             = train,
+                     test            = test,
+                     embedDimensions = self.embedDimensions,
+                     predictionHorizon              = self.predictionHorizon,
                      knn             = self.knn,
-                     tau             = self.tau,
+                     step             = self.step,
                      theta           = self.theta,
                      exclusionRadius = self.exclusionRadius,
                      solver          = self.solver,
@@ -356,10 +355,10 @@ class SMap( EDMClass ):
             # Dynamic library not implemented
 
             # 4) Increment prediction indices --------------------------
-            pred = [ p + 1 for p in pred ]
+            test = [ p + 1 for p in test ]
 
             if self.verbose:
-                print(f'4) pred {pred}')
+                print(f'4) test {test}')
 
             # 5) Add 1-step ahead projection to newData for next Project()
             columnData[ N + step ] = newPrediction
@@ -379,8 +378,8 @@ class SMap( EDMClass ):
         if self.generateConcat :
             # Concatenate original data observations with generated predictions
             # Original data: columns 0 (time), 1 (observations)
-            # Generated: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
-            # Result: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
+            # Generated: columns 0 (time), 1 (obs), 2 (test), 3 (var)
+            # Result: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             timeName = 0  # Column 0 is time
             data_obs = column_stack([self.Data[:, timeName], self.Data[:, column]])
             self.Projection = column_stack([data_obs, generated[:, 2:4]])

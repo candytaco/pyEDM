@@ -19,25 +19,25 @@ import pyEDM.PoolFunc as PoolFunc
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def Simplex( data            = None,
-             columns         = None,
-             target          = None,
-             lib             = "",
-             pred            = "",
-             E               = 0,
-             Tp              = 1,
-             knn             = 0,
-             tau             = -1,
-             exclusionRadius = 0,
-             embedded        = False,
-             validLib        = [],
-             noTime          = False,
-             generateSteps   = 0,
-             generateConcat  = False,
-             verbose         = False,
-             showPlot        = False,
-             ignoreNan       = True,
-             returnObject    = False ):
+def Simplex( data               = None,
+             columns            = None,
+             target             = None,
+             train                = "",
+             test               = "",
+             embedDimensions    = 0,
+             predictionHorizon                 = 1,
+             knn                = 0,
+             step                = -1,
+             exclusionRadius    = 0,
+             embedded           = False,
+             validLib           = [],
+             noTime             = False,
+             generateSteps      = 0,
+             generateConcat     = False,
+             verbose            = False,
+             showPlot           = False,
+             ignoreNan          = True,
+             returnObject       = False ):
     '''Simplex prediction using numpy array data.
 
     Parameters:
@@ -55,12 +55,12 @@ def Simplex( data            = None,
     S = SimplexClass(data = data,
                      columns         = columns,
                      target          = target,
-                     lib             = lib,
-                     pred            = pred,
-                     E               = E,
-                     Tp              = Tp,
+                     train             = train,
+                     test            = test,
+                     embedDimensions = embedDimensions,
+                     predictionHorizon              = predictionHorizon,
                      knn             = knn,
-                     tau             = tau,
+                     step             = step,
                      exclusionRadius = exclusionRadius,
                      embedded        = embedded,
                      validLib        = validLib,
@@ -76,7 +76,7 @@ def Simplex( data            = None,
         S.Run()
 
     if showPlot :
-        PlotObsPred( S.Projection, "", S.E, S.Tp )
+        PlotObsPred( S.Projection, "", S.embedDimensions, S.predictionHorizon )
 
     if returnObject :
         return S
@@ -86,27 +86,27 @@ def Simplex( data            = None,
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def SMap( data            = None,
-          columns         = None,
-          target          = None,
-          lib             = "",
-          pred            = "",
-          E               = 0,
-          Tp              = 1,
-          knn             = 0,
-          tau             = -1,
-          theta           = 0,
-          exclusionRadius = 0,
-          solver          = None,
-          embedded        = False,
-          validLib        = [],
-          noTime          = False,
-          generateSteps   = 0,
-          generateConcat  = False,
-          ignoreNan       = True,
-          showPlot        = False,
-          verbose         = False,
-          returnObject    = False ):
+def SMap( data               = None,
+          columns            = None,
+          target             = None,
+          train                = "",
+          test               = "",
+          embedDimensions    = 0,
+          predictionHorizon                 = 1,
+          knn                = 0,
+          step                = -1,
+          theta              = 0,
+          exclusionRadius    = 0,
+          solver             = None,
+          embedded           = False,
+          validLib           = [],
+          noTime             = False,
+          generateSteps      = 0,
+          generateConcat     = False,
+          ignoreNan          = True,
+          showPlot           = False,
+          verbose            = False,
+          returnObject       = False ):
     '''S-Map prediction using numpy array data.
 
     Parameters:
@@ -140,12 +140,12 @@ def SMap( data            = None,
     S = SMapClass(data = data,
                   columns         = columns,
                   target          = target,
-                  lib             = lib,
-                  pred            = pred,
-                  E               = E,
-                  Tp              = Tp,
+                  train             = train,
+                  test            = test,
+                  embedDimensions = embedDimensions,
+                  predictionHorizon              = predictionHorizon,
                   knn             = knn,
-                  tau             = tau,
+                  step             = step,
                   theta           = theta,
                   exclusionRadius = exclusionRadius,
                   solver          = solver,
@@ -163,8 +163,8 @@ def SMap( data            = None,
         S.Run()
 
     if showPlot :
-        PlotObsPred( S.Projection,   "", S.E, S.Tp )
-        PlotCoeff  ( S.Coefficients, "", S.E, S.Tp )
+        PlotObsPred(S.Projection,   "", S.embedDimensions, S.predictionHorizon)
+        PlotCoeff  (S.Coefficients, "", S.embedDimensions, S.predictionHorizon)
 
     if returnObject :
         return S
@@ -177,27 +177,27 @@ def SMap( data            = None,
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def CCM( data             = None,
-         columns          = None,
-         target           = None,
-         libSizes         = "",
-         sample           = 0,
-         E                = 0,
-         Tp               = 0,
-         knn              = 0,
-         tau              = -1,
-         exclusionRadius  = 0,
-         seed             = None,
-         embedded         = False,
-         validLib         = [],
-         includeData      = False,
-         noTime           = False,
-         ignoreNan        = True,
-         mpMethod         = None,
-         sequential       = False,
-         verbose          = False,
-         showPlot         = False,
-         returnObject     = False ) :
+def CCM( data                = None,
+         columns             = None,
+         target              = None,
+         libSizes            = "",
+         sample              = 0,
+         embedDimensions     = 0,
+         predictionHorizon                  = 0,
+         knn                 = 0,
+         step                 = -1,
+         exclusionRadius     = 0,
+         seed                = None,
+         embedded            = False,
+         validLib            = [],
+         includeData         = False,
+         noTime              = False,
+         ignoreNan           = True,
+         mpMethod            = None,
+         sequential          = False,
+         verbose             = False,
+         showPlot            = False,
+         returnObject        = False ) :
     '''Convergent Cross Mapping.
 
     Parameters:
@@ -211,25 +211,25 @@ def CCM( data             = None,
 
     # Instantiate CCMClass object
     # __init__ creates .FwdMap & .RevMap
-    C = CCMClass( data            = data,
-                  columns         = columns,
-                  target          = target,
-                  E               = E,
-                  Tp              = Tp,
-                  knn             = knn,
-                  tau             = tau,
-                  exclusionRadius = exclusionRadius,
-                  libSizes        = libSizes,
-                  sample          = sample,
-                  seed            = seed,
-                  includeData     = includeData,
-                  embedded        = embedded,
-                  validLib        = validLib,
-                  noTime          = noTime,
-                  ignoreNan       = ignoreNan,
-                  mpMethod        = mpMethod,
-                  sequential      = sequential,
-                  verbose         = verbose )
+    C = CCMClass(data            = data,
+                 columns         = columns,
+                 target          = target,
+                 embedDimensions = embedDimensions,
+                 predictionHorizon              = predictionHorizon,
+                 knn             = knn,
+                 step             = step,
+                 exclusionRadius = exclusionRadius,
+                 libSizes        = libSizes,
+                 sample          = sample,
+                 seed            = seed,
+                 includeData     = includeData,
+                 embedded        = embedded,
+                 validLib        = validLib,
+                 noTime          = noTime,
+                 ignoreNan       = ignoreNan,
+                 mpMethod        = mpMethod,
+                 sequential      = sequential,
+                 verbose         = verbose)
 
     # Embedding of Forward & Reverse mapping
     C.FwdMap.EmbedData()
@@ -241,7 +241,7 @@ def CCM( data             = None,
 
     if showPlot :
         import matplotlib.pyplot as plt
-        title = f'E = {C.E}'
+        title = f'E = {C.embedDimensions}'
         fig, ax = plt.subplots()
 
         # C.libMeans is numpy array: Column 0 is LibSize, rest are correlation values
@@ -254,7 +254,7 @@ def CCM( data             = None,
             # CCM of degenerate columns : target
             ax.plot(C.libMeans[:, 0], C.libMeans[:, 1], linewidth=3)
 
-        ax.set( xlabel = "Library Size", ylabel = "CCM ρ", title=title )
+        ax.set( xlabel = "Library Size", ylabel = "CCM correlation", title=title )
         axhline( y = 0, linewidth = 1 )
         show()
 
@@ -271,27 +271,27 @@ def CCM( data             = None,
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def Multiview( data            = None,
-               columns         = None,
-               target          = None,
-               lib             = "",
-               pred            = "",
-               D               = 0,
-               E               = 1,
-               Tp              = 1,
-               knn             = 0,
-               tau             = -1,
-               multiview       = 0,
-               exclusionRadius = 0,
-               trainLib        = True,
-               excludeTarget   = False,
-               ignoreNan       = True,
-               verbose         = False,
-               numProcess      = 4,
-               mpMethod        = None,
-               chunksize       = 1,
-               showPlot        = False,
-               returnObject    = False ):
+def Multiview( data               = None,
+               columns            = None,
+               target             = None,
+               train                = "",
+               test               = "",
+               D                  = 0,
+               embedDimensions    = 1,
+               predictionHorizon                 = 1,
+               knn                = 0,
+               step                = -1,
+               multiview          = 0,
+               exclusionRadius    = 0,
+               trainLib           = True,
+               excludeTarget      = False,
+               ignoreNan          = True,
+               verbose            = False,
+               numProcess         = 4,
+               mpMethod           = None,
+               chunksize          = 1,
+               showPlot           = False,
+               returnObject       = False ):
     '''Multiview prediction using numpy array data.
 
     Parameters:
@@ -308,13 +308,13 @@ def Multiview( data            = None,
     M = MultiviewClass( data            = data,
                         columns         = columns,
                         target          = target,
-                        lib             = lib,
-                        pred            = pred,
+                        train             = train,
+                        test            = test,
                         D               = D,
-                        E               = E,
-                        Tp              = Tp,
+                        embedDimensions = embedDimensions,
+                        predictionHorizon              = predictionHorizon,
                         knn             = knn,
-                        tau             = tau,
+                        step             = step,
                         multiview       = multiview,
                         exclusionRadius = exclusionRadius,
                         trainLib        = trainLib,
@@ -364,7 +364,7 @@ def Multiview( data            = None,
     M.View = view_rows  # List of lists for now
 
     if showPlot :
-        PlotObsPred( M.Projection, "", M.D, M.Tp )
+        PlotObsPred( M.Projection, "", M.D, M.predictionHorizon )
 
     if returnObject :
         return M
@@ -378,10 +378,10 @@ def EmbedDimension( data            = None,
                     columns         = None,
                     target          = None,
                     maxE            = 10,
-                    lib             = "",
-                    pred            = "",
-                    Tp              = 1,
-                    tau             = -1,
+                    train             = "",
+                    test            = "",
+                    predictionHorizon              = 1,
+                    step             = -1,
                     exclusionRadius = 0,
                     embedded        = False,
                     validLib        = [],
@@ -411,10 +411,10 @@ def EmbedDimension( data            = None,
     Evals = [ E for E in range( 1, maxE + 1 ) ]
     args = { 'columns'         : columns,
              'target'          : target,
-             'lib'             : lib,
-             'pred'            : pred,
-             'Tp'              : Tp,
-             'tau'             : tau,
+             'train'             : train,
+             'test'            : test,
+             'predictionHorizon'              : predictionHorizon,
+             'step'             : step,
              'exclusionRadius' : exclusionRadius,
              'embedded'        : embedded,
              'validLib'        : validLib,
@@ -435,11 +435,11 @@ def EmbedDimension( data            = None,
 
     if showPlot :
         import matplotlib.pyplot as plt
-        title = "Tp=" + str(Tp)
+        title = "predictionHorizon=" + str(predictionHorizon)
         fig, ax = plt.subplots()
         ax.plot(result[:, 0], result[:, 1], linewidth=3)
         ax.set( xlabel = "Embedding Dimension",
-                ylabel = "Prediction Skill ρ",
+                ylabel = "Prediction Skill correlation",
                 title = title )
         show()
 
@@ -448,24 +448,24 @@ def EmbedDimension( data            = None,
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def PredictInterval( data            = None,
-                     columns         = None,
-                     target          = None,
-                     lib             = "",
-                     pred            = "",
-                     maxTp           = 10,
-                     E               = 1,
-                     tau             = -1,
-                     exclusionRadius = 0,
-                     embedded        = False,
-                     validLib        = [],
-                     noTime          = False,
-                     ignoreNan       = True,
-                     verbose         = False,
-                     numProcess      = 4,
-                     mpMethod        = None,
-                     chunksize       = 1,
-                     showPlot        = True ):
+def PredictInterval( data               = None,
+                     columns            = None,
+                     target             = None,
+                     train                = "",
+                     test               = "",
+                     maxTp              = 10,
+                     embedDimensions    = 1,
+                     step                = -1,
+                     exclusionRadius    = 0,
+                     embedded           = False,
+                     validLib           = [],
+                     noTime             = False,
+                     ignoreNan          = True,
+                     verbose            = False,
+                     numProcess         = 4,
+                     mpMethod           = None,
+                     chunksize          = 1,
+                     showPlot           = True ):
     '''Estimate optimal prediction interval [1:maxTp].
 
     Parameters:
@@ -478,17 +478,17 @@ def PredictInterval( data            = None,
 
     Returns:
     numpy.ndarray, shape (maxTp, 2)
-        Column 0: Tp values, Column 1: correlation values
+        Column 0: predictionHorizon values, Column 1: correlation values
     '''
 
     # Setup Pool
-    Evals = [ Tp for Tp in range( 1, maxTp + 1 ) ]
+    Evals = [ predictionHorizon for predictionHorizon in range( 1, maxTp + 1 ) ]
     args = { 'columns'         : columns,
              'target'          : target,
-             'lib'             : lib,
-             'pred'            : pred,
-             'E'               : E,
-             'tau'             : tau,
+             'train'             : train,
+             'test'            : test,
+             'embedDims'               : embedDimensions,
+             'step'             : step,
              'exclusionRadius' : exclusionRadius,
              'embedded'        : embedded,
              'validLib'        : validLib,
@@ -510,15 +510,15 @@ def PredictInterval( data            = None,
     if showPlot :
         if embedded :
             if IsIterable( columns ) :
-                E = len( columns )
+                embedDimensions = len( columns )
             else :
-                E = 1
-        title = "E=" + str( E )
+                embedDimensions = 1
+        title = "Embedding Dims = " + str( embedDimensions )
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(result[:, 0], result[:, 1], linewidth=3)
         ax.set( xlabel = "Forecast Interval",
-                ylabel = "Prediction Skill ρ",
+                ylabel = "Prediction Skill correlation",
                 title = title )
         show()
 
@@ -527,27 +527,27 @@ def PredictInterval( data            = None,
 #------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------
-def PredictNonlinear( data            = None,
-                      columns         = None,
-                      target          = None,
-                      theta           = None,
-                      lib             = "",
-                      pred            = "",
-                      E               = 1,
-                      Tp              = 1,
-                      knn             = 0,
-                      tau             = -1,
-                      exclusionRadius = 0,
-                      solver          = None,
-                      embedded        = False,
-                      validLib        = [],
-                      noTime          = False,
-                      ignoreNan       = True,
-                      verbose         = False,
-                      numProcess      = 4,
-                      mpMethod        = None,
-                      chunksize       = 1,
-                      showPlot        = True ):
+def PredictNonlinear( data               = None,
+                      columns            = None,
+                      target             = None,
+                      theta              = None,
+                      train                = "",
+                      test               = "",
+                      embedDimensions    = 1,
+                      predictionHorizon                 = 1,
+                      knn                = 0,
+                      step                = -1,
+                      exclusionRadius    = 0,
+                      solver             = None,
+                      embedded           = False,
+                      validLib           = [],
+                      noTime             = False,
+                      ignoreNan          = True,
+                      verbose            = False,
+                      numProcess         = 4,
+                      mpMethod           = None,
+                      chunksize          = 1,
+                      showPlot           = True ):
     '''Estimate S-map localisation over theta.
 
     Parameters:
@@ -571,13 +571,13 @@ def PredictNonlinear( data            = None,
 
     # Setup Pool
     args = { 'columns'         : columns,
-             'target'          : target, 
-             'lib'             : lib,
-             'pred'            : pred,
-             'E'               : E,
-             'Tp'              : Tp,
+             'target'          : target,
+             'train'             : train,
+             'test'            : test,
+             'embedDims'               : embedDimensions,
+             'predictionHorizon'              : predictionHorizon,
              'knn'             : knn,
-             'tau'             : tau,
+             'step'             : step,
              'exclusionRadius' : exclusionRadius,
              'solver'          : solver,
              'embedded'        : embedded,
@@ -600,16 +600,16 @@ def PredictNonlinear( data            = None,
     if showPlot :
         if embedded :
             if IsIterable( columns ) :
-                E = len( columns )
+                embedDimensions = len( columns )
             else :
-                E = 1
-        title = "E=" + str( E )
+                embedDimensions = 1
+        title = "Embedding Dims = " + str( embedDimensions )
 
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(result[:, 0], result[:, 1], linewidth=3)
-        ax.set( xlabel = "S-map Localisation (θ)",
-                ylabel = "Prediction Skill ρ",
+        ax.set( xlabel = "S-map Localisation (theta)",
+                ylabel = "Prediction Skill correlation",
                 title = title )
         show()
 

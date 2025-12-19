@@ -14,26 +14,26 @@ from .AuxFunc import ComputeError, IsIterable
 class CCM:
     '''CCM class : Base class. Contains two Simplex instances'''
 
-    def __init__( self,
-                  data            = None,
-                  columns         = "",
-                  target          = "",
-                  E               = 0,
-                  Tp              = 0,
-                  knn             = 0,
-                  tau             = -1,
-                  exclusionRadius = 0,
-                  libSizes        = [],
-                  sample          = 0,
-                  seed            = None,
-                  includeData     = False,
-                  embedded        = False,
-                  validLib        = [],
-                  noTime          = False,
-                  ignoreNan       = True,
-                  mpMethod        = None,
-                  sequential      = False,
-                  verbose         = False ):
+    def __init__(self,
+                 data            = None,
+                 columns         = "",
+                 target          = "",
+                 embedDimensions = 0,
+                 predictionHorizon              = 0,
+                 knn             = 0,
+                 step             = -1,
+                 exclusionRadius = 0,
+                 libSizes        = [],
+                 sample          = 0,
+                 seed            = None,
+                 includeData     = False,
+                 embedded        = False,
+                 validLib        = [],
+                 noTime          = False,
+                 ignoreNan       = True,
+                 mpMethod        = None,
+                 sequential      = False,
+                 verbose         = False):
         '''Initialize CCM.'''
 
         # Assign parameters from API arguments
@@ -41,10 +41,10 @@ class CCM:
         self.Data            = data
         self.columns         = columns
         self.target          = target
-        self.E               = E
-        self.Tp              = Tp
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon              = predictionHorizon
         self.knn             = knn
-        self.tau             = tau
+        self.step             = step
         self.exclusionRadius = exclusionRadius
         self.libSizes        = libSizes
         self.sample          = sample
@@ -58,8 +58,8 @@ class CCM:
         self.sequential      = sequential
         self.verbose         = verbose
 
-        # Set full lib & pred
-        self.lib = self.pred = [ 1, self.Data.shape[0] ]
+        # Set full train & test
+        self.train = self.test = [ 1, self.Data.shape[0] ]
 
         self.CrossMapList  = None # List of CrossMap results
         self.libMeans      = None # DataFrame of CrossMap results
@@ -76,12 +76,12 @@ class CCM:
         self.FwdMap = SimplexClass(data = data,
                                    columns         = columns,
                                    target          = target,
-                                   lib             = self.lib,
-                                   pred            = self.pred,
-                                   E               = E,
-                                   Tp              = Tp,
+                                   train             = self.train,
+                                   test            = self.test,
+                                   embedDimensions = embedDimensions,
+                                   predictionHorizon              = predictionHorizon,
                                    knn             = knn,
-                                   tau             = tau,
+                                   step             = step,
                                    exclusionRadius = exclusionRadius,
                                    embedded        = embedded,
                                    validLib        = validLib,
@@ -92,12 +92,12 @@ class CCM:
         self.RevMap = SimplexClass(data = data,
                                    columns         = target,
                                    target          = columns,
-                                   lib             = self.lib,
-                                   pred            = self.pred,
-                                   E               = E,
-                                   Tp              = Tp,
+                                   train             = self.train,
+                                   test            = self.test,
+                                   embedDimensions = embedDimensions,
+                                   predictionHorizon              = predictionHorizon,
                                    knn             = knn,
-                                   tau             = tau,
+                                   step             = step,
                                    exclusionRadius = exclusionRadius,
                                    embedded        = embedded,
                                    validLib        = validLib,
@@ -211,7 +211,7 @@ class CCM:
                 S.FindNeighbors() # Depends on S.lib_i
 
                 # Code from Simplex:Project ---------------------------------
-                # First column is minimum distance of all N pred rows
+                # First column is minimum distance of all N test rows
                 minDistances = S.knn_distances[:,0]
                 # In case there is 0 in minDistances: minWeight = 1E-6
                 minDistances = fmax( minDistances, 1E-6 )
@@ -221,8 +221,8 @@ class CCM:
                 weights         = exp( -scaledDistances )  # Npred x k
                 weightRowSum    = sum( weights, axis = 1 ) # Npred x 1
 
-                # Matrix of knn_neighbors + Tp defines library target values
-                knn_neighbors_Tp = S.knn_neighbors + self.Tp      # Npred x k
+                # Matrix of knn_neighbors + predictionHorizon defines library target values
+                knn_neighbors_Tp = S.knn_neighbors + self.predictionHorizon      # Npred x k
 
                 libTargetValues = zeros( knn_neighbors_Tp.shape ) # Npred x k
                 for j in range( knn_neighbors_Tp.shape[1] ) :
@@ -235,12 +235,12 @@ class CCM:
                                    axis = 1) / weightRowSum
 
                 # Align observations & predictions as in FormatProjection()
-                # Shift projection_ by Tp
-                projection_ = roll( projection_, S.Tp )
-                if S.Tp > 0 :
-                    projection_[ :S.Tp ] = nan
-                elif S.Tp < 0 :
-                    projection_[ S.Tp: ] = nan
+                # Shift projection_ by predictionHorizon
+                projection_ = roll( projection_, S.predictionHorizon )
+                if S.predictionHorizon > 0 :
+                    projection_[ :S.predictionHorizon ] = nan
+                elif S.predictionHorizon < 0 :
+                    projection_[ S.predictionHorizon: ] = nan
 
                 err = ComputeError(S.targetVec[ S.testIndices, 0],
                                    projection_, digits = 5)
@@ -301,9 +301,9 @@ class CCM:
                           f'libSizes start {start} stop {stop} are invalid.'
                     raise RuntimeError( msg )
 
-                if start < self.E :
+                if start < self.embedDimensions :
                     msg = f'{self.name} Validate(): ' +\
-                          f'libSizes start {start} less than E {self.E}'
+                          f'libSizes start {start} less than E {self.embedDimensions}'
                     raise RuntimeError( msg )
                 elif start < 3 :
                     msg = f'{self.name} Validate(): ' +\
@@ -319,18 +319,18 @@ class CCM:
                   f' exceeds data size {self.Data.shape[0]}.'
             raise RuntimeError( msg )
 
-        if self.libSizes[0] < self.E + 2 :
+        if self.libSizes[0] < self.embedDimensions + 2 :
             msg = f'{self.name} Validate(): ' +\
                   f'Minimum libSize {self.libSizes[0]}'    +\
-                  f' invalid for E={self.E}. Minimum {self.E + 2}.'
+                  f' invalid for E={self.embedDimensions}. Minimum {self.embedDimensions + 2}.'
             raise RuntimeError( msg )
 
-        if self.Tp < 0 :
-            embedShift = abs( self.tau ) * ( self.E - 1 )
+        if self.predictionHorizon < 0 :
+            embedShift = abs( self.step ) * (self.embedDimensions - 1)
             maxLibSize = self.libSizes[-1]
-            maxAllowed = self.Data.shape[0] - embedShift + (self.Tp + 1)
+            maxAllowed = self.Data.shape[0] - embedShift + (self.predictionHorizon + 1)
             if maxLibSize > maxAllowed :
-                msg = f'{self.name} Validate(): Maximum libSize {maxLibSize}'  +\
-                    f' too large for Tp {self.Tp}, E {self.E}, tau {self.tau}' +\
+                msg = f'{self.name} Validate(): Maximum libSize {maxLibSize}' +\
+                    f' too large for predictionHorizon {self.predictionHorizon}, E {self.embedDimensions}, step {self.step}' +\
                     f' Maximum is {maxAllowed}'
                 raise RuntimeError( msg )

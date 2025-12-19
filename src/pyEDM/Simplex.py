@@ -18,12 +18,12 @@ class Simplex( EDMClass ):
                  data       = None,
                  columns         = "",
                  target          = "",
-                 lib             = "",
-                 pred            = "",
-                 E               = 0,
-                 Tp              = 1,
+                 train             = "",
+                 test            = "",
+                 embedDimensions = 0,
+                 predictionHorizon              = 1,
                  knn             = 0,
-                 tau             = -1,
+                 step             = -1,
                  exclusionRadius = 0,
                  embedded        = False,
                  validLib        = [],
@@ -42,12 +42,12 @@ class Simplex( EDMClass ):
         # Assign parameters from API arguments
         self.columns         = columns
         self.target          = target
-        self.lib             = lib
-        self.pred            = pred
-        self.E               = E
-        self.Tp              = Tp
+        self.train             = train
+        self.test            = test
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon              = predictionHorizon
         self.knn             = knn
-        self.tau             = tau
+        self.step             = step
         self.exclusionRadius = exclusionRadius
         self.embedded        = embedded
         self.validLib        = validLib
@@ -58,9 +58,8 @@ class Simplex( EDMClass ):
         self.verbose         = verbose
 
         # Map API parameter names to EDM base class names
-        self.embedDimensions   = E
-        self.predictionHorizon = Tp
-        self.embedStep         = tau
+        self.predictionHorizon = predictionHorizon
+        self.embedStep         = step
         self.isEmbedded        = embedded
 
         # Setup
@@ -96,7 +95,7 @@ class Simplex( EDMClass ):
         if self.verbose:
             print( f'{self.name}: Project()' )
 
-        # First column of knn_distances is minimum distance of all N pred rows
+        # First column of knn_distances is minimum distance of all N test rows
         minDistances = self.knn_distances[:,0]
         # In case there is 0 in minDistances: minWeight = 1E-6
         minDistances = fmax( minDistances, 1E-6 )
@@ -108,12 +107,12 @@ class Simplex( EDMClass ):
         weights      = exp( -scaledDistances )  # N x k
         weightRowSum = sum( weights, axis = 1 ) # N x 1
 
-        # Matrix of knn_neighbors + Tp defines library target values
+        # Matrix of knn_neighbors + predictionHorizon defines library target values
         # JP : Find optimal way to fill libTargetValues, for now:
-        #   Since number of knn is usually less than number of pred rows
+        #   Since number of knn is usually less than number of test rows
         #   loop over knn_neighbors_Tp columns to get target value column
         #   vectors from the knn_neighbors_Tp row indices
-        knn_neighbors_Tp = self.knn_neighbors + self.Tp     # N x k
+        knn_neighbors_Tp = self.knn_neighbors + self.predictionHorizon     # N x k
         libTargetValues  = zeros( knn_neighbors_Tp.shape )  # N x k
 
         for j in range( knn_neighbors_Tp.shape[1] ) : # for each column j of k   
@@ -132,7 +131,7 @@ class Simplex( EDMClass ):
     def Generate( self ) :
     #-------------------------------------------------------------------
         '''Simplex Generation
-           Given lib: override pred for single prediction at end of lib
+           Given train: override test for single prediction at end of train
            Replace self.Projection with G.Projection
 
            Note: Generation with datetime time values fails: incompatible
@@ -145,16 +144,16 @@ class Simplex( EDMClass ):
         N      = self.Data.shape[0]
         column = self.columns[0]
         target = self.target[0]
-        lib    = self.lib
+        train    = self.train
 
         if self.verbose:
             print(f'\tData shape: {self.Data.shape}')
-            print(f'\tlib: {lib}')
+            print(f'\ttrain: {train}')
 
-        # Override pred for single prediction at end of lib
-        pred = [ lib[-1] - 1, lib[-1] ]
+        # Override test for single prediction at end of train
+        test = [ train[-1] - 1, train[-1] ]
         if self.verbose:
-            print(f'\tGenerate(): pred overriden to {pred}')
+            print(f'\tGenerate(): test overriden to {test}')
 
         # Output numpy array to replace self.Projection
         # Shape: (n_samples, 4)
@@ -194,12 +193,12 @@ class Simplex( EDMClass ):
             G = Simplex(data = newData,
                         columns         = column,
                         target          = target,
-                        lib             = lib,
-                        pred            = pred,
-                        E               = self.E,
-                        Tp              = self.Tp,
+                        train             = train,
+                        test            = test,
+                        embedDimensions = self.embedDimensions,
+                        predictionHorizon              = self.predictionHorizon,
                         knn             = self.knn,
-                        tau             = self.tau,
+                        step             = self.step,
                         exclusionRadius = self.exclusionRadius,
                         embedded        = self.embedded,
                         validLib        = self.validLib,
@@ -232,10 +231,10 @@ class Simplex( EDMClass ):
             # Dynamic library not implemented
 
             # 4) Increment prediction indices --------------------------
-            pred = [ p + 1 for p in pred ]
+            test = [ p + 1 for p in test ]
 
             if self.verbose:
-                print(f'4) pred {pred}')
+                print(f'4) test {test}')
 
             # 5) Add 1-step ahead projection to newData for next Project()
             columnData[ N + step ] = newPrediction
@@ -255,8 +254,8 @@ class Simplex( EDMClass ):
         if self.generateConcat :
             # Concatenate original data observations with generated predictions
             # Original data: columns 0 (time), 1 (observations)
-            # Generated: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
-            # Result: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
+            # Generated: columns 0 (time), 1 (obs), 2 (test), 3 (var)
+            # Result: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             timeName = 0  # Column 0 is time
             data_obs = column_stack([self.Data[:, timeName], self.Data[:, column]])
             self.Projection = column_stack([data_obs, generated[:, 2:4]])

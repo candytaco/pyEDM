@@ -26,29 +26,29 @@ from .LoadData import sampleData
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def ComputeError( obs, pred, digits = 6 ):
+def ComputeError( obs, test, digits = 6 ):
     '''Pearson correlation, MAE, CAE, RMSE
-       Remove nan from obs, pred for corrcoeff.
+       Remove nan from obs, test for corrcoeff.
     '''
 
-    notNan = isfinite( pred )
+    notNan = isfinite( test )
     if any( ~notNan ) :
-        pred = pred[ notNan ]
+        test = test[ notNan ]
         obs  = obs [ notNan ]
 
     notNan = isfinite( obs )
     if any( ~notNan ) :
-        pred = pred[ notNan ]
+        test = test[ notNan ]
         obs  = obs [ notNan ]
 
-    if len( pred ) < 5 :
-        msg = f'ComputeError(): Not enough data ({len(pred)}) to ' +\
+    if len( test ) < 5 :
+        msg = f'ComputeError(): Not enough data ({len(test)}) to ' +\
                ' compute error statistics.'
         print( msg )
         return { 'correlation' : nan, 'MAE' : nan, 'RMSE' : nan }
 
-    correlation  = round( corrcoef( obs, pred )[0,1], digits )
-    err  = obs - pred
+    correlation  = round( corrcoef( obs, test )[0,1], digits )
+    err  = obs - test
     MAE  = round( max( err ), digits )
     CAE  = round( absolute( err ).sum(), digits )
     RMSE = round( sqrt( mean( err**2 ) ), digits )
@@ -211,7 +211,7 @@ def SurrogateData( data     = None,
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def PlotObsPred( data, dataName = "", E = 0, Tp = 0, block = True ):
+def PlotObsPred( data, dataName = "", embedDimensions = 0, predictionHorizon = 0, block = True ):
     '''Plot observations and predictions
 
     Parameters:
@@ -223,8 +223,8 @@ def PlotObsPred( data, dataName = "", E = 0, Tp = 0, block = True ):
     # stats: {'MAE': 0., 'RMSE': 0., 'correlation': 0. }
     stats = ComputeError( data[:, 1], data[:, 2] )
 
-    title = dataName + "\nE=" + str(E) + " Tp=" + str(Tp) +\
-            "  ρ="   + str( round( stats['correlation'],  3 ) )   +\
+    title = dataName + "\nEmbedding Dims = " + str(embedDimensions) + " predictionHorizon=" + str(predictionHorizon) +\
+            "  correlation="   + str( round( stats['correlation'],  3 ) )   +\
             " RMSE=" + str( round( stats['RMSE'], 3 ) )
 
     plt.figure()
@@ -236,7 +236,7 @@ def PlotObsPred( data, dataName = "", E = 0, Tp = 0, block = True ):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def PlotCoeff( data, dataName = "", E = 0, Tp = 0, block = True ):
+def PlotCoeff( data, dataName = "", embedDimensions = 0, predictionHorizon = 0, block = True ):
     '''Plot S-Map coefficients
 
     Parameters:
@@ -245,7 +245,7 @@ def PlotCoeff( data, dataName = "", E = 0, Tp = 0, block = True ):
     '''
     import matplotlib.pyplot as plt
 
-    title = dataName + "\nE=" + str(E) + " Tp=" + str(Tp) +\
+    title = dataName + "\nEmbedding Dims = " + str(embedDimensions) + " predictionHorizon=" + str(predictionHorizon) +\
             "  S-Map Coefficients"
 
     plt.figure()
@@ -279,43 +279,43 @@ def Examples():
     #---------------------------------------------------------------
     cmd = str().join(['EmbedDimension( data = sampleData["TentMap"],',
                       ' columns = [1], target = 1,',
-                      ' lib = [1, 100], pred = [201, 500] )'])
+                      ' train = [1, 100], test = [201, 500] )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     cmd = str().join(['PredictInterval( data = sampleData["TentMap"],',
                       ' columns = [1], target = 1,'
-                      ' lib = [1, 100], pred = [201, 500], E = 2 )'])
+                      ' train = [1, 100], test = [201, 500], embedDimensions = 2 )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     cmd = str().join(
         ['PredictNonlinear( data = sampleData["TentMapNoise"],',
          ' columns = [1], target = 1, '
-         ' lib = [1, 100], pred = [201, 500], E = 2 )'])
+         ' train = [1, 100], test = [201, 500], embedDimensions = 2 )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     # Tent map simplex : specify multivariable columns embedded = True
     cmd = str().join(['Simplex( data = sampleData["block_3sp"],',
                       ' columns=[1, 4, 7], target=1,'
-                      ' lib = [1, 99], pred = [100, 195],',
-                      ' E = 3, embedded = True, showPlot = True )'])
+                      ' train = [1, 99], test = [100, 195],',
+                      ' embedDimensions = 3, embedded = True, showPlot = True )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
-    # Tent map simplex : Embed column x_t to E=3, embedded = False
+    # Tent map simplex : Embed column x_t to embedDimensions=3, embedded = False
     cmd = str().join(['Simplex( data = sampleData["block_3sp"],',
                       ' columns = [1], target = 1,',
-                      ' lib = [1, 99], pred = [105, 190],',
-                      ' E = 3, showPlot = True )'])
+                      ' train = [1, 99], test = [105, 190],',
+                      ' embedDimensions = 3, showPlot = True )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     cmd = str().join(['Multiview( data = sampleData["block_3sp"],',
                       ' columns = [1, 4, 7], target = 1,',
-                      ' lib = [1, 100], pred = [101, 198],',
-                      ' D = 0, E = 3, Tp = 1, multiview = 0,',
+                      ' train = [1, 100], test = [101, 198],',
+                      ' D = 0, embedDimensions = 3, predictionHorizon = 1, multiview = 0,',
                       ' trainLib = False, showPlot = True ) '])
     RunEDM( cmd )
 
@@ -323,7 +323,7 @@ def Examples():
     # S-map circle : specify multivariable columns embedded = True
     cmd = str().join(['SMap( data = sampleData["circle"],',
                       ' columns = [1, 2], target = 1,'
-                      ' lib = [1, 100], pred = [110, 190], theta = 4, E = 2,',
+                      ' train = [1, 100], test = [110, 190], theta = 4, embedDimensions = 2,',
                       ' verbose = False, showPlot = True, embedded = True )'])
     RunEDM( cmd )
 
@@ -331,5 +331,5 @@ def Examples():
     cmd = str().join(['CCM( data = sampleData["sardine_anchovy_sst"],',
                       ' columns = [1], target = [4],',
                       ' libSizes = [10, 70, 10], sample = 50,',
-                      ' E = 3, Tp = 0, verbose = False, showPlot = True )'])
+                      ' embedDimensions = 3, predictionHorizon = 0, verbose = False, showPlot = True )'])
     RunEDM( cmd )

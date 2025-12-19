@@ -74,44 +74,44 @@ class test_EDM( unittest.TestCase ):
         '''API 1'''
         if self.verbose : print ( " --- API 1 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_, columns = 'V1', target = 'V5',
-                           lib = '1 300', pred = '301 310', E = 5 )
+        df  = EDM.Simplex( data = df_, columns = 'V1', target = 'V5',
+                           train = '1 300', test = '301 310', embedDimensions = 5 )
 
     def test_API_2( self ):
         '''API 2'''
         if self.verbose : print ( "--- API 2 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_, columns = ['V1'], target = 'V5',
-                           lib = [1, 300], pred = [301, 310], E = 5 )
+        df  = EDM.Simplex( data = df_, columns = ['V1'], target = 'V5',
+                           train = [1, 300], test = [301, 310], embedDimensions = 5 )
 
     def test_API_3( self ):
         '''API 3'''
         if self.verbose : print ( "--- API 3 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_, columns = ['V1','V3'], target = 'V5',
-                           lib = [1, 300], pred = [301, 310], E = 5 )
+        df  = EDM.Simplex( data = df_, columns = ['V1','V3'], target = 'V5',
+                           train = [1, 300], test = [301, 310], embedDimensions = 5 )
 
     def test_API_4( self ):
         '''API 4'''
         if self.verbose : print ( "--- API 4 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_,
+        df  = EDM.Simplex( data = df_,
                            columns = ['V1','V3'], target = ['V5','V2'], 
-                           lib = [1, 300], pred = [301, 310], E = 5 )
+                           train = [1, 300], test = [301, 310], embedDimensions = 5 )
 
     def test_API_5( self ):
         '''API 5'''
         if self.verbose : print ( "--- API 5 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_, columns = 'V1', target = 'V5',
-                           lib = [1, 300], pred = [301, 310], E = 5, knn = 0 )
+        df  = EDM.Simplex( data = df_, columns = 'V1', target = 'V5',
+                           train = [1, 300], test = [301, 310], embedDimensions = 5, knn = 0 )
 
     def test_API_6( self ):
         '''API 6'''
         if self.verbose : print ( "--- API 6 ---" )
         df_ = EDM.sampleData['Lorenz5D']
-        df  = EDM.Simplex( dataFrame = df_, columns = 'V1', target = 'V5',
-                           lib = [1, 300], pred = [301, 310], E = 5, tau = -2 )
+        df  = EDM.Simplex( data = df_, columns = 'V1', target = 'V5',
+                           train = [1, 300], test = [301, 310], embedDimensions = 5, step = -2 )
 
     def test_API_7( self ):
         '''API 7'''
@@ -182,8 +182,8 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex3( self ):
-        '''negative Tp'''
-        if self.verbose : print ( "--- negative Tp ---" )
+        '''negative predictionHorizon'''
+        if self.verbose : print ( "--- negative predictionHorizon ---" )
         df_ = EDM.sampleData["block_3sp"]
         df = EDM.Simplex( df_, "x_t", "y_t",
                           [1, 100], [50, 80], 3, -2, 0, -1, 0,
@@ -200,8 +200,8 @@ class test_EDM( unittest.TestCase ):
         '''validLib'''
         if self.verbose : print ( "--- validLib ---" )
         df_ = EDM.sampleData["circle"]
-        df = EDM.Simplex( dataFrame = df_, columns = 'x', target = 'x',
-                          lib = [1,200], pred = [1,200], E = 2, Tp = 1,
+        df = EDM.Simplex( data = df_, columns = 'x', target = 'x',
+                          train = [1,200], test = [1,200], embedDimensions = 2, predictionHorizon = 1,
                           validLib = df_.eval('x > 0.5 | x < -0.5') )
 
         dfv = self.ValidFiles["Smplx_validLib_valid.csv"]
@@ -212,12 +212,12 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex5( self ):
-        '''disjoint lib'''
-        if self.verbose : print ( "--- disjoint lib ---" )
+        '''disjoint train'''
+        if self.verbose : print ( "--- disjoint train ---" )
         df_ = EDM.sampleData["circle"]
-        df = EDM.Simplex( dataFrame = df_, columns = 'x', target = 'x',
-                          lib = [1,40, 50,130], pred = [80,170],
-                          E = 2, Tp = 1, tau = -3 )
+        df = EDM.Simplex( data = df_, columns = 'x', target = 'x',
+                          train = [1,40, 50,130], test = [80,170],
+                          embedDimensions = 2, predictionHorizon = 1, step = -3 )
 
         dfv = self.ValidFiles["Smplx_disjointLib_valid.csv"]
 
@@ -227,14 +227,14 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex6( self ):
-        '''disjoint pred w/ nan'''
-        if self.verbose : print ( "--- disjoint pred w/ nan ---" )
+        '''disjoint test w/ nan'''
+        if self.verbose : print ( "--- disjoint test w/ nan ---" )
         df_ = EDM.sampleData["Lorenz5D"]
         df_.iloc[ [8,50,501], [1,2] ] = nan
 
-        df = EDM.Simplex( dataFrame = df_, columns='V1', target = 'V2',
-                          E = 5, Tp = 2, lib = [1,50,101,200,251,500],
-                          pred = [1,10,151,155,551,555,881,885,991,1000] )
+        df = EDM.Simplex( data = df_, columns='V1', target = 'V2',
+                          embedDimensions = 5, predictionHorizon = 2, train = [1,50,101,200,251,500],
+                          test = [1,10,151,155,551,555,881,885,991,1000] )
 
         dfv = self.ValidFiles["Smplx_disjointPred_nan_valid.csv"]
 
@@ -247,8 +247,8 @@ class test_EDM( unittest.TestCase ):
         '''exclusion radius'''
         if self.verbose : print ( "--- exclusion radius ---" )
         df_ = EDM.sampleData["circle"]
-        df = EDM.Simplex( dataFrame = df_, columns = 'x', target = 'y',
-                          lib = [1,100], pred = [21,81], E = 2, Tp = 1,
+        df = EDM.Simplex( data = df_, columns = 'x', target = 'y',
+                          train = [1,100], test = [21,81], embedDimensions = 2, predictionHorizon = 1,
                           exclusionRadius = 5 )
 
         dfv = self.ValidFiles["Smplx_exclRadius_valid.csv"]
@@ -267,7 +267,7 @@ class test_EDM( unittest.TestCase ):
         dfn.iloc[ [10,11,17], 2 ] = nan
 
         df = EDM.Simplex( dataFrame = dfn, columns = 'x', target = 'y',
-                          lib = [1,100], pred = [1,95], E = 2, Tp = 1 )
+                          train = [1,100], test = [1,95], embedDimensions = 2, predictionHorizon = 1 )
 
         dfv = self.ValidFiles["Smplx_nan_valid.csv"]
 
@@ -285,7 +285,7 @@ class test_EDM( unittest.TestCase ):
         dfn.iloc[ [10,11,17], 2 ] = nan
 
         df = EDM.Simplex( dataFrame = dfn, columns = 'y', target = 'x',
-                          lib = [1,200], pred = [1,195], E = 2, Tp = 1 )
+                          train = [1,200], test = [1,195], embedDimensions = 2, predictionHorizon = 1 )
 
         dfv = self.ValidFiles["Smplx_nan2_valid.csv"]
 
@@ -299,9 +299,9 @@ class test_EDM( unittest.TestCase ):
         if self.verbose : print ( "--- DateTime ---" )
         df_ = EDM.sampleData["SumFlow_1980-2005"]
 
-        df = EDM.Simplex( dataFrame = df_,
+        df = EDM.Simplex( data = df_,
                           columns = 'S12.C.D.S333', target = 'S12.C.D.S333',
-                          lib = [1,800], pred = [801,1001], E = 3, Tp = 1 )
+                          train = [1,800], test = [801,1001], embedDimensions = 3, predictionHorizon = 1 )
 
         self.assertTrue( isinstance( df['Time'][0],  datetime ) )
 
@@ -317,8 +317,8 @@ class test_EDM( unittest.TestCase ):
         if self.verbose : print ( "--- knn = 1 ---" )
         df_ = EDM.sampleData["Lorenz5D"]
 
-        df = EDM.Simplex( dataFrame = df_, columns='V5', target = 'V5',
-                          lib = [301,400], pred = [350,355],
+        df = EDM.Simplex( data = df_, columns='V5', target = 'V5',
+                          train = [301,400], test = [350,355],
                           knn = 1, embedded = True, returnObject = True )
 
         knn = df.knn_neighbors
@@ -333,9 +333,9 @@ class test_EDM( unittest.TestCase ):
         x   = [i+1 for i in range(1000)]
         df_ = DataFrame({'Time':df_['Time'],'X':x,'V1':df_['V1']})
 
-        df = EDM.Simplex( dataFrame = df_, columns='X', target = 'V1',
-                          lib = [1,100], pred = [101,110],
-                          E = 5, exclusionRadius = 10, returnObject = True )
+        df = EDM.Simplex( data = df_, columns='X', target = 'V1',
+                          train = [1,100], test = [101,110],
+                          embedDimensions = 5, exclusionRadius = 10, returnObject = True )
 
         knn = df.knn_neighbors[:,0]
         knnValid = array( [89, 90, 91, 92, 93, 94, 95, 96, 97, 98] )
@@ -348,9 +348,9 @@ class test_EDM( unittest.TestCase ):
         '''SMap'''
         if self.verbose : print ( "--- SMap ---" )
         df_ = EDM.sampleData["circle"]
-        S = EDM.SMap( dataFrame = df_, columns = 'x', target = 'x',
-                      lib = [1,100], pred = [110,160], E = 4, Tp = 1,
-                      tau = -1, theta = 3. )
+        S = EDM.SMap( data = df_, columns = 'x', target = 'x',
+                      train = [1,100], test = [110,160], embedDimensions = 4, predictionHorizon = 1,
+                      step = -1, theta = 3. )
 
         dfv = self.ValidFiles["SMap_circle_E4_valid.csv"]
         df  = S['predictions']
@@ -364,9 +364,9 @@ class test_EDM( unittest.TestCase ):
         '''SMap embedded = True'''
         if self.verbose : print ( "--- SMap embedded = True ---" )
         df_ = EDM.sampleData["circle"]
-        S = EDM.SMap( dataFrame = df_, columns = ['x', 'y'], target = 'x',
-                      lib = [1,200], pred = [1,200], E = 2, Tp = 1,
-                      tau = -1, embedded = True, theta = 3. )
+        S = EDM.SMap( data = df_, columns = ['x', 'y'], target = 'x',
+                      train = [1,200], test = [1,200], embedDimensions = 2, predictionHorizon = 1,
+                      step = -1, embedded = True, theta = 3. )
 
         dfv  = self.ValidFiles["SMap_circle_E2_embd_valid.csv"]
         
@@ -390,8 +390,8 @@ class test_EDM( unittest.TestCase ):
         dfn.iloc[ [10,11,17], 2 ] = nan
 
         S = EDM.SMap( dataFrame = dfn, columns = 'x', target = 'y',
-                      lib = [1,50], pred = [1,50], E = 2, Tp = 1,
-                      tau = -1, theta = 3. )
+                      train = [1,50], test = [1,50], embedDimensions = 2, predictionHorizon = 1,
+                      step = -1, theta = 3. )
 
         dfv = self.ValidFiles["SMap_nan_valid.csv"]
         df  = S['predictions']
@@ -406,8 +406,8 @@ class test_EDM( unittest.TestCase ):
         if self.verbose : print ( "--- noTime ---" )
         df_ = EDM.sampleData["circle_noTime"]
 
-        S = EDM.SMap( dataFrame = df_, columns = 'x', target = 'y',
-                      lib = [1,100], pred = [101,150], E = 2,
+        S = EDM.SMap( data = df_, columns = 'x', target = 'y',
+                      train = [1,100], test = [101,150], embedDimensions = 2,
                       theta = 3, noTime = True )
 
         dfv = self.ValidFiles["SMap_noTime_valid.csv"]
@@ -427,9 +427,9 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM ---" )
             df_ = EDM.sampleData['sardine_anchovy_sst']
-            df = EDM.CCM( dataFrame = df_, columns = 'anchovy',target = 'np_sst',
+            df = EDM.CCM( data = df_, columns = 'anchovy',target = 'np_sst',
                           libSizes = [10,20,30,40,50,60,70,75], sample = 100,
-                          E = 3, Tp = 0, tau = -1, seed = 777 )
+                          embedDimensions = 3, predictionHorizon = 0, step = -1, seed = 777 )
 
         dfv = round( self.ValidFiles["CCM_anch_sst_valid.csv"], 2 )
 
@@ -444,9 +444,9 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM multivariate ---" )
             df_ = EDM.sampleData['Lorenz5D']
-            df = EDM.CCM( dataFrame = df_, columns = 'V3 V5', target = 'V1',
-                          libSizes = [20, 200, 500, 950], sample = 30, E = 5,
-                          Tp = 10, tau = -5, seed = 777 )
+            df = EDM.CCM( data = df_, columns = 'V3 V5', target = 'V1',
+                          libSizes = [20, 200, 500, 950], sample = 30, embedDimensions = 5,
+                          predictionHorizon = 10, step = -5, seed = 777 )
 
         dfv = round( self.ValidFiles["CCM_Lorenz5D_MV_valid.csv"], 4 )
 
@@ -466,8 +466,8 @@ class test_EDM( unittest.TestCase ):
             dfn.iloc[ [10,11,17], 2 ] = nan
 
             df = EDM.CCM( dataFrame = dfn, columns = 'x', target = 'y',
-                          libSizes = [10,190,10], sample = 20, E = 2,
-                          Tp = 5, tau = -1, seed = 777 )
+                          libSizes = [10,190,10], sample = 20, embedDimensions = 2,
+                          predictionHorizon = 5, step = -1, seed = 777 )
 
         dfv = self.ValidFiles["CCM_nan_valid.csv"]
 
@@ -482,11 +482,11 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM multivariate name spaces ---" )
             df_ = EDM.sampleData['columnNameSpace']
-            df = EDM.CCM( dataFrame = df_,
+            df = EDM.CCM( data = df_,
                           columns = ['Var 1','Var3','Var 5 1'],
                           target = ['Var 2','Var 4 A'],
                           libSizes = [20, 50, 90], sample = 1,
-                          E = 5, Tp = 0, tau = -1, seed = 777 )
+                          embedDimensions = 5, predictionHorizon = 0, step = -1, seed = 777 )
 
         dfv = round( self.ValidFiles["CCM_Lorenz5D_MV_Space_valid.csv"], 4 )
 
@@ -502,10 +502,10 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- Multiview ---" )
             df_ = EDM.sampleData['block_3sp']
-            M = EDM.Multiview( dataFrame = df_,
+            M = EDM.Multiview( data = df_,
                                columns = "x_t y_t z_t", target = "x_t",
-                               lib = [1, 100], pred = [101, 198],
-                               D = 0, E = 3, Tp = 1, knn = 0, tau = -1,
+                               train = [1, 100], test = [101, 198],
+                               D = 0, embedDimensions = 3, predictionHorizon = 1, knn = 0, step = -1,
                                multiview = 0, exclusionRadius = 0,
                                trainLib = False, excludeTarget = False,
                                numProcess = 4, showPlot = False )
@@ -516,8 +516,8 @@ class test_EDM( unittest.TestCase ):
         # Validate predictions
         dfvp      = self.ValidFiles["Multiview_pred_valid.csv"]
         predValid = round( dfvp.get('Predictions'), 4 )
-        pred      = round( df_pred.get('Predictions'), 4 )
-        self.assertTrue( predValid.equals( pred ) )
+        test      = round( df_pred.get('Predictions'), 4 )
+        self.assertTrue( predValid.equals( test ) )
 
         # Validate combinations
         dfvc = round( self.ValidFiles['Multiview_combos_valid.csv'], 4 )
@@ -535,9 +535,9 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- EmbedDimension ---" )
             df_ = EDM.sampleData['Lorenz5D']
-            df = EDM.EmbedDimension( dataFrame = df_, columns='V1', target='V1',
-                                     maxE = 12, lib = [1, 500], pred=[501, 800],
-                                     Tp = 15, tau = -5, exclusionRadius = 20,
+            df = EDM.EmbedDimension( data = df_, columns='V1', target='V1',
+                                     maxE = 12, train = [1, 500], test=[501, 800],
+                                     predictionHorizon = 15, step = -5, exclusionRadius = 20,
                                      numProcess = 10, showPlot = False )
 
         dfv = round( self.ValidFiles["EmbedDim_valid.csv"], 6 )
@@ -554,10 +554,10 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- PredictInterval ---" )
             df_ = EDM.sampleData['block_3sp']
-            df = EDM.PredictInterval( dataFrame = df_,
+            df = EDM.PredictInterval( data = df_,
                                       columns = 'x_t', target='x_t', maxTp = 15,
-                                      lib = [1, 150], pred = [151, 198], E = 3,
-                                      tau = -1, numProcess = 10, showPlot=False )
+                                      train = [1, 150], test = [151, 198], embedDimensions = 3,
+                                      step = -1, numProcess = 10, showPlot=False )
             
         dfv = round( self.ValidFiles["PredictInterval_valid.csv"], 6 )
 
@@ -573,10 +573,10 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- Predict ---" )
             df_ = EDM.sampleData['TentMapNoise']
-            df = EDM.PredictNonlinear( dataFrame = df_,
+            df = EDM.PredictNonlinear( data = df_,
                                        columns = 'TentMap', target = 'TentMap',
-                                       lib = [1, 500], pred = [501,800], E = 4,
-                                       Tp = 1, tau = -1, numProcess = 10,
+                                       train = [1, 500], test = [501,800], embedDimensions = 4,
+                                       predictionHorizon = 1, step = -1, numProcess = 10,
                                        theta = [0.01,0.1,0.3,0.5,0.75,1,1.5,
                                                 2,3,4,5,6,7,8,9,10,15,20 ],
                                        showPlot = False )
@@ -593,9 +593,9 @@ class test_EDM( unittest.TestCase ):
         if self.verbose : print ( "--- Simplex Generate 1 ---" )
         df_ = EDM.sampleData["circle"]
 
-        df = EDM.Simplex( dataFrame = df_,
+        df = EDM.Simplex( data = df_,
                           columns = 'x', target = 'x',
-                          lib = [1,200], pred = [1,2], E = 2,
+                          train = [1,200], test = [1,2], embedDimensions = 2,
                           generateSteps = 100, generateConcat = True )
 
         self.assertTrue( df.shape == (300,4) )
@@ -618,9 +618,9 @@ class test_EDM( unittest.TestCase ):
         if self.verbose : print ( "--- SMap Generate ---" )
         df_ = EDM.sampleData["circle"]
 
-        S = EDM.SMap( dataFrame = df_,
+        S = EDM.SMap( data = df_,
                       columns = 'x', target = 'x', theta = 3.,
-                      lib = [1,200], pred = [1,2], E = 2,
+                      train = [1,200], test = [1,2], embedDimensions = 2,
                       generateSteps = 100, generateConcat = True )
 
         self.assertTrue( S['predictions'].shape == (300,4) )

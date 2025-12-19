@@ -6,12 +6,12 @@ def Embed(data,
           includeTime   = False, ):
     '''Takens time-delay embedding on columns via pandas DataFrame.shift()
        if includeTime True : insert dataFrame column 0 in first column
-       nan will be present in |tau| * (E-1) rows.'''
+       nan will be present in |step| * (E-1) rows.'''
 
     if embeddingDimensions < 1 :
         raise RuntimeError( 'Embed(): E must be positive.' )
     if stepSize == 0 :
-        raise RuntimeError( 'Embed(): tau must be non-zero.' )
+        raise RuntimeError( 'Embed(): step must be non-zero.' )
 
     selected_data = data[:, columns]
     n_rows, n_cols = selected_data.shape
