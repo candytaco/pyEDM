@@ -16,8 +16,8 @@ class CCM:
 
     def __init__(self,
                  data            = None,
-                 columns         = "",
-                 target          = "",
+                 columns = None,
+                 target = None,
                  embedDimensions = 0,
                  predictionHorizon              = 0,
                  knn             = 0,
@@ -327,7 +327,7 @@ class CCM:
 
         if self.predictionHorizon < 0 :
             embedShift = abs( self.step ) * (self.embedDimensions - 1)
-            maxLibSize = self.libSizes[-1]
+            maxLibSize = self.trainSizes[-1]
             maxAllowed = self.Data.shape[0] - embedShift + (self.predictionHorizon + 1)
             if maxLibSize > maxAllowed :
                 msg = f'{self.name} Validate(): Maximum libSize {maxLibSize}' +\
