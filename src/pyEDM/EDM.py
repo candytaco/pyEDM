@@ -809,6 +809,8 @@ class EDM:
 			# If [0, 1, ... embedShift] nan (negative step) or
 			# [N - embedShift, ... N-1, N]  (positive step) nan
 			# are in pred_i delete elements
+
+			# TODO: this is like, 4 levels of index shadowing - needs to be fixed
 			nan_i_start = [i for i in range(embedShift)]
 			nan_i_end = [self.Data.shape[0] - 1 - i for i in range(embedShift)]
 
