@@ -1,6 +1,6 @@
 '''Python tools for EDM'''
 # import EDM functions
-from .API      import MakeBlock, Simplex, SMap, CCM, Multiview
+from .API      import Simplex, SMap, CCM, Multiview
 from .Embed import Embed
 from .API      import EmbedDimension, PredictInterval, PredictNonlinear
 from .AuxFunc  import Examples, PlotObsPred, PlotCoeff, ComputeError

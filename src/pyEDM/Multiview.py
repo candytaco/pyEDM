@@ -8,7 +8,7 @@ from itertools import combinations, repeat
 # package modules
 from numpy import argsort, array
 
-import pyEDM.Embed
+from pyEDM.Embed import Embed
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .AuxFunc import ComputeError, IsIterable
@@ -51,13 +51,13 @@ class Multiview:
     '''
 
     def __init__( self,
-                  dataFrame       = None,
-                  columns         = "",
-                  target          = "", 
+                  data            = None,
+                  columns         = None,
+                  target          = None,
                   lib             = "",
                   pred            = "",
-                  D               = 0, 
-                  E               = 1, 
+                  D               = 0,
+                  E               = 1,
                   Tp              = 1,
                   knn             = 0,
                   tau             = -1,
@@ -75,7 +75,7 @@ class Multiview:
 
         # Assign parameters from API arguments
         self.name            = 'Multiview'
-        self.Data            = dataFrame
+        self.Data            = data
         self.columns         = columns
         self.target          = target
         self.lib             = lib
@@ -95,13 +95,13 @@ class Multiview:
         self.mpMethod        = mpMethod
         self.chunksize       = chunksize
 
-        self.Embedding  = None # DataFrame 
-        self.View       = None # DataFrame
-        self.Projection = None # DataFrame
+        self.Embedding  = None # numpy array
+        self.View       = None # numpy array
+        self.Projection = None # numpy array
 
         self.combos             = None # List of column combinations (tuples)
         self.topRankCombos      = None # List of top columns (tuples)
-        self.topRankProjections = None # dict of columns : DataFrame
+        self.topRankProjections = None # dict of columns : numpy array
         self.topRankStats       = None # dict of columns : dict of stats
 
         # Setup
@@ -181,7 +181,7 @@ class Multiview:
     #--------------------------------------------------------------------
     def Setup( self ):
     #--------------------------------------------------------------------
-        '''Set D, lib, pred, combos. Embed Data. 
+        '''Set D, lib, pred, combos. Embed Data.
         '''
         if self.verbose:
             print( f'{self.name}: Setup()' )
@@ -215,12 +215,30 @@ class Multiview:
         else :
             comboCols = self.columns
 
-        # Embed Data
-        self.Embedding = pyEDM.Embed.Embed(self.Data, embeddingDimensions = self.E, stepSize = self.tau,
-                                           columns = comboCols)
+        # Embed Data - returns numpy array
+        self.Embedding = Embed(self.Data,
+                               columns = comboCols,
+                               embeddingDimensions = self.E,
+                               stepSize = self.tau,
+                               includeTime = False)
 
-        # Combinations of possible embedding vectors, D at-a-time
-        self.combos = list( combinations( self.Embedding.columns, self.D ) )
+        # Map target from original column index to embedded column index
+        # Target in embedded space is the first lag (t-0) of the target variable
+        # Find which position the target column is in comboCols
+        if self.target[0] in comboCols:
+            target_pos = comboCols.index(self.target[0])
+            # In embedding, this variable's t-0 lag is at index: target_pos * E
+            self.target = [target_pos * self.E]
+        else:
+            # Target was excluded, use first embedded column
+            self.target = [0]
+
+        # Combinations of possible embedding vectors (column indices), D at-a-time
+        # For E=1, columns are 0, 1, 2, ... (one per original column)
+        # For E>1, columns are interleaved (col1_t0, col1_t-1, ..., col2_t0, col2_t-1, ...)
+        n_embed_cols = self.Embedding.shape[1]
+        embed_col_indices = list(range(n_embed_cols))
+        self.combos = list( combinations( embed_col_indices, self.D ) )
 
         # Establish number of ensembles if not specified
         if self.multiview < 1 :
@@ -228,14 +246,14 @@ class Multiview:
             self.multiview = floor( sqrt( len( self.combos ) ) )
 
             if self.verbose :
-                msg = 'Validate() {self.name}:' +\
+                msg = f'Validate() {self.name}:' +\
                     f' Set view sample size to {self.multiview}'
                 print( msg, flush = True )
 
         if self.multiview > len( self.combos ) :
-            msg = 'Validate() {self.name}: multiview ensembles ' +\
+            msg = f'Validate() {self.name}: multiview ensembles ' +\
                 f' {self.multiview} exceeds the number of available' +\
-                f' combinations: {len(combos)}. Set to {len(combos)}.'
+                f' combinations: {len(self.combos)}. Set to {len(self.combos)}.'
             warn( msg )
 
             self.multiview = len( self.combos )
@@ -246,17 +264,15 @@ class Multiview:
         if self.verbose:
             print( f'{self.name}: Validate()' )
 
-        if not self.columns :
+        if self.columns is None or not len(self.columns):
             raise RuntimeError( f'Validate() {self.name}: columns required.' )
         if not IsIterable( self.columns ) :
-            self.columns = self.columns.split()
+            raise RuntimeError( f'Validate() {self.name}: columns must be a list of integers.' )
 
-        if not self.target :
+        if self.target is None:
             raise RuntimeError( f'Validate() {self.name}: target required.' )
         if not IsIterable( self.target ) :
-            self.target = self.target.split()
-        # Add (t-0) to target since Embedding columns are mapped
-        self.target[0] = self.target[0] + '(t-0)'
+            self.target = [self.target]
 
         if not self.trainLib :
             if not len( self.lib ) :

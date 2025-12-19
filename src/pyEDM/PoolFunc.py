@@ -12,7 +12,7 @@ from .AuxFunc import ComputeError
 #------------------------------------------------------
 def MultiviewSimplexPred( combo, data, args ) :
 
-    df = API.Simplex( dataFrame       = data,
+    df = API.Simplex( data       = data,
                       columns         = list( combo ),
                       target          = args['target'], 
                       lib             = args['lib'],
@@ -31,7 +31,7 @@ def MultiviewSimplexPred( combo, data, args ) :
 #----------------------------------------------------
 def MultiviewSimplexRho( combo, data, args ) :
 
-    df = API.Simplex( dataFrame       = data,
+    df = API.Simplex( data       = data,
                       columns         = list( combo ),
                       target          = args['target'], 
                       lib             = args['lib'],
@@ -44,7 +44,8 @@ def MultiviewSimplexRho( combo, data, args ) :
                       noTime          = args['noTime'],
                       ignoreNan       = args['ignoreNan'] )
 
-    err = ComputeError( df['Observations'], df['Predictions'] )
+    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( df[:, 1], df[:, 2] )
     return err['rho']
 
 #----------------------------------------------------
@@ -52,7 +53,7 @@ def MultiviewSimplexRho( combo, data, args ) :
 #----------------------------------------------------
 def EmbedDimSimplexFunc( E, data, args ) :
 
-    df = API.Simplex( dataFrame       = data,
+    df = API.Simplex( data       = data,
                       columns         = args['columns'],
                       target          = args['target'], 
                       lib             = args['lib'],
@@ -66,15 +67,16 @@ def EmbedDimSimplexFunc( E, data, args ) :
                       noTime          = args['noTime'],
                       ignoreNan       = args['ignoreNan'] )
 
-    err = ComputeError( df['Observations'], df['Predictions'] )
+    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( df[:, 1], df[:, 2] )
     return err['rho']
 
 #-----------------------------------------------------
 # Function to evaluate Simplex in PredictInterval Pool
-#-----------------------------------------------------
+#----------------------------------------------------
 def PredictIntervalSimplexFunc( Tp, data, args ) :
 
-    df = API.Simplex( dataFrame       = data,
+    df = API.Simplex( data       = data,
                       columns         = args['columns'],
                       target          = args['target'], 
                       lib             = args['lib'],
@@ -88,15 +90,16 @@ def PredictIntervalSimplexFunc( Tp, data, args ) :
                       noTime          = args['noTime'],
                       ignoreNan       = args['ignoreNan'] )
 
-    err = ComputeError( df['Observations'], df['Predictions'] )
+    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( df[:, 1], df[:, 2] )
     return err['rho']
 
 #-----------------------------------------------------
 # Function to evaluate SMap in PredictNonlinear Pool
-#-----------------------------------------------------
+#----------------------------------------------------
 def PredictNLSMapFunc( theta, data, args ) :
 
-    S = API.SMap( dataFrame       = data,
+    S = API.SMap( data       = data,
                   columns         = args['columns'],
                   target          = args['target'], 
                   lib             = args['lib'],
@@ -114,5 +117,6 @@ def PredictNLSMapFunc( theta, data, args ) :
                   ignoreNan       = args['ignoreNan'] )
 
     df = S['predictions']
-    err = ComputeError( df['Observations'], df['Predictions'] )
+    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( df[:, 1], df[:, 2] )
     return err['rho']

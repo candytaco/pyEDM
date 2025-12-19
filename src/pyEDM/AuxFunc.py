@@ -13,11 +13,11 @@
 from math   import floor, pi, sqrt, cos
 from cmath  import exp
 from random import sample, uniform, normalvariate
+import numpy as np
 
 # package modules
 from numpy             import absolute, any, arange, corrcoef, fft, isfinite
-from numpy             import mean, max, nan, ptp, std, sqrt, zeros
-from pandas            import DataFrame, read_csv
+from numpy             import mean, max, nan, ptp, std, sqrt, zeros, column_stack
 from scipy.interpolate import UnivariateSpline
 from matplotlib.pyplot import show, axhline
 
@@ -82,7 +82,7 @@ def IsIterable( obj ):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def SurrogateData( dataFrame     = None,
+def SurrogateData( data     = None,
                    column        = None,
                    method        = 'ebisuzaki',
                    numSurrogates = 10,
@@ -112,28 +112,34 @@ def SurrogateData( dataFrame     = None,
       deviation that is the data range / 5.
     '''
 
-    if dataFrame is None :
-        raise RuntimeError( "SurrogateData() empty DataFrame." )
+    if data is None :
+        raise RuntimeError( "SurrogateData() empty data array." )
 
     if column is None :
-        raise RuntimeError( "SurrogateData() must specify column." )
+        raise RuntimeError( "SurrogateData() must specify column index." )
 
-    # New dataFrame with initial time column
-    df = DataFrame( dataFrame.iloc[ :,0 ] )
+    # Extract time column (column 0) and data column
+    time_col = data[:, 0]
+    data_col = data[:, column]
+
+    # Initialize result array: (n_samples, numSurrogates + 1)
+    # Column 0: time, Columns 1+: surrogate data
+    result = zeros((data.shape[0], numSurrogates + 1))
+    result[:, 0] = time_col  # Time column
 
     if method.lower() == "random_shuffle" :
-        for s in range( numSurrogates ) : # use pandas sample
-            surr = dataFrame[ column ].sample(
-                n = dataFrame.shape[0] ).to_numpy()
-            df[ s + 1 ] = surr
+        for s in range( numSurrogates ) :
+            # Random shuffle of the data column
+            surr = data_col.copy()
+            np.random.shuffle(surr)
+            result[:, s + 1] = surr
 
     elif method.lower() == "ebisuzaki" :
-        data          = dataFrame[ column ].to_numpy()
-        n             = dataFrame.shape[0]
+        n             = data.shape[0]
         n2            = floor( n/2 )
-        mu            = mean   ( data )
-        sigma         = std    ( data )
-        a             = fft.fft( data )
+        mu            = mean   ( data_col )
+        sigma         = std    ( data_col )
+        a             = fft.fft( data_col )
         amplitudes    = absolute( a )
         amplitudes[0] = 0
 
@@ -157,11 +163,11 @@ def SurrogateData( dataFrame     = None,
             # adjust variance of surrogate time series to match original
             scaled = [ sigma * x / sdevifft for x in realifft ]
 
-            df[ s + 1 ] = scaled
+            result[:, s + 1] = scaled
 
     elif method.lower() == "seasonal" :
-        y = dataFrame[ column ].to_numpy()
-        n = dataFrame.shape[0]
+        y = data_col
+        n = data.shape[0]
 
         # Presume a spline captures the seasonal cycle
         x      = arange( n )
@@ -182,62 +188,74 @@ def SurrogateData( dataFrame     = None,
         for s in range( numSurrogates ) :
             noise = [ normalvariate( 0, alpha ) for z in range( n ) ]
 
-            df[ s + 1 ] = y_spline + sample( residual, n ) + noise
+            result[:, s + 1] = y_spline + sample( residual, n ) + noise
 
     else :
         raise RuntimeError( "SurrogateData() invalid method." )
 
-    df = df.round( 8 ) # Should be a parameter
-
-    # Rename columns
-    columnNames = [ column + "_" + str( c + 1 )
-                    for c in range( numSurrogates ) ]
-
-    columnNames.insert( 0, df.columns[0] ) # insert time column name
-
-    df.columns = columnNames
+    # Round to 8 decimal places
+    result = result.round( 8 )
 
     if outputFile :
-        df.to_csv( outputFile, index = False )
+        # Save as CSV with column names
+        import csv
+        with open(outputFile, 'w', newline='') as f:
+            writer = csv.writer(f)
+            # Write header
+            header = ['Time'] + [f'Column_{column}_{s+1}' for s in range(numSurrogates)]
+            writer.writerow(header)
+            # Write data
+            writer.writerows(result)
 
-    return df
+    return result
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def PlotObsPred( df, dataName = "", E = 0, Tp = 0, block = True ):
-    '''Plot observations and predictions'''
+def PlotObsPred( data, dataName = "", E = 0, Tp = 0, block = True ):
+    '''Plot observations and predictions
+
+    Parameters:
+    data : numpy array with shape (n_samples, 4)
+        Column 0: Time, Column 1: Observations, Column 2: Predictions, Column 3: Pred_Variance
+    '''
+    import matplotlib.pyplot as plt
 
     # stats: {'MAE': 0., 'RMSE': 0., 'rho': 0. }
-    stats = ComputeError( df['Observations'], df['Predictions' ] )
+    stats = ComputeError( data[:, 1], data[:, 2] )
 
     title = dataName + "\nE=" + str(E) + " Tp=" + str(Tp) +\
             "  ρ="   + str( round( stats['rho'],  3 ) )   +\
             " RMSE=" + str( round( stats['RMSE'], 3 ) )
 
-    time_col = df.columns[0]
-
-    df.plot( time_col, ['Observations', 'Predictions'],
-             title = title, linewidth = 3 )
-
-    show( block = block )
+    plt.figure()
+    plt.plot(data[:, 0], data[:, 1], label='Observations', linewidth=3)
+    plt.plot(data[:, 0], data[:, 2], label='Predictions', linewidth=3)
+    plt.title(title)
+    plt.legend()
+    plt.show(block=block)
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def PlotCoeff( df, dataName = "", E = 0, Tp = 0, block = True ):
-    '''Plot S-Map coefficients'''
+def PlotCoeff( data, dataName = "", E = 0, Tp = 0, block = True ):
+    '''Plot S-Map coefficients
+
+    Parameters:
+    data : numpy array with shape (n_samples, n_coeff + 1)
+        Column 0: Time, Columns 1+: coefficients
+    '''
+    import matplotlib.pyplot as plt
 
     title = dataName + "\nE=" + str(E) + " Tp=" + str(Tp) +\
             "  S-Map Coefficients"
 
-    time_col = df.columns[0]
-
-    # Coefficient columns can be in any column
-    coef_cols = [ x for x in df.columns if time_col not in x ]
-
-    df.plot( time_col, coef_cols, title = title, linewidth = 3,
-             subplots = True )
-
-    show( block = block )
+    plt.figure()
+    for i in range(1, data.shape[1]):
+        plt.subplot(data.shape[1] - 1, 1, i)
+        plt.plot(data[:, 0], data[:, i], linewidth=3)
+        plt.title(f'Coefficient {i-1}')
+    plt.suptitle(title)
+    plt.tight_layout()
+    plt.show(block=block)
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -259,43 +277,43 @@ def Examples():
                              dataName + " in EDM package" )
 
     #---------------------------------------------------------------
-    cmd = str().join(['EmbedDimension( dataFrame = sampleData["TentMap"],',
-                      ' columns = "TentMap", target = "TentMap",',
+    cmd = str().join(['EmbedDimension( data = sampleData["TentMap"],',
+                      ' columns = [1], target = 1,',
                       ' lib = [1, 100], pred = [201, 500] )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
-    cmd = str().join(['PredictInterval( dataFrame = sampleData["TentMap"],',
-                      ' columns = "TentMap", target = "TentMap",'
+    cmd = str().join(['PredictInterval( data = sampleData["TentMap"],',
+                      ' columns = [1], target = 1,'
                       ' lib = [1, 100], pred = [201, 500], E = 2 )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     cmd = str().join(
-        ['PredictNonlinear( dataFrame = sampleData["TentMapNoise"],',
-         ' columns = "TentMap", target = "TentMap", '
+        ['PredictNonlinear( data = sampleData["TentMapNoise"],',
+         ' columns = [1], target = 1, '
          ' lib = [1, 100], pred = [201, 500], E = 2 )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     # Tent map simplex : specify multivariable columns embedded = True
-    cmd = str().join(['Simplex( dataFrame = sampleData["block_3sp"],',
-                      ' columns="x_t y_t z_t", target="x_t",'
+    cmd = str().join(['Simplex( data = sampleData["block_3sp"],',
+                      ' columns=[1, 4, 7], target=1,'
                       ' lib = [1, 99], pred = [100, 195],',
                       ' E = 3, embedded = True, showPlot = True )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
     # Tent map simplex : Embed column x_t to E=3, embedded = False
-    cmd = str().join(['Simplex( dataFrame = sampleData["block_3sp"],',
-                      ' columns = "x_t", target = "x_t",',
+    cmd = str().join(['Simplex( data = sampleData["block_3sp"],',
+                      ' columns = [1], target = 1,',
                       ' lib = [1, 99], pred = [105, 190],',
                       ' E = 3, showPlot = True )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
-    cmd = str().join(['Multiview( dataFrame = sampleData["block_3sp"],',
-                      ' columns = "x_t y_t z_t", target = "x_t",',
+    cmd = str().join(['Multiview( data = sampleData["block_3sp"],',
+                      ' columns = [1, 4, 7], target = 1,',
                       ' lib = [1, 100], pred = [101, 198],',
                       ' D = 0, E = 3, Tp = 1, multiview = 0,',
                       ' trainLib = False, showPlot = True ) '])
@@ -303,15 +321,15 @@ def Examples():
 
     #---------------------------------------------------------------
     # S-map circle : specify multivariable columns embedded = True
-    cmd = str().join(['SMap( dataFrame = sampleData["circle"],',
-                      ' columns = ["x", "y"], target = "x",'
+    cmd = str().join(['SMap( data = sampleData["circle"],',
+                      ' columns = [1, 2], target = 1,'
                       ' lib = [1, 100], pred = [110, 190], theta = 4, E = 2,',
                       ' verbose = False, showPlot = True, embedded = True )'])
     RunEDM( cmd )
 
     #---------------------------------------------------------------
-    cmd = str().join(['CCM( dataFrame = sampleData["sardine_anchovy_sst"],',
-                      ' columns = "anchovy", target = "np_sst",',
+    cmd = str().join(['CCM( data = sampleData["sardine_anchovy_sst"],',
+                      ' columns = [1], target = [4],',
                       ' libSizes = [10, 70, 10], sample = 50,',
                       ' E = 3, Tp = 0, verbose = False, showPlot = True )'])
     RunEDM( cmd )

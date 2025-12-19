@@ -1,20 +1,12 @@
 import numpy
-from typing import Union, List
-
-def Embed(data: numpy.ndarray,
-          columns: Union[int, List[int]],
-          embeddingDimensions: int = 0,
-          stepSize: int = -1,
-          includeTime: bool = False) -> numpy.ndarray:
-    '''Takens time-delay embedding on columns via numpy array operations.
-       if includeTime True : insert data column 0 in first column
-       nan will be present in |tau| * (E-1) rows.
-
-       Returns:
-           numpy.ndarray: Embedded data array of shape
-                          (n_samples - abs(tau)*(E-1), n_cols*E)
-                          or (n_samples - abs(tau)*(E-1), n_cols*E + 1) if includeTime=True
-                          '''
+def Embed(data,
+          columns,
+          embeddingDimensions             = 0,
+          stepSize      = -1,
+          includeTime   = False, ):
+    '''Takens time-delay embedding on columns via pandas DataFrame.shift()
+       if includeTime True : insert dataFrame column 0 in first column
+       nan will be present in |tau| * (E-1) rows.'''
 
     if embeddingDimensions < 1 :
         raise RuntimeError( 'Embed(): E must be positive.' )

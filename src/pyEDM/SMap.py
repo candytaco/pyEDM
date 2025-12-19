@@ -2,8 +2,8 @@
 
 # package modules
 from numpy  import apply_along_axis, insert, isnan, isfinite, exp
-from numpy  import full, integer, linspace, mean, nan, power, sum
-from pandas import DataFrame, Series, concat
+from numpy  import full, integer, linspace, mean, nan, power, sum, array
+from numpy  import column_stack
 
 from numpy.linalg import lstsq # from scipy.linalg import lstsq
 
@@ -14,33 +14,32 @@ from .EDM import EDM as EDMClass
 class SMap( EDMClass ):
     '''SMap class : child of EDM'''
 
-    def __init__( self,
-                  dataFrame       = None,
-                  columns         = "",
-                  target          = "",
-                  lib             = "",
-                  pred            = "",
-                  E               = 0,
-                  Tp              = 1,
-                  knn             = 0,
-                  tau             = -1,
-                  theta           = 0.,
-                  exclusionRadius = 0,
-                  solver          = None,
-                  embedded        = False,
-                  validLib        = [],
-                  noTime          = False,
-                  generateSteps   = 0,
-                  generateConcat  = False,
-                  ignoreNan       = True,
-                  verbose         = False,
-                  neighbor_algorithm = 'kdtree'):
+    def __init__(self,
+                 data       = None,
+                 columns         = "",
+                 target          = "",
+                 lib             = "",
+                 pred            = "",
+                 E               = 0,
+                 Tp              = 1,
+                 knn             = 0,
+                 tau             = -1,
+                 theta           = 0.,
+                 exclusionRadius = 0,
+                 solver          = None,
+                 embedded        = False,
+                 validLib        = [],
+                 noTime          = False,
+                 generateSteps   = 0,
+                 generateConcat  = False,
+                 ignoreNan       = True,
+                 verbose         = False):
         '''Initialize SMap as child of EDM.
            Set data object to dataFrame.
            Setup : Validate(), CreateIndices(), get targetVec, time'''
 
         # Instantiate EDM class: inheret all members to self
-        super(SMap, self).__init__(dataFrame, neighbor_algorithm, name = 'SMap')
+        super(SMap, self).__init__(data, isEmbedded=False, name='SMap')
 
         # Assign parameters from API arguments
         self.columns         = columns
@@ -62,6 +61,12 @@ class SMap( EDMClass ):
         self.ignoreNan       = ignoreNan
         self.verbose         = verbose
 
+        # Map API parameter names to EDM base class names
+        self.embedDimensions   = E
+        self.predictionHorizon = Tp
+        self.embedStep         = tau
+        self.isEmbedded        = embedded
+
         # SMap storage
         self.Coefficients   = None # DataFrame SMap API output
         self.SingularValues = None # DataFrame SMap API output
@@ -72,15 +77,15 @@ class SMap( EDMClass ):
         self.Validate()      # EDM Method: set knn default, E if embedded
         self.CreateIndices() # Generate lib_i & pred_i, validLib
 
-        self.targetVec = self.Data[ [ self.target[0] ] ].to_numpy()
+        self.targetVec = self.Data[:, [self.target[0]]]
 
         if self.noTime :
             # Generate a time/index vector, store as ndarray
             timeIndex = [ i for i in range( 1, self.Data.shape[0] + 1 ) ]
-            self.time = Series( timeIndex, dtype = int ).to_numpy()
+            self.time = array( timeIndex, dtype = int )
         else :
             # 1st data column is time
-            self.time = self.Data.iloc[ :, 0 ].to_numpy()
+            self.time = self.Data[:, 0]
 
         if self.solver is None :
             self.solver = lstsq
@@ -115,7 +120,7 @@ class SMap( EDMClass ):
         if self.verbose:
             print( f'{self.name}: Project()' )
 
-        N_pred = len( self.pred_i )
+        N_pred = len(self.testIndices)
         N_dim  = self.E + 1
 
         self.projection     = full( N_pred, nan, dtype = float )
@@ -123,7 +128,7 @@ class SMap( EDMClass ):
         self.coefficients   = full( (N_pred, N_dim), nan, dtype = float )
         self.singularValues = full( (N_pred, N_dim), nan, dtype = float )
 
-        embedding = self.Embedding.to_numpy() # reference to ndarray
+        embedding = self.Embedding # reference to ndarray
 
         # Compute average distance for knn pred rows into a vector
         distRowMean = mean( self.knn_distances, axis = 1 )
@@ -192,7 +197,7 @@ class SMap( EDMClass ):
 
             for e in range( 1, N_dim ) :
                 projection_ = projection_ + \
-                    C[e] * embedding[ self.pred_i[ row ], e-1 ]
+                    C[e] * embedding[ self.testIndices[ row], e - 1]
 
             self.projection[ row ] = projection_
 
@@ -261,53 +266,38 @@ class SMap( EDMClass ):
         if self.verbose:
             print(f'{self.name}: Generate(): pred overriden to {pred}')
 
-        # Output DataFrames to replace self.Projection, self.Coefficients...
-        if self.noTime :
-            time_dtype = float # numpy int cannot represent nan, use float
-        else :
-            self.ConvertTime()
-
-            time0 = self.time[0]
-            if isinstance( time0, int ) or isinstance( time0, integer ) :
-                time_dtype = float # numpy int cannot represent nan, use float
-            else :
-                time_dtype = type( time0 )
-
+        # Output numpy arrays to replace self.Projection, self.Coefficients...
         nOutRows  = self.generateSteps
-        generated = DataFrame({'Time' : full(nOutRows, nan, dtype = time_dtype),
-                               'Observations'  : full(nOutRows, nan),
-                               'Predictions'   : full(nOutRows, nan),
-                               'Pred_Variance' : full(nOutRows, nan)})
 
-        coeff_ = full( (nOutRows, self.E + 2), nan )
-        if self.tau < 0 :
-            coefNames = [f'∂{target}/∂{target}(t-{e})' for e in range(self.E)]
-        else :
-            coefNames = [f'∂{target}/∂{target}(t+{e})' for e in range(self.E)]
-        colNames = [ 'Time', 'C0' ] + coefNames
-        genCoeff = DataFrame( coeff_, columns = colNames )
+        # Projection array: shape (n_samples, 4)
+        # Column 0: Time, Column 1: Observations, Column 2: Predictions, Column 3: Pred_Variance
+        generated = full( (nOutRows, 4), nan )
 
-        sv_      = full( (nOutRows, self.E + 2), nan )
-        colNames = [ 'Time' ] + [ f'C{i}' for i in range( self.E + 1 ) ]
-        genSV    = DataFrame( sv_, columns = colNames )
+        # Coefficients array: shape (n_samples, E+2)
+        # Column 0: Time, Column 1: C0, Columns 2-E+1: coefficients
+        genCoeff = full( (nOutRows, self.E + 2), nan )
+
+        # SingularValues array: shape (n_samples, E+2)
+        # Column 0: Time, Columns 1-E+1: singular values
+        genSV = full( (nOutRows, self.E + 2), nan )
 
         # Allocate vector for univariate column data
         # At each iteration the prediction is stored in columnData
         # timeData and columnData are copied to newData for next iteration
         columnData     = full( N + nOutRows, nan )
-        columnData[:N] = self.Data.loc[ :, column ] # First col only
+        columnData[:N] = self.Data[:, column] # First col only
 
         # Allocate output time vector & newData DataFrame
         timeData = full( N + nOutRows, nan )
         if self.noTime :
             # If noTime create a time vector and join into self.Data
             timeData[:N] = linspace( 1, N, N )
-            timeDF       = DataFrame( {'Time' : timeData[:N]} )
-            self.Data    = timeDF.join( self.Data, lsuffix = '_' )
+            # Create new data array with time column
+            newData = column_stack([timeData[:N], columnData[:N]])
         else :
             timeData[:N] = self.time # Presume column 0 is time
-
-        newData = self.Data.copy()
+            # Create new data array with time column
+            newData = column_stack([timeData[:N], columnData[:N]])
 
         #-------------------------------------------------------------------
         # Loop for each feedback generation step
@@ -317,25 +307,25 @@ class SMap( EDMClass ):
                 print( f'{self.name}: Generate(): step {step} {"="*50}')
 
             # Local SMapClass for generation
-            G = SMap( dataFrame       = newData,
-                      columns         = column,
-                      target          = target,
-                      lib             = lib,
-                      pred            = pred,
-                      E               = self.E,
-                      Tp              = self.Tp,
-                      knn             = self.knn,
-                      tau             = self.tau,
-                      theta           = self.theta,
-                      exclusionRadius = self.exclusionRadius,
-                      solver          = self.solver,
-                      embedded        = self.embedded,
-                      validLib        = self.validLib,
-                      noTime          = self.noTime,
-                      generateSteps   = self.generateSteps,
-                      generateConcat  = self.generateConcat,
-                      ignoreNan       = self.ignoreNan,
-                      verbose         = self.verbose )
+            G = SMap(data = newData,
+                     columns         = column,
+                     target          = target,
+                     lib             = lib,
+                     pred            = pred,
+                     E               = self.E,
+                     Tp              = self.Tp,
+                     knn             = self.knn,
+                     tau             = self.tau,
+                     theta           = self.theta,
+                     exclusionRadius = self.exclusionRadius,
+                     solver          = self.solver,
+                     embedded        = self.embedded,
+                     validLib        = self.validLib,
+                     noTime          = self.noTime,
+                     generateSteps   = self.generateSteps,
+                     generateConcat  = self.generateConcat,
+                     ignoreNan       = self.ignoreNan,
+                     verbose         = self.verbose)
 
             # 1) Generate prediction ----------------------------------
             G.Run()
@@ -344,16 +334,23 @@ class SMap( EDMClass ):
                 print( 'G.Projection' )
                 print( G.Projection ); print()
 
-            newPrediction = G.Projection['Predictions'].iat[-1]
-            newTime       = G.Projection.iloc[-1, 0] # Presume col 0 is time
+            newPrediction = G.Projection[:, 2]  # Column 2 is Predictions
+            newTime       = G.Projection[-1, 0]  # Column 0 is time
 
             # 2) Save prediction in generated --------------------------
-            generated.iloc[ step, : ] = G.Projection.iloc    [-1, :]
-            genCoeff.iloc [ step, : ] = G.Coefficients.iloc  [-1, :]
-            genSV.iloc    [ step, : ] = G.SingularValues.iloc[-1, :]
+            generated[step, 0] = newTime
+            generated[step, 1] = nan  # Observations (not applicable for generation)
+            generated[step, 2] = newPrediction
+            generated[step, 3] = nan  # Pred_Variance (not applicable for generation)
+
+            # Save coefficients and singular values
+            genCoeff[step, 0] = newTime
+            genCoeff[step, 1:] = G.Coefficients[-1, 1:]  # Skip time column
+            genSV[step, 0] = newTime
+            genSV[step, 1:] = G.SingularValues[-1, 1:]  # Skip time column
 
             if self.verbose :
-                print( f'2) generated\n{generated}\n' )
+                print( f'2) generated step {step}' )
 
             # 3) Increment library by adding another row index ---------
             # Dynamic library not implemented
@@ -369,22 +366,25 @@ class SMap( EDMClass ):
             timeData  [ N + step ] = newTime
 
             # JP : for big data this is likely not efficient
-            newData = DataFrame( { 'Time'      : timeData  [:(N + step + 1)],
-                                   f'{column}' : columnData[:(N + step + 1)] } )
+            newData = column_stack([timeData[:(N + step + 1)],
+                                   columnData[:(N + step + 1)]])
 
             if self.verbose:
-                print(f'5) newData: {newData.shape}  newData.tail(4):')
-                print( newData.tail(4) )
-        #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                print(f'5) newData: {newData.shape}')
+        #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         # Loop for each feedback generation step
         #----------------------------------------------------------
 
         # Replace self.Projection with generated
         if self.generateConcat :
-            timeName = self.Data.columns[0]
-            dataDF   = self.Data.loc[ :, [timeName, column] ]
-            dataDF.columns = [ 'Time', 'Observations' ]
-            self.Projection = concat( [ dataDF, generated ], axis = 0 )
+            # Concatenate original data observations with generated predictions
+            # Original data: columns 0 (time), 1 (observations)
+            # Generated: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
+            # Result: columns 0 (time), 1 (obs), 2 (pred), 3 (var)
+            timeName = 0  # Column 0 is time
+            data_obs = column_stack([self.Data[:, timeName], self.Data[:, column]])
+            self.Projection = column_stack([data_obs, generated[:, 2:4]])
+
         else :
             self.Projection = generated
 

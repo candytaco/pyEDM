@@ -15,7 +15,7 @@ dataFileNames = [ ("TentMap.csv",             "TentMap"),
                   ("LorenzData1000.csv",      "Lorenz5D"),
                   ("S12CD-S333-SumFlow_1980-2005.csv", "SumFlow_1980-2005") ]
 
-# Dictionary of module DataFrames so user can access sample data
+# Dictionary of module numpy arrays so user can access sample data
 sampleData = {}
 
 for fileName, dataName in dataFileNames:
@@ -25,7 +25,9 @@ for fileName, dataName in dataFileNames:
     ref = importlib.resources.files('pyEDM') / filePath
 
     with importlib.resources.as_file( ref ) as filePath_ :
-        sampleData[ dataName ] = read_csv( filePath_ )
+        # Read CSV using pandas, convert to numpy array
+        df = read_csv( filePath_ )
+        sampleData[ dataName ] = df.to_numpy()
 
 if not len( sampleData ) :
     raise Warning( "pyEDM: Failed to find sample data in pyEDM package." )
