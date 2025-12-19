@@ -23,7 +23,7 @@ class CCM:
                  knn             = 0,
                  step             = -1,
                  exclusionRadius = 0,
-                 libSizes        = [],
+                 trainSizes        = [],
                  sample          = 0,
                  seed            = None,
                  includeData     = False,
@@ -46,7 +46,7 @@ class CCM:
         self.knn             = knn
         self.step             = step
         self.exclusionRadius = exclusionRadius
-        self.libSizes        = libSizes
+        self.trainSizes        = trainSizes
         self.sample          = sample
         self.seed            = seed
         self.includeData     = includeData
@@ -195,7 +195,7 @@ class CCM:
         libStatMap = {} # Output dict libSize key : list of ComputeError dicts
 
         # Loop for library sizes
-        for libSize in self.libSizes :
+        for libSize in self.trainSizes :
             correlations = zeros( self.sample )
             if self.includeData :
                 predictStats = [None] * self.sample
@@ -270,10 +270,10 @@ class CCM:
         if self.verbose:
             print( f'{self.name}: Validate()' )
 
-        if not len( self.libSizes ) :
+        if not len(self.trainSizes) :
             raise RuntimeError(f'{self.name} Validate(): LibSizes required.')
-        if not IsIterable( self.libSizes ) :
-            self.libSizes = [ int(L) for L in self.libSizes.split() ]
+        if not IsIterable(self.trainSizes) :
+            self.trainSizes = [int(L) for L in self.trainSizes.split()]
 
         if self.sample == 0:
             raise RuntimeError(f'{self.name} Validate(): ' +\
@@ -284,9 +284,9 @@ class CCM:
         #      if increment < stop generate the library sequence.
         #      if increment > stop presume list of 3 library sizes.
         #   else: Already list of library sizes.
-        if len( self.libSizes ) == 3 :
+        if len(self.trainSizes) == 3 :
             # Presume ( start, stop, increment ) sequence arguments
-            start, stop, increment = [ int( s ) for s in self.libSizes ]
+            start, stop, increment = [int( s ) for s in self.trainSizes]
 
             # If increment < stop, presume start : stop : increment
             # and generate the sequence of library sizes
@@ -311,17 +311,17 @@ class CCM:
                     raise RuntimeError( msg )
 
                 # Fill in libSizes sequence
-                self.libSizes = [i for i in range(start, stop+1, increment)]
+                self.trainSizes = [i for i in range(start, stop + 1, increment)]
 
-        if self.libSizes[-1] > self.Data.shape[0] :
+        if self.trainSizes[-1] > self.Data.shape[0] :
             msg = f'{self.name} Validate(): ' +\
-                  f'Maximum libSize {self.libSizes[-1]}'    +\
+                  f'Maximum libSize {self.trainSizes[-1]}' +\
                   f' exceeds data size {self.Data.shape[0]}.'
             raise RuntimeError( msg )
 
-        if self.libSizes[0] < self.embedDimensions + 2 :
+        if self.trainSizes[0] < self.embedDimensions + 2 :
             msg = f'{self.name} Validate(): ' +\
-                  f'Minimum libSize {self.libSizes[0]}'    +\
+                  f'Minimum libSize {self.trainSizes[0]}' +\
                   f' invalid for E={self.embedDimensions}. Minimum {self.embedDimensions + 2}.'
             raise RuntimeError( msg )
 

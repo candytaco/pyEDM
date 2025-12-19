@@ -427,9 +427,9 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM ---" )
             df_ = EDM.sampleData['sardine_anchovy_sst']
-            df = EDM.CCM( data = df_, columns = 'anchovy',target = 'np_sst',
-                          libSizes = [10,20,30,40,50,60,70,75], sample = 100,
-                          embedDimensions = 3, predictionHorizon = 0, step = -1, seed = 777 )
+            df = EDM.CCM(data = df_, columns = 'anchovy', target = 'np_sst',
+                         trainSizes = [10, 20, 30, 40, 50, 60, 70, 75], sample = 100,
+                         embedDimensions = 3, predictionHorizon = 0, step = -1, seed = 777)
 
         dfv = round( self.ValidFiles["CCM_anch_sst_valid.csv"], 2 )
 
@@ -444,9 +444,9 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM multivariate ---" )
             df_ = EDM.sampleData['Lorenz5D']
-            df = EDM.CCM( data = df_, columns = 'V3 V5', target = 'V1',
-                          libSizes = [20, 200, 500, 950], sample = 30, embedDimensions = 5,
-                          predictionHorizon = 10, step = -5, seed = 777 )
+            df = EDM.CCM(data = df_, columns = 'V3 V5', target = 'V1',
+                         trainSizes = [20, 200, 500, 950], sample = 30, embedDimensions = 5,
+                         predictionHorizon = 10, step = -5, seed = 777)
 
         dfv = round( self.ValidFiles["CCM_Lorenz5D_MV_valid.csv"], 4 )
 
@@ -465,9 +465,9 @@ class test_EDM( unittest.TestCase ):
             dfn.iloc[ [5,6,12], 1 ] = nan
             dfn.iloc[ [10,11,17], 2 ] = nan
 
-            df = EDM.CCM( dataFrame = dfn, columns = 'x', target = 'y',
-                          libSizes = [10,190,10], sample = 20, embedDimensions = 2,
-                          predictionHorizon = 5, step = -1, seed = 777 )
+            df = EDM.CCM(dataFrame = dfn, columns = 'x', target = 'y',
+                         trainSizes = [10, 190, 10], sample = 20, embedDimensions = 2,
+                         predictionHorizon = 5, step = -1, seed = 777)
 
         dfv = self.ValidFiles["CCM_nan_valid.csv"]
 
@@ -482,11 +482,11 @@ class test_EDM( unittest.TestCase ):
 
             if self.verbose : print ( "--- CCM multivariate name spaces ---" )
             df_ = EDM.sampleData['columnNameSpace']
-            df = EDM.CCM( data = df_,
-                          columns = ['Var 1','Var3','Var 5 1'],
-                          target = ['Var 2','Var 4 A'],
-                          libSizes = [20, 50, 90], sample = 1,
-                          embedDimensions = 5, predictionHorizon = 0, step = -1, seed = 777 )
+            df = EDM.CCM(data = df_,
+                         columns = ['Var 1','Var3','Var 5 1'],
+                         target = ['Var 2','Var 4 A'],
+                         trainSizes = [20, 50, 90], sample = 1,
+                         embedDimensions = 5, predictionHorizon = 0, step = -1, seed = 777)
 
         dfv = round( self.ValidFiles["CCM_Lorenz5D_MV_Space_valid.csv"], 4 )
 

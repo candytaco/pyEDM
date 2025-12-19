@@ -56,11 +56,11 @@ def main():
                   solver = None, embedded = True,
                   validLib = [], showPlot = True )
     
-    CM = EDM.CCM( dataFrame = EDM.sampleData[ "sardine_anchovy_sst" ],
-                  columns = "anchovy", target = "np_sst",
-                  E = 3, predictionHorizon = 0, knn = 0, step = -1, exclusionRadius = 0,
-                  libSizes = [10, 70, 10], sample = 100,
-                  seed = 0, verbose = False, showPlot = True )
+    CM = EDM.CCM(dataFrame = EDM.sampleData[ "sardine_anchovy_sst" ],
+                 columns = "anchovy", target = "np_sst",
+                 E = 3, predictionHorizon = 0, knn = 0, step = -1, exclusionRadius = 0,
+                 trainSizes = [10, 70, 10], sample = 100,
+                 seed = 0, verbose = False, showPlot = True)
 
 #------------------------------------------------------------
 #------------------------------------------------------------
