@@ -9,7 +9,7 @@ from matplotlib.pyplot import show, axhline
 
 import pyEDM.PoolFunc as PoolFunc
 # local modules
-from .AuxFunc import IsIterable, PlotObsPred, PlotCoeff, ComputeError
+from .Utils import IsIterable, PlotObsPred, PlotCoeff, ComputeError
 from .CCM import CCM as CCMClass
 from .Multiview import Multiview as MultiviewClass
 from .SMap import SMap as SMapClass

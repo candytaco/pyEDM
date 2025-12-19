@@ -11,7 +11,7 @@ from numpy import argsort, array
 import pyEDM.PoolFunc as PoolFunc
 from pyEDM.Embed import Embed
 # local modules
-from .AuxFunc import IsIterable
+from .Utils import IsIterable
 
 
 #------------------------------------------------------------------

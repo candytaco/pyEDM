@@ -5,7 +5,7 @@
 
 # local modules
 import pyEDM.API as API
-from .AuxFunc import ComputeError
+from .Utils import ComputeError
 
 #------------------------------------------------------
 # Function to evaluate multiview predictions top combos

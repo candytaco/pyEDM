@@ -6,7 +6,7 @@ from multiprocessing import get_context
 from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros, column_stack
 from numpy.random import default_rng
 
-from .AuxFunc import ComputeError, IsIterable
+from .Utils import ComputeError, IsIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
 
