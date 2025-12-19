@@ -244,7 +244,7 @@ def CCM( data             = None,
         title = f'E = {C.E}'
         fig, ax = plt.subplots()
 
-        # C.libMeans is numpy array: Column 0 is LibSize, rest are rho values
+        # C.libMeans is numpy array: Column 0 is LibSize, rest are correlation values
         if C.libMeans.shape[1] == 3 :
             # CCM of two different variables
             ax.plot(C.libMeans[:, 0], C.libMeans[:, 1], linewidth=3, label='Col 1')
@@ -355,11 +355,11 @@ def Multiview( data            = None,
 
     M.topRankStats = topRankStats
 
-    # Build View array: each row is [combo_as_str, rho, MAE, CAE, RMSE]
+    # Build View array: each row is [combo_as_str, correlation, MAE, CAE, RMSE]
     view_rows = []
     for combo in colCombos:
         stats = topRankStats[combo]
-        view_rows.append([str(combo), stats['rho'], stats['MAE'], stats['CAE'], stats['RMSE']])
+        view_rows.append([str(combo), stats['correlation'], stats['MAE'], stats['CAE'], stats['RMSE']])
 
     M.View = view_rows  # List of lists for now
 
@@ -404,7 +404,7 @@ def EmbedDimension( data            = None,
 
     Returns:
     numpy.ndarray, shape (maxE, 2)
-        Column 0: E values, Column 1: rho values
+        Column 0: E values, Column 1: correlation values
     '''
 
     # Setup Pool
@@ -427,11 +427,11 @@ def EmbedDimension( data            = None,
     # Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
     mpContext = get_context( mpMethod )
     with mpContext.Pool( processes = numProcess ) as pool :
-        rhoList = pool.starmap( PoolFunc.EmbedDimSimplexFunc, poolArgs,
+        correlationList = pool.starmap( PoolFunc.EmbedDimSimplexFunc, poolArgs,
                                 chunksize = chunksize )
 
     import numpy as np
-    result = np.column_stack([Evals, rhoList])
+    result = np.column_stack([Evals, correlationList])
 
     if showPlot :
         import matplotlib.pyplot as plt
@@ -478,7 +478,7 @@ def PredictInterval( data            = None,
 
     Returns:
     numpy.ndarray, shape (maxTp, 2)
-        Column 0: Tp values, Column 1: rho values
+        Column 0: Tp values, Column 1: correlation values
     '''
 
     # Setup Pool
@@ -501,11 +501,11 @@ def PredictInterval( data            = None,
     # Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
     mpContext = get_context( mpMethod )
     with mpContext.Pool( processes = numProcess ) as pool :
-        rhoList = pool.starmap( PoolFunc.PredictIntervalSimplexFunc, poolArgs,
+        correlationList = pool.starmap( PoolFunc.PredictIntervalSimplexFunc, poolArgs,
                                 chunksize = chunksize )
 
     import numpy as np
-    result = np.column_stack([Evals, rhoList])
+    result = np.column_stack([Evals, correlationList])
 
     if showPlot :
         if embedded :
@@ -560,7 +560,7 @@ def PredictNonlinear( data            = None,
 
     Returns:
     numpy.ndarray, shape (len(theta), 2)
-        Column 0: theta values, Column 1: rho values
+        Column 0: theta values, Column 1: correlation values
     '''
 
     if theta is None :
@@ -591,11 +591,11 @@ def PredictNonlinear( data            = None,
     # Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
     mpContext = get_context( mpMethod )
     with mpContext.Pool( processes = numProcess ) as pool :
-        rhoList = pool.starmap( PoolFunc.PredictNLSMapFunc, poolArgs,
+        correlationList = pool.starmap( PoolFunc.PredictNLSMapFunc, poolArgs,
                                 chunksize = chunksize )
 
     import numpy as np
-    result = np.column_stack([theta, rhoList])
+    result = np.column_stack([theta, correlationList])
 
     if showPlot :
         if embedded :

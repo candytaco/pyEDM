@@ -27,9 +27,9 @@ def MultiviewSimplexPred( combo, data, args ) :
     return df
 
 #----------------------------------------------------
-# Function to evaluate combo rank (rho)
+# Function to evaluate combo rank (correlation)
 #----------------------------------------------------
-def MultiviewSimplexRho( combo, data, args ) :
+def MultiviewSimplexcorrelation( combo, data, args ) :
 
     df = API.Simplex( data       = data,
                       columns         = list( combo ),
@@ -46,7 +46,7 @@ def MultiviewSimplexRho( combo, data, args ) :
 
     # df is numpy array: Column 1 is Observations, Column 2 is Predictions
     err = ComputeError( df[:, 1], df[:, 2] )
-    return err['rho']
+    return err['correlation']
 
 #----------------------------------------------------
 # Function to evaluate Simplex in EmbedDimension Pool
@@ -69,7 +69,7 @@ def EmbedDimSimplexFunc( E, data, args ) :
 
     # df is numpy array: Column 1 is Observations, Column 2 is Predictions
     err = ComputeError( df[:, 1], df[:, 2] )
-    return err['rho']
+    return err['correlation']
 
 #-----------------------------------------------------
 # Function to evaluate Simplex in PredictInterval Pool
@@ -92,7 +92,7 @@ def PredictIntervalSimplexFunc( Tp, data, args ) :
 
     # df is numpy array: Column 1 is Observations, Column 2 is Predictions
     err = ComputeError( df[:, 1], df[:, 2] )
-    return err['rho']
+    return err['correlation']
 
 #-----------------------------------------------------
 # Function to evaluate SMap in PredictNonlinear Pool
@@ -119,4 +119,4 @@ def PredictNLSMapFunc( theta, data, args ) :
     df = S['predictions']
     # df is numpy array: Column 1 is Observations, Column 2 is Predictions
     err = ComputeError( df[:, 1], df[:, 2] )
-    return err['rho']
+    return err['correlation']

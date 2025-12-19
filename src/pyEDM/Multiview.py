@@ -135,14 +135,14 @@ class Multiview:
         # Create iterable for Pool.starmap, repeated copies of data, args
         poolArgs = zip( self.combos, repeat( self.Embedding ), repeat( args ) )
 
-        # Multiargument starmap : MultiviewSimplexRho in PoolFunc
+        # Multiargument starmap : MultiviewSimplexcorrelation in PoolFunc
         mpContext = get_context( self.mpMethod )
         with mpContext.Pool( processes = self.numProcess ) as pool :
-            rhoList = pool.starmap( PoolFunc.MultiviewSimplexRho, poolArgs,
+            correlationList = pool.starmap( PoolFunc.MultiviewSimplexcorrelation, poolArgs,
                                     chunksize = self.chunksize )
 
-        rhoVec    = array( rhoList, dtype = float )
-        rank_i    = argsort( rhoVec )[::-1] # Reverse results 
+        correlationVec    = array( correlationList, dtype = float )
+        rank_i    = argsort( correlationVec )[::-1] # Reverse results 
         topRank_i = rank_i[ :self.multiview ]
 
         self.topRankCombos = [ self.combos[i] for i in topRank_i ]

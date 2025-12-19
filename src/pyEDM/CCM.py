@@ -130,19 +130,19 @@ class CCM:
         FwdCM, RevCM = self.CrossMapList
 
         # Create libMeans array: shape (n_lib_sizes, 3)
-        # Column 0: LibSize, Column 1: Fwd rho, Column 2: Rev rho
-        lib_sizes = array(list(FwdCM['libRho'].keys()))
-        fwd_rhos = array(list(FwdCM['libRho'].values()))
-        rev_rhos = array(list(RevCM['libRho'].values()))
+        # Column 0: LibSize, Column 1: Fwd correlation, Column 2: Rev correlation
+        lib_sizes = array(list(FwdCM['libcorrelation'].keys()))
+        fwd_correlations = array(list(FwdCM['libcorrelation'].values()))
+        rev_correlations = array(list(RevCM['libcorrelation'].values()))
 
-        self.libMeans = column_stack([lib_sizes, fwd_rhos, rev_rhos])
+        self.libMeans = column_stack([lib_sizes, fwd_correlations, rev_correlations])
 
         if self.includeData :
             FwdCMStats = FwdCM['predictStats'] # key libSize : list of CE dicts
             RevCMStats = RevCM['predictStats']
 
             # Build PredictStats1 array
-            # Each row is a sample with: LibSize, rho, mae, rmse, mse, nrmse
+            # Each row is a sample with: LibSize, correlation, mae, rmse, mse, nrmse
             stats1_rows = []
             for libSize in FwdCMStats.keys() :
                 LibSize  = [libSize] * self.sample # this libSize sample times
@@ -150,7 +150,7 @@ class CCM:
 
                 for s in range(self.sample):
                     stats = libStats[s]
-                    row = [libSize[s], stats['rho'], stats['mae'], stats['rmse'],
+                    row = [libSize[s], stats['correlation'], stats['mae'], stats['rmse'],
                            stats['mse'], stats['nrmse']]
                     stats1_rows.append(row)
 
@@ -164,7 +164,7 @@ class CCM:
 
                 for s in range(self.sample):
                     stats = libStats[s]
-                    row = [libSize[s], stats['rho'], stats['mae'], stats['rmse'],
+                    row = [libSize[s], stats['correlation'], stats['mae'], stats['rmse'],
                            stats['mse'], stats['nrmse']]
                     stats2_rows.append(row)
 
@@ -191,12 +191,12 @@ class CCM:
         lib_i   = S.trainIndices.copy()
         N_lib_i = len( lib_i )
 
-        libRhoMap  = {} # Output dict libSize key : mean rho value
+        libcorrelationMap  = {} # Output dict libSize key : mean correlation value
         libStatMap = {} # Output dict libSize key : list of ComputeError dicts
 
         # Loop for library sizes
         for libSize in self.libSizes :
-            rhos = zeros( self.sample )
+            correlations = zeros( self.sample )
             if self.includeData :
                 predictStats = [None] * self.sample
 
@@ -245,12 +245,12 @@ class CCM:
                 err = ComputeError(S.targetVec[ S.testIndices, 0],
                                    projection_, digits = 5)
 
-                rhos[ s ] = err['rho']
+                correlations[ s ] = err['correlation']
 
                 if self.includeData :
                     predictStats[s] = err
 
-            libRhoMap[ libSize ] = mean( rhos )
+            libcorrelationMap[ libSize ] = mean( correlations )
 
             if self.includeData :
                 libStatMap[ libSize ] = predictStats
@@ -260,9 +260,9 @@ class CCM:
 
         if self.includeData :
             return { 'columns' : S.columns, 'target' : S.target,
-                     'libRho' : libRhoMap, 'predictStats' : libStatMap }
+                     'libcorrelation' : libcorrelationMap, 'predictStats' : libStatMap }
         else :
-            return {'columns':S.columns, 'target':S.target, 'libRho':libRhoMap}
+            return {'columns':S.columns, 'target':S.target, 'libcorrelation':libcorrelationMap}
 
     #--------------------------------------------------------------------
     def Validate( self ):

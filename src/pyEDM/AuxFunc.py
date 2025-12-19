@@ -1,6 +1,6 @@
 '''Auxiliary functions:
 
-   ComputeError    Pearson rho, RMSE, MAE, CAE
+   ComputeError    Pearson correlation, RMSE, MAE, CAE
    Iterable        Is an object iterable?
    IsIterable      Is an object iterable and not a string?
    SurrogateData   ebisuzaki, random shuffle, seasonal
@@ -27,7 +27,7 @@ from .LoadData import sampleData
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def ComputeError( obs, pred, digits = 6 ):
-    '''Pearson rho, MAE, CAE, RMSE
+    '''Pearson correlation, MAE, CAE, RMSE
        Remove nan from obs, pred for corrcoeff.
     '''
 
@@ -45,15 +45,15 @@ def ComputeError( obs, pred, digits = 6 ):
         msg = f'ComputeError(): Not enough data ({len(pred)}) to ' +\
                ' compute error statistics.'
         print( msg )
-        return { 'rho' : nan, 'MAE' : nan, 'RMSE' : nan }
+        return { 'correlation' : nan, 'MAE' : nan, 'RMSE' : nan }
 
-    rho  = round( corrcoef( obs, pred )[0,1], digits )
+    correlation  = round( corrcoef( obs, pred )[0,1], digits )
     err  = obs - pred
     MAE  = round( max( err ), digits )
     CAE  = round( absolute( err ).sum(), digits )
     RMSE = round( sqrt( mean( err**2 ) ), digits )
 
-    D = { 'rho' : rho, 'MAE' : MAE, 'CAE' : CAE, 'RMSE' : RMSE }
+    D = { 'correlation' : correlation, 'MAE' : MAE, 'CAE' : CAE, 'RMSE' : RMSE }
 
     return D
 
@@ -220,11 +220,11 @@ def PlotObsPred( data, dataName = "", E = 0, Tp = 0, block = True ):
     '''
     import matplotlib.pyplot as plt
 
-    # stats: {'MAE': 0., 'RMSE': 0., 'rho': 0. }
+    # stats: {'MAE': 0., 'RMSE': 0., 'correlation': 0. }
     stats = ComputeError( data[:, 1], data[:, 2] )
 
     title = dataName + "\nE=" + str(E) + " Tp=" + str(Tp) +\
-            "  ρ="   + str( round( stats['rho'],  3 ) )   +\
+            "  ρ="   + str( round( stats['correlation'],  3 ) )   +\
             " RMSE=" + str( round( stats['RMSE'], 3 ) )
 
     plt.figure()

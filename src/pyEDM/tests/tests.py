@@ -511,7 +511,7 @@ class test_EDM( unittest.TestCase ):
                                numProcess = 4, showPlot = False )
 
         df_pred  = M['Predictions']
-        df_combo = M['View'][ ['rho', 'MAE', 'RMSE'] ]
+        df_combo = M['View'][ ['correlation', 'MAE', 'RMSE'] ]
 
         # Validate predictions
         dfvp      = self.ValidFiles["Multiview_pred_valid.csv"]
@@ -521,7 +521,7 @@ class test_EDM( unittest.TestCase ):
 
         # Validate combinations
         dfvc = round( self.ValidFiles['Multiview_combos_valid.csv'], 4 )
-        dfvc = dfvc[ ['rho', 'MAE', 'RMSE'] ]
+        dfvc = dfvc[ ['correlation', 'MAE', 'RMSE'] ]
 
         self.assertTrue( dfvc.equals( round( df_combo, 4 ) ) )
 
