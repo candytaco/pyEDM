@@ -21,31 +21,42 @@ class Multiview:
        D represents the number of variables to combine for each
        assessment, if not specified, it is the number of columns.
 
-       E is the embedding dimension of each variable. 
+       E is the embedding dimension of each variable.
        If E = 1, no time delay embedding is done, but the variables
        in the embedding are named X(t-0), Y(t-0)...
 
-       Simplex.Validate() sets knn equal to E+1 if knn not specified, 
+       Simplex.Validate() sets knn equal to E+1 if knn not specified,
        so we need to explicitly set knn to D + 1.
 
        Parameter 'multiview' is the number of top-ranked D-dimensional
        predictions for the final prediction. Corresponds to parameter k
-       in Ye & Sugihara with default k = sqrt(m) where m is the number 
-       of combinations C(n,D) available from the n = D * E columns 
+       in Ye & Sugihara with default k = sqrt(m) where m is the number
+       of combinations C(n,D) available from the n = D * E columns
        taken D at-a-time.
 
        Ye H., and G. Sugihara, 2016. Information leverage in
        interconnected ecosystems: Overcoming the curse of dimensionality
        Science 353:922-925.
 
-       NOTE: Multiview evaluates the top projections using in-sample
-             library predictions. It can be shown that highly accurate
-             in-sample predictions can be made from arbitrary non-
-             constant, non-oscillatory vectors. Therefore, some attention
-             may be warranted to filter prospective embedding vectors.
-             The trainLib flag disables this default behavior (test == train)
-             so that the top k rankings are done using the specified
-             train and test. 
+       Parameter 'trainLib' controls the evaluation strategy for ranking
+       column combinations:
+
+       trainLib = True (default):
+         Uses in-sample evaluation for ranking. During the Rank() phase,
+         predictions are made using test = train (in-sample). This is
+         computationally faster but may produce artificially high skill
+         scores, as highly accurate in-sample predictions can be made from
+         arbitrary non-constant, non-oscillatory vectors. After ranking,
+         the final Project() phase uses the specified train and test.
+
+       trainLib = False:
+         Uses proper out-of-sample evaluation for ranking. The Rank() phase
+         uses the specified train and test parameters to evaluate combinations.
+         This is more rigorous but computationally more expensive. Requires
+         explicit train and test parameters.
+
+       NOTE: When trainLib = True and no train/test are specified, the data
+             is automatically split 50/50 for the final projection phase.
     '''
 
     def __init__( self,
@@ -118,7 +129,7 @@ class Multiview:
         args = { 'target'          : self.target, 
                  'train'             : self.train,
                  'test'            : self.test,
-                 embedDims               : self.D,
+                 'embedDims'               : self.D,
                  'predictionHorizon'              : self.predictionHorizon,
                  'step'             : self.step,
                  'exclusionRadius' : self.exclusionRadius,
@@ -127,7 +138,7 @@ class Multiview:
                  'ignoreNan'       : self.ignoreNan }
 
         if self.trainLib :
-            # Set test = train for in-sample training 
+            # Set test = train for in-sample training
             args['test'] = self.train
 
         # Create iterable for Pool.starmap, repeated copies of data, args
@@ -157,7 +168,7 @@ class Multiview:
         args = { 'target'          : self.target, 
                  'train'             : self.train,
                  'test'            : self.test,
-                 embedDims               : self.D,
+                 'embedDims'               : self.D,
                  'predictionHorizon'              : self.predictionHorizon,
                  'step'             : self.step,
                  'exclusionRadius' : self.exclusionRadius,
