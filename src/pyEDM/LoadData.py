@@ -1,6 +1,6 @@
 '''Loading of example data.'''
 
-import importlib.resources # Get data file pathnames from EDM package
+import importlib.resources  # Get data file pathnames from EDM package
 
 from pandas import read_csv
 

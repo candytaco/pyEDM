@@ -2,11 +2,12 @@
 # python modules
 
 # package modules
-from numpy  import array, divide, exp, fmax, full, integer, nan
-from numpy  import linspace, power, subtract, sum, zeros, column_stack
+from numpy import array, divide, exp, fmax, full, nan
+from numpy import linspace, power, subtract, sum, zeros, column_stack
 
 # local modules
 from .EDM import EDM as EDMClass
+
 
 #-----------------------------------------------------------
 class Simplex( EDMClass ):

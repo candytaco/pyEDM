@@ -1,14 +1,14 @@
 # python modules
 
 # package modules
-from numpy  import apply_along_axis, insert, isnan, isfinite, exp
-from numpy  import full, integer, linspace, mean, nan, power, sum, array
-from numpy  import column_stack
-
-from numpy.linalg import lstsq # from scipy.linalg import lstsq
+from numpy import apply_along_axis, insert, isnan, isfinite, exp
+from numpy import column_stack
+from numpy import full, linspace, mean, nan, power, sum, array
+from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 
 # local modules
 from .EDM import EDM as EDMClass
+
 
 #-----------------------------------------------------------
 class SMap( EDMClass ):

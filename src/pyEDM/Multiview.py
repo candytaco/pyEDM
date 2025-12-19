@@ -1,20 +1,18 @@
 
 # python modules
-from multiprocessing import get_context
-from math import floor, sqrt
-from warnings import warn
 from itertools import combinations, repeat
+from math import floor, sqrt
+from multiprocessing import get_context
+from warnings import warn
 
 # package modules
 from numpy import argsort, array
 
+import pyEDM.PoolFunc as PoolFunc
 from pyEDM.Embed import Embed
 # local modules
-from .Simplex import Simplex as SimplexClass
-from .AuxFunc import ComputeError, IsIterable
+from .AuxFunc import IsIterable
 
-import pyEDM.API      as API
-import pyEDM.PoolFunc as PoolFunc
 
 #------------------------------------------------------------------
 class Multiview:

@@ -1,22 +1,19 @@
 # python modules
-from typing import List, Tuple
-from warnings import warn
 import datetime as dt
 from datetime import datetime
+from typing import List, Tuple
+from warnings import warn
 
 import numpy
 # package modules
-from numpy import any, append, array, concatenate, isnan, zeros
-
-# local modules
-import pyEDM.API
-from .Embed import Embed
-from .AuxFunc import IsIterable
-
-from numpy import array, delete, full, zeros, apply_along_axis
-from numpy  import append, array, column_stack, empty, floating, full, integer, nan
+from numpy import any, concatenate, isnan
+from numpy import append, array, column_stack, empty, floating, full, integer, nan
+from numpy import delete, zeros, apply_along_axis
 from scipy.spatial import KDTree
 
+from .AuxFunc import IsIterable
+# local modules
+from .Embed import Embed
 
 
 # --------------------------------------------------------------------

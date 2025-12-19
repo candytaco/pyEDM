@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
 
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.linear_model import SGDRegressor, Lars, LassoLars
 from sklearn.linear_model import RidgeCV, LassoCV, ElasticNetCV
+from sklearn.linear_model import SGDRegressor, Lars, LassoLars
 
 import pyEDM as EDM
+
 
 #------------------------------------------------------------
 #------------------------------------------------------------

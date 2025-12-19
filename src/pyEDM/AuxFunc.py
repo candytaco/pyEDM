@@ -9,20 +9,19 @@
    Examples        Canonical examples
 '''
 
+from cmath import exp
 # python modules
-from math   import floor, pi, sqrt, cos
-from cmath  import exp
+from math import floor, pi, sqrt, cos
 from random import sample, uniform, normalvariate
+
 import numpy as np
-
 # package modules
-from numpy             import absolute, any, arange, corrcoef, fft, isfinite
-from numpy             import mean, max, nan, ptp, std, sqrt, zeros, column_stack
+from numpy import absolute, any, arange, corrcoef, fft, isfinite
+from numpy import mean, max, nan, ptp, std, sqrt, zeros
 from scipy.interpolate import UnivariateSpline
-from matplotlib.pyplot import show, axhline
 
-import pyEDM.API as EDM
 from .LoadData import sampleData
+
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------

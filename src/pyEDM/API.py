@@ -1,20 +1,20 @@
 '''Interface to Empirical Dynamic Modeling (EDM) pyEDM'''
 
+from itertools import repeat
 # python modules
 from multiprocessing import get_context
-from itertools       import repeat
 
 # package modules
 from matplotlib.pyplot import show, axhline
 
-# local modules
-from .AuxFunc   import IsIterable, PlotObsPred, PlotCoeff, ComputeError
-from .Simplex   import Simplex   as SimplexClass
-from .SMap      import SMap      as SMapClass
-from .CCM       import CCM       as CCMClass
-from .Multiview import Multiview as MultiviewClass
-
 import pyEDM.PoolFunc as PoolFunc
+# local modules
+from .AuxFunc import IsIterable, PlotObsPred, PlotCoeff, ComputeError
+from .CCM import CCM as CCMClass
+from .Multiview import Multiview as MultiviewClass
+from .SMap import SMap as SMapClass
+from .Simplex import Simplex as SimplexClass
+
 
 #------------------------------------------------------------------------
 #
