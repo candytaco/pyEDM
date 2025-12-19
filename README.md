@@ -18,9 +18,11 @@ Certain MacOS, Linux and Windows platforms are supported with prebuilt binary di
 ---
 ## Usage
 Examples can be executed in the python command line:
+
 ```python
->>> import pyEDM
->>> pyEDM.Examples()
+import pyEDM.Examples
+>> > import pyEDM
+>> > pyEDM.Examples.Examples()
 ```
 
 ---
