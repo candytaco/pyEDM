@@ -9,6 +9,7 @@ from numpy.random import default_rng
 from .Utils import ComputeError, IsIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
+from .Results import CCMResult
 
 
 #------------------------------------------------------------
@@ -108,6 +109,25 @@ class CCM:
 
     #-------------------------------------------------------------------
     # Methods
+    #-------------------------------------------------------------------
+    def Run( self ) :
+        """Execute CCM and return CCMResult.
+
+        Returns
+        -------
+        CCMResult
+            CCM results with library means and optional detailed statistics
+        """
+        self.Project()
+
+        return CCMResult(
+            libMeans=self.libMeans,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon,
+            predictStats1=self.PredictStats1 if self.includeData else None,
+            predictStats2=self.PredictStats2 if self.includeData else None
+        )
+
     #-------------------------------------------------------------------
     def Project( self, sequential = False ) :
         '''CCM both directions with CrossMap()'''

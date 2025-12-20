@@ -7,7 +7,7 @@ from numpy import linspace, power, subtract, sum, zeros, column_stack
 
 # local modules
 from .EDM import EDM as EDMClass
-
+from .Results import SimplexResult
 
 #-----------------------------------------------------------
 class Simplex( EDMClass ):
@@ -80,13 +80,26 @@ class Simplex( EDMClass ):
     #-------------------------------------------------------------------
     # Methods
     #-------------------------------------------------------------------
-    def Run( self ) :
+    def Run( self ):
     #-------------------------------------------------------------------
+        """Execute standard prediction and return SimplexResult.
+
+        Returns
+        -------
+        SimplexResult
+            Prediction results with projection array and metadata
+        """
         self.EmbedData()
         self.RemoveNan()
         self.FindNeighbors()
         self.Project()
         self.FormatProjection()
+
+        return SimplexResult(
+            projection=self.Projection,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon
+        )
 
     #-------------------------------------------------------------------
     def Project( self ) :
@@ -263,3 +276,9 @@ class Simplex( EDMClass ):
 
         else :
             self.Projection = generated
+
+        return SimplexResult(
+            projection=self.Projection,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon
+        )

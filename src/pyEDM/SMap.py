@@ -8,6 +8,7 @@ from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 
 # local modules
 from .EDM import EDM as EDMClass
+from .Results import SMapResult
 
 
 #-----------------------------------------------------------
@@ -94,11 +95,28 @@ class SMap( EDMClass ):
     #-------------------------------------------------------------------
     def Run( self ) :
     #-------------------------------------------------------------------
+        """Execute S-Map prediction and return SMapResult.
+
+        Returns
+        -------
+        SMapResult
+            Prediction results with projection array, coefficients,
+            singular values, and metadata
+        """
         self.EmbedData()
         self.RemoveNan()
         self.FindNeighbors()
         self.Project()
         self.FormatProjection()
+
+        return SMapResult(
+            projection=self.Projection,
+            coefficients=self.coefficients,
+            singularValues=self.singularValues,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon,
+            theta=self.theta
+        )
 
     #-------------------------------------------------------------------
     def Project( self ) :
@@ -389,3 +407,12 @@ class SMap( EDMClass ):
 
         self.Coefficients   = genCoeff
         self.SingularValues = genSV
+
+        return SMapResult(
+            projection=self.Projection,
+            coefficients=genCoeff,
+            singularValues=genSV,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon,
+            theta=self.theta
+        )

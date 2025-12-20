@@ -6,12 +6,13 @@ from multiprocessing import get_context
 from warnings import warn
 
 # package modules
-from numpy import argsort, array
+from numpy import argsort, array, column_stack, mean
 
 import pyEDM.PoolFunc as PoolFunc
 from pyEDM.Embed import Embed
 # local modules
-from .Utils import IsIterable
+from .Utils import IsIterable, ComputeError
+from .Results import MultiviewResult
 
 
 #------------------------------------------------------------------
@@ -119,6 +120,62 @@ class Multiview:
 
     #-------------------------------------------------------------------
     # Methods
+    #-------------------------------------------------------------------
+    def Run( self ) :
+        """Execute Multiview prediction and return MultiviewResult.
+
+        Returns
+        -------
+        MultiviewResult
+            Multiview results with ensemble-averaged projection, view rankings,
+            top-ranked projections, and statistics
+        """
+        self.Rank()
+        self.Project()
+
+        # Compute ensemble-averaged prediction
+        # M.topRankProjections is dict of combo : numpy array
+        # Each array has columns: [Time, Observations, Predictions, Pred_Variance]
+
+        # Get first projection for Time and Observations
+        first_proj = next(iter(self.topRankProjections.values()))
+
+        # Collect all predictions (column 2) and average them
+        all_predictions = [proj[:, 2] for proj in self.topRankProjections.values()]
+        multiviewPredict = mean(all_predictions, axis=0)
+
+        # Create result array: [Time, Observations, Predictions]
+        self.Projection = column_stack([first_proj[:, 0], first_proj[:, 1], multiviewPredict])
+
+        # Create View: rankings of column combinations
+        colCombos = list(self.topRankProjections.keys())
+
+        topRankStats = {}
+        for combo in colCombos :
+            proj = self.topRankProjections[combo]
+            # proj columns: 0=Time, 1=Observations, 2=Predictions, 3=Variance
+            topRankStats[combo] = ComputeError(proj[:, 1], proj[:, 2])
+
+        self.topRankStats = topRankStats
+
+        # Build View array: each row is [combo_as_str, correlation, MAE, CAE, RMSE]
+        view_rows = []
+        for combo in colCombos:
+            stats = topRankStats[combo]
+            view_rows.append([str(combo), stats['correlation'], stats['MAE'], stats['CAE'], stats['RMSE']])
+
+        self.View = view_rows  # List of lists
+
+        return MultiviewResult(
+            projection=self.Projection,
+            view=self.View,
+            topRankProjections=self.topRankProjections,
+            topRankStats=self.topRankStats,
+            D=self.D,
+            embedDimensions=self.embedDimensions,
+            predictionHorizon=self.predictionHorizon
+        )
+
     #-------------------------------------------------------------------
     def Rank( self ) :
         '''Multiprocess to rank top multiview vectors'''
