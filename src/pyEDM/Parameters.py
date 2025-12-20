@@ -9,6 +9,7 @@ of truth for parameter definitions.
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 import numpy as np
+from .Execution import ExecutionMode
 
 
 @dataclass
@@ -194,6 +195,38 @@ class CCMParameters:
                 raise ValueError("trainSizes stop must be >= start")
             if self.trainSizes[2] <= 0:
                 raise ValueError("trainSizes increment must be positive")
+
+
+@dataclass
+class ExecutionParameters:
+    """Execution and multiprocessing parameters.
+
+    Parameters
+    ----------
+    numProcess : int, default=4
+        Number of processes for multiprocessing
+    mpMethod : ExecutionMode, optional
+        Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER)
+        If None, uses platform default
+    chunksize : int, default=1
+        Chunk size for pool.starmap operations
+    sequential : bool, default=False
+        Use sequential execution instead of multiprocessing
+    """
+    numProcess: int = 4
+    mpMethod: Optional[ExecutionMode] = None
+    chunksize: int = 1
+    sequential: bool = False
+
+    def __post_init__(self):
+        """Validate execution parameters."""
+        if self.numProcess < 1:
+            raise ValueError("numProcess must be positive")
+        if self.chunksize < 1:
+            raise ValueError("chunksize must be positive")
+        if self.mpMethod is not None:
+            if not isinstance(self.mpMethod, ExecutionMode):
+                raise ValueError(f"mpMethod must be an ExecutionMode enum value")
 
 
 @dataclass

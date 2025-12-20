@@ -9,6 +9,7 @@ from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 # local modules
 from .EDM import EDM as EDMClass
 from .Results import SMapResult
+from .Parameters import EDMParameters, DataSplit, GenerationParameters, SMapParameters
 
 
 #-----------------------------------------------------------
@@ -16,56 +17,62 @@ class SMap( EDMClass ):
     '''SMap class : child of EDM'''
 
     def __init__(self,
-                 data       = None,
-                 columns = None,
-                 target = None,
-                 train = None,
-                 test = None,
-                 embedDimensions = 0,
-                 predictionHorizon              = 1,
-                 knn             = 0,
-                 step             = -1,
-                 theta           = 0.,
-                 exclusionRadius = 0,
-                 solver          = None,
-                 embedded        = False,
-                 validLib        = [],
-                 noTime          = False,
-                 generateSteps   = 0,
-                 generateConcat  = False,
-                 ignoreNan       = True,
-                 verbose         = False):
-        '''Initialize SMap as child of EDM.
-           Set data object to dataFrame.
-           Setup : Validate(), CreateIndices(), get targetVec, time'''
+                 params: EDMParameters,
+                 split: DataSplit = None,
+                 generation: GenerationParameters = None,
+                 smap: SMapParameters = None):
+        '''Initialize SMap as child of EDM using parameter objects.
+
+        Parameters
+        ----------
+        params : EDMParameters
+            Common EDM parameters (data, columns, target, etc.)
+        split : DataSplit, optional
+            Train/test split configuration
+        generation : GenerationParameters, optional
+            Iterative generation configuration
+        smap : SMapParameters, optional
+            S-Map specific parameters (theta, solver)
+        '''
 
         # Instantiate EDM class: inheret all members to self
-        super(SMap, self).__init__(data, isEmbedded=False, name='SMap')
+        super(SMap, self).__init__(params.data, isEmbedded=False, name='SMap')
 
-        # Assign parameters from API arguments
-        self.columns         = columns
-        self.target          = target
-        self.train             = train
-        self.test            = test
-        self.embedDimensions = embedDimensions
-        self.predictionHorizon              = predictionHorizon
-        self.knn             = knn
-        self.step             = step
-        self.theta           = theta
-        self.exclusionRadius = exclusionRadius
-        self.solver          = solver
-        self.embedded        = embedded
-        self.validLib        = validLib
-        self.noTime          = noTime
-        self.generateSteps   = generateSteps
-        self.generateConcat  = generateConcat
-        self.ignoreNan       = ignoreNan
-        self.verbose         = verbose
+        # Extract parameters from dataclasses
+        self.columns         = params.columns
+        self.target          = params.target
+        self.embedDimensions = params.embedDimensions
+        self.predictionHorizon = params.predictionHorizon
+        self.knn             = params.knn
+        self.step            = params.step
+        self.exclusionRadius = params.exclusionRadius
+        self.embedded        = params.embedded
+        self.validLib        = params.validLib
+        self.noTime          = params.noTime
+        self.ignoreNan       = params.ignoreNan
+        self.verbose         = params.verbose
+
+        # Extract split parameters
+        if split is None:
+            split = DataSplit()
+        self.train = split.train if split.train is not None else []
+        self.test = split.test if split.test is not None else []
+
+        # Extract generation parameters
+        if generation is None:
+            generation = GenerationParameters()
+        self.generateSteps = generation.generateSteps
+        self.generateConcat = generation.generateConcat
+
+        # Extract SMap parameters
+        if smap is None:
+            smap = SMapParameters()
+        self.theta = smap.theta
+        self.solver = smap.solver if smap.solver is not None else lstsq
 
         # Map API parameter names to EDM base class names
-        self.predictionHorizon = predictionHorizon
-        self.embedStep         = step
-        self.isEmbedded        = embedded
+        self.embedStep         = self.step
+        self.isEmbedded        = self.embedded
 
         # SMap storage
         self.Coefficients   = None # DataFrame SMap API output
@@ -86,9 +93,6 @@ class SMap( EDMClass ):
         else :
             # 1st data column is time
             self.time = self.Data[:, 0]
-
-        if self.solver is None :
-            self.solver = lstsq
 
     #-------------------------------------------------------------------
     # Methods

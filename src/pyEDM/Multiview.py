@@ -13,6 +13,7 @@ from pyEDM.Embed import Embed
 # local modules
 from .Utils import IsIterable, ComputeError
 from .Results import MultiviewResult
+from .Parameters import EDMParameters, DataSplit, MultiviewParameters, ExecutionParameters
 
 
 #------------------------------------------------------------------
@@ -61,49 +62,57 @@ class Multiview:
     '''
 
     def __init__( self,
-                  data            = None,
-                  columns         = None,
-                  target          = None,
-                  train = None,
-                  test = None,
-                  D               = 0,
-                  embedDimensions = 1,
-                  predictionHorizon              = 1,
-                  knn             = 0,
-                  step             = -1,
-                  multiview       = 0,
-                  exclusionRadius = 0,
-                  trainLib        = True,
-                  excludeTarget   = False,
-                  ignoreNan       = True,
-                  verbose         = False,
-                  numProcess      = 4,
-                  mpMethod        = None,
-                  chunksize       = 1,
-                  returnObject    = False ):
-        '''Initialize Multiview.'''
+                  params: EDMParameters,
+                  split: DataSplit = None,
+                  multiview: MultiviewParameters = None,
+                  execution: ExecutionParameters = None):
+        '''Initialize Multiview using parameter objects.
 
-        # Assign parameters from API arguments
+        Parameters
+        ----------
+        params : EDMParameters
+            Common EDM parameters (data, columns, target, etc.)
+        split : DataSplit, optional
+            Train/test split configuration
+        multiview : MultiviewParameters, optional
+            Multiview-specific parameters (D, multiview, trainLib, excludeTarget)
+        execution : ExecutionParameters, optional
+            Execution and multiprocessing configuration
+        '''
+
+        # Assign parameters from dataclasses
         self.name            = 'Multiview'
-        self.Data            = data
-        self.columns         = columns
-        self.target          = target
-        self.train             = train
-        self.test            = test
-        self.D               = D
-        self.embedDimensions = embedDimensions
-        self.predictionHorizon              = predictionHorizon
-        self.knn             = knn
-        self.step             = step
-        self.multiview       = multiview
-        self.exclusionRadius = exclusionRadius
-        self.trainLib        = trainLib
-        self.excludeTarget   = excludeTarget
-        self.ignoreNan       = ignoreNan
-        self.verbose         = verbose
-        self.numProcess      = numProcess
-        self.mpMethod        = mpMethod
-        self.chunksize       = chunksize
+        self.Data            = params.data
+        self.columns         = params.columns
+        self.target          = params.target
+        self.embedDimensions = params.embedDimensions
+        self.predictionHorizon = params.predictionHorizon
+        self.knn             = params.knn
+        self.step            = params.step
+        self.exclusionRadius = params.exclusionRadius
+        self.ignoreNan       = params.ignoreNan
+        self.verbose         = params.verbose
+
+        # Extract split parameters
+        if split is None:
+            split = DataSplit()
+        self.train = split.train if split.train is not None else []
+        self.test = split.test if split.test is not None else []
+
+        # Extract multiview parameters
+        if multiview is None:
+            multiview = MultiviewParameters()
+        self.D             = multiview.D
+        self.multiview     = multiview.multiview
+        self.trainLib      = multiview.trainLib
+        self.excludeTarget = multiview.excludeTarget
+
+        # Extract execution parameters
+        if execution is None:
+            execution = ExecutionParameters()
+        self.numProcess = execution.numProcess
+        self.mpMethod   = execution.mpMethod
+        self.chunksize  = execution.chunksize
 
         self.Embedding  = None # numpy array
         self.View       = None # numpy array
@@ -202,7 +211,7 @@ class Multiview:
         poolArgs = zip( self.combos, repeat( self.Embedding ), repeat( args ) )
 
         # Multiargument starmap : MultiviewSimplexcorrelation in PoolFunc
-        mpContext = get_context( self.mpMethod )
+        mpContext = get_context( self.mpMethod.value if self.mpMethod else None )
         with mpContext.Pool( processes = self.numProcess ) as pool :
             correlationList = pool.starmap( PoolFunc.MultiviewSimplexcorrelation, poolArgs,
                                     chunksize = self.chunksize )
@@ -238,7 +247,7 @@ class Multiview:
                         repeat( args ) )
 
         # Multiargument starmap : MultiviewSimplexPred in PoolFunc
-        mpContext = get_context( self.mpMethod )
+        mpContext = get_context( self.mpMethod.value if self.mpMethod else None )
         with mpContext.Pool( processes = self.numProcess ) as pool :
             dfList = pool.starmap( PoolFunc.MultiviewSimplexPred, poolArgs )
 

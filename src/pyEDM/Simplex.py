@@ -8,6 +8,7 @@ from numpy import linspace, power, subtract, sum, zeros, column_stack
 # local modules
 from .EDM import EDM as EDMClass
 from .Results import SimplexResult
+from .Parameters import EDMParameters, DataSplit, GenerationParameters
 
 #-----------------------------------------------------------
 class Simplex( EDMClass ):
@@ -16,52 +17,53 @@ class Simplex( EDMClass ):
        To Do : Neighbor ties'''
 
     def __init__(self,
-                 data       = None,
-                 columns = None,
-                 target = None,
-                 train = None,
-                 test = None,
-                 embedDimensions = 0,
-                 predictionHorizon              = 1,
-                 knn             = 0,
-                 step             = -1,
-                 exclusionRadius = 0,
-                 embedded        = False,
-                 validLib        = [],
-                 noTime          = False,
-                 generateSteps   = 0,
-                 generateConcat  = False,
-                 ignoreNan       = True,
-                 verbose         = False):
-        '''Initialize Simplex as child of EDM.
-           Set data object to dataFrame.
-           Setup : Validate(), CreateIndices(), get targetVec, time'''
+                 params: EDMParameters,
+                 split: DataSplit = None,
+                 generation: GenerationParameters = None):
+        '''Initialize Simplex as child of EDM using parameter objects.
+
+        Parameters
+        ----------
+        params : EDMParameters
+            Common EDM parameters (data, columns, target, etc.)
+        split : DataSplit, optional
+            Train/test split configuration
+        generation : GenerationParameters, optional
+            Iterative generation configuration
+        '''
 
         # Instantiate EDM class: inheret EDM members to self
-        super(Simplex, self).__init__(data, isEmbedded=False, name='Simplex')
+        super(Simplex, self).__init__(params.data, isEmbedded=False, name='Simplex')
 
-        # Assign parameters from API arguments
-        self.columns         = columns
-        self.target          = target
-        self.train             = train
-        self.test            = test
-        self.embedDimensions = embedDimensions
-        self.predictionHorizon              = predictionHorizon
-        self.knn             = knn
-        self.step             = step
-        self.exclusionRadius = exclusionRadius
-        self.embedded        = embedded
-        self.validLib        = validLib
-        self.noTime          = noTime
-        self.generateSteps   = generateSteps
-        self.generateConcat  = generateConcat
-        self.ignoreNan       = ignoreNan
-        self.verbose         = verbose
+        # Extract parameters from dataclasses
+        self.columns         = params.columns
+        self.target          = params.target
+        self.embedDimensions = params.embedDimensions
+        self.predictionHorizon = params.predictionHorizon
+        self.knn             = params.knn
+        self.step            = params.step
+        self.exclusionRadius = params.exclusionRadius
+        self.embedded        = params.embedded
+        self.validLib        = params.validLib
+        self.noTime          = params.noTime
+        self.ignoreNan       = params.ignoreNan
+        self.verbose         = params.verbose
+
+        # Extract split parameters
+        if split is None:
+            split = DataSplit()
+        self.train = split.train if split.train is not None else []
+        self.test = split.test if split.test is not None else []
+
+        # Extract generation parameters
+        if generation is None:
+            generation = GenerationParameters()
+        self.generateSteps = generation.generateSteps
+        self.generateConcat = generation.generateConcat
 
         # Map API parameter names to EDM base class names
-        self.predictionHorizon = predictionHorizon
-        self.embedStep         = step
-        self.isEmbedded        = embedded
+        self.embedStep         = self.step
+        self.isEmbedded        = self.embedded
 
         # Setup
         self.Validate()      # EDM Method: set knn default, E if embedded

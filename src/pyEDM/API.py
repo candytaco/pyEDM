@@ -14,6 +14,9 @@ from .CCM import CCM as CCMClass
 from .Multiview import Multiview as MultiviewClass
 from .SMap import SMap as SMapClass
 from .Simplex import Simplex as SimplexClass
+from .Parameters import (EDMParameters, DataSplit, GenerationParameters,
+                         SMapParameters, CCMParameters, MultiviewParameters,
+                         ExecutionParameters)
 
 
 #------------------------------------------------------------------------
@@ -48,26 +51,28 @@ def Simplex( data               = None,
         Target column index (defaults to column 1)
     '''
 
-    # Instantiate SimplexClass object
-    #    Constructor assigns data to self, calls Validate(),
-    #    CreateIndices(), and assigns targetVec, time
-    S = SimplexClass(data = data,
-                     columns         = columns,
-                     target          = target,
-                     train             = train,
-                     test            = test,
-                     embedDimensions = embedDimensions,
-                     predictionHorizon              = predictionHorizon,
-                     knn             = knn,
-                     step             = step,
-                     exclusionRadius = exclusionRadius,
-                     embedded        = embedded,
-                     validLib        = validLib,
-                     noTime          = noTime,
-                     generateSteps   = generateSteps,
-                     generateConcat  = generateConcat,
-                     ignoreNan       = ignoreNan,
-                     verbose         = verbose)
+    # Create parameter objects
+    params = EDMParameters(
+        data=data,
+        columns=columns,
+        target=target,
+        embedDimensions=embedDimensions,
+        predictionHorizon=predictionHorizon,
+        knn=knn,
+        step=step,
+        exclusionRadius=exclusionRadius,
+        embedded=embedded,
+        validLib=validLib,
+        noTime=noTime,
+        ignoreNan=ignoreNan,
+        verbose=verbose
+    )
+
+    split = DataSplit(train=train, test=test)
+    generation = GenerationParameters(generateSteps=generateSteps, generateConcat=generateConcat)
+
+    # Instantiate SimplexClass object using parameter objects
+    S = SimplexClass(params=params, split=split, generation=generation)
 
     if generateSteps :
         result = S.Generate()
@@ -113,44 +118,29 @@ def SMap( data               = None,
         Target column index (defaults to column 1)
     '''
 
-    # Validate solver if one was provided
-    if solver is not None :
-        supportedSolvers = [ 'function',  'lstsq',
-                             'LinearRegression', 'SGDRegressor',
-                             'Ridge',      'RidgeCV',
-                             'Lasso',      'LassoCV',
-                             'Lars',       'LarsCV',
-                             'LassoLars',  'LassoLarsCV', 'LassoLarsIC',
-                             'ElasticNet', 'ElasticNetCV',
-                             'OrthogonalMatchingPursuit',
-                             'OrthogonalMatchingPursuitCV' ]
-        if not solver.__class__.__name__ in supportedSolvers :
-            msg = f'SMap(): Invalid solver {solver.__name__}.\n' +\
-                  f'Supported solvers: {supportedSolvers}'
-            raise Exception( msg )
+    # Create parameter objects
+    params = EDMParameters(
+        data=data,
+        columns=columns,
+        target=target,
+        embedDimensions=embedDimensions,
+        predictionHorizon=predictionHorizon,
+        knn=knn,
+        step=step,
+        exclusionRadius=exclusionRadius,
+        embedded=embedded,
+        validLib=validLib,
+        noTime=noTime,
+        ignoreNan=ignoreNan,
+        verbose=verbose
+    )
 
-    # Instantiate SMapClass object
-    #    Constructor assigns data to self, calls Validate(),
-    #    CreateIndices(), and assigns targetVec, time
-    S = SMapClass(data = data,
-                  columns         = columns,
-                  target          = target,
-                  train             = train,
-                  test            = test,
-                  embedDimensions = embedDimensions,
-                  predictionHorizon              = predictionHorizon,
-                  knn             = knn,
-                  step             = step,
-                  theta           = theta,
-                  exclusionRadius = exclusionRadius,
-                  solver          = solver,
-                  embedded        = embedded,
-                  validLib        = validLib,
-                  noTime          = noTime,
-                  generateSteps   = generateSteps,
-                  generateConcat  = generateConcat,
-                  ignoreNan       = ignoreNan,
-                  verbose         = verbose)
+    split = DataSplit(train=train, test=test)
+    generation = GenerationParameters(generateSteps=generateSteps, generateConcat=generateConcat)
+    smap_params = SMapParameters(theta=theta, solver=solver)
+
+    # Instantiate SMapClass object using parameter objects
+    S = SMapClass(params=params, split=split, generation=generation, smap=smap_params)
 
     if generateSteps :
         result = S.Generate()
@@ -199,27 +189,34 @@ def CCM(data                = None,
         Target column index (defaults to column 1)
     '''
 
-    # Instantiate CCMClass object
-    # __init__ creates .FwdMap & .RevMap
-    C = CCMClass(data            = data,
-                 columns         = columns,
-                 target          = target,
-                 embedDimensions = embedDimensions,
-                 predictionHorizon              = predictionHorizon,
-                 knn             = knn,
-                 step             = step,
-                 exclusionRadius = exclusionRadius,
-                 trainSizes = trainSizes,
-                 sample          = sample,
-                 seed            = seed,
-                 includeData     = includeData,
-                 embedded        = embedded,
-                 validLib        = validLib,
-                 noTime          = noTime,
-                 ignoreNan       = ignoreNan,
-                 mpMethod        = mpMethod,
-                 sequential      = sequential,
-                 verbose         = verbose)
+    # Create parameter objects
+    params = EDMParameters(
+        data=data,
+        columns=columns,
+        target=target,
+        embedDimensions=embedDimensions,
+        predictionHorizon=predictionHorizon,
+        knn=knn,
+        step=step,
+        exclusionRadius=exclusionRadius,
+        embedded=embedded,
+        validLib=validLib,
+        noTime=noTime,
+        ignoreNan=ignoreNan,
+        verbose=verbose
+    )
+
+    ccm_params = CCMParameters(
+        trainSizes=trainSizes if trainSizes is not None else [],
+        sample=sample,
+        seed=seed,
+        includeData=includeData
+    )
+
+    execution = ExecutionParameters(mpMethod=mpMethod, sequential=sequential)
+
+    # Instantiate CCMClass object using parameter objects
+    C = CCMClass(params=params, ccm=ccm_params, execution=execution)
 
     # Embedding of Forward & Reverse mapping
     C.FwdMap.EmbedData()
@@ -273,28 +270,37 @@ def Multiview( data               = None,
         Target column index (defaults to column 1)
     '''
 
-    # Instantiate MultiviewClass object
-    # __init__ creates .Simplex_, calls Validate(), Setup()
-    M = MultiviewClass( data            = data,
-                        columns         = columns,
-                        target          = target,
-                        train             = train,
-                        test            = test,
-                        D               = D,
-                        embedDimensions = embedDimensions,
-                        predictionHorizon              = predictionHorizon,
-                        knn             = knn,
-                        step             = step,
-                        multiview       = multiview,
-                        exclusionRadius = exclusionRadius,
-                        trainLib        = trainLib,
-                        excludeTarget   = excludeTarget,
-                        ignoreNan       = ignoreNan,
-                        verbose         = verbose,
-                        numProcess      = numProcess,
-                        mpMethod        = mpMethod,
-                        chunksize       = chunksize,
-                        returnObject    = returnObject )
+    # Create parameter objects
+    params = EDMParameters(
+        data=data,
+        columns=columns,
+        target=target,
+        embedDimensions=embedDimensions,
+        predictionHorizon=predictionHorizon,
+        knn=knn,
+        step=step,
+        exclusionRadius=exclusionRadius,
+        ignoreNan=ignoreNan,
+        verbose=verbose
+    )
+
+    split = DataSplit(train=train, test=test)
+
+    multiview_params = MultiviewParameters(
+        D=D,
+        multiview=multiview,
+        trainLib=trainLib,
+        excludeTarget=excludeTarget
+    )
+
+    execution = ExecutionParameters(
+        numProcess=numProcess,
+        mpMethod=mpMethod,
+        chunksize=chunksize
+    )
+
+    # Instantiate MultiviewClass object using parameter objects
+    M = MultiviewClass(params=params, split=split, multiview=multiview_params, execution=execution)
 
     result = M.Run()
 
