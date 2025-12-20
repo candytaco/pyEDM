@@ -35,7 +35,6 @@ def Simplex( data               = None,
              generateSteps      = 0,
              generateConcat     = False,
              verbose            = False,
-             showPlot           = False,
              ignoreNan          = True,
              returnObject       = False ):
     '''Simplex prediction using numpy array data.
@@ -75,9 +74,6 @@ def Simplex( data               = None,
     else :
         result = S.Run()
 
-    if showPlot :
-        PlotObsPred( result.projection, "", result.embedDimensions, result.predictionHorizon )
-
     if returnObject :
         return S
     else :
@@ -104,7 +100,6 @@ def SMap( data               = None,
           generateSteps      = 0,
           generateConcat     = False,
           ignoreNan          = True,
-          showPlot           = False,
           verbose            = False,
           returnObject       = False ):
     '''S-Map prediction using numpy array data.
@@ -162,10 +157,6 @@ def SMap( data               = None,
     else :
         result = S.Run()
 
-    if showPlot :
-        PlotObsPred(result.projection,      "", result.embedDimensions, result.predictionHorizon)
-        PlotCoeff  (result.coefficients,    "", result.embedDimensions, result.predictionHorizon)
-
     if returnObject :
         return S
     else :
@@ -196,7 +187,6 @@ def CCM(data                = None,
         mpMethod            = None,
         sequential          = False,
         verbose             = False,
-        showPlot            = False,
         returnObject        = False) :
     '''Convergent Cross Mapping.
 
@@ -239,25 +229,6 @@ def CCM(data                = None,
 
     result = C.Run()
 
-    if showPlot :
-        import matplotlib.pyplot as plt
-        title = f'E = {result.embedDimensions}'
-        fig, ax = plt.subplots()
-
-        # result.libMeans is numpy array: Column 0 is LibSize, rest are correlation values
-        if result.libMeans.shape[1] == 3 :
-            # CCM of two different variables
-            ax.plot(result.libMeans[:, 0], result.libMeans[:, 1], linewidth=3, label='Col 1')
-            ax.plot(result.libMeans[:, 0], result.libMeans[:, 2], linewidth=3, label='Col 2')
-            ax.legend()
-        elif result.libMeans.shape[1] == 2 :
-            # CCM of degenerate columns : target
-            ax.plot(result.libMeans[:, 0], result.libMeans[:, 1], linewidth=3)
-
-        ax.set( xlabel = "Library Size", ylabel = "CCM correlation", title=title )
-        axhline( y = 0, linewidth = 1 )
-        show()
-
     if returnObject :
         return C
     else :
@@ -290,7 +261,6 @@ def Multiview( data               = None,
                numProcess         = 4,
                mpMethod           = None,
                chunksize          = 1,
-               showPlot           = False,
                returnObject       = False ):
     '''Multiview prediction using numpy array data.
 
@@ -328,8 +298,6 @@ def Multiview( data               = None,
 
     result = M.Run()
 
-    if showPlot :
-        PlotObsPred( result.projection, "", result.D, result.predictionHorizon )
 
     if returnObject :
         return M
@@ -355,8 +323,7 @@ def EmbedDimension( data            = None,
                     verbose         = False,
                     numProcess      = 4,
                     mpMethod        = None,
-                    chunksize       = 1,
-                    showPlot        = True ):
+                    chunksize       = 1,):
     '''Estimate optimal embedding dimension [1:maxE].
 
     Parameters:
@@ -398,15 +365,6 @@ def EmbedDimension( data            = None,
     import numpy as np
     result = np.column_stack([Evals, correlationList])
 
-    if showPlot :
-        import matplotlib.pyplot as plt
-        title = "predictionHorizon=" + str(predictionHorizon)
-        fig, ax = plt.subplots()
-        ax.plot(result[:, 0], result[:, 1], linewidth=3)
-        ax.set( xlabel = "Embedding Dimension",
-                ylabel = "Prediction Skill correlation",
-                title = title )
-        show()
 
     return result
 
@@ -429,8 +387,7 @@ def PredictInterval( data               = None,
                      verbose            = False,
                      numProcess         = 4,
                      mpMethod           = None,
-                     chunksize          = 1,
-                     showPlot           = True ):
+                     chunksize          = 1,):
     '''Estimate optimal prediction interval [1:maxTp].
 
     Parameters:
@@ -472,20 +429,6 @@ def PredictInterval( data               = None,
     import numpy as np
     result = np.column_stack([Evals, correlationList])
 
-    if showPlot :
-        if embedded :
-            if IsIterable( columns ) :
-                embedDimensions = len( columns )
-            else :
-                embedDimensions = 1
-        title = "Embedding Dims = " + str( embedDimensions )
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.plot(result[:, 0], result[:, 1], linewidth=3)
-        ax.set( xlabel = "Forecast Interval",
-                ylabel = "Prediction Skill correlation",
-                title = title )
-        show()
 
     return result
 
@@ -511,8 +454,7 @@ def PredictNonlinear( data               = None,
                       verbose            = False,
                       numProcess         = 4,
                       mpMethod           = None,
-                      chunksize          = 1,
-                      showPlot           = True ):
+                      chunksize          = 1,):
     '''Estimate S-map localisation over theta.
 
     Parameters:
@@ -562,20 +504,5 @@ def PredictNonlinear( data               = None,
     import numpy as np
     result = np.column_stack([theta, correlationList])
 
-    if showPlot :
-        if embedded :
-            if IsIterable( columns ) :
-                embedDimensions = len( columns )
-            else :
-                embedDimensions = 1
-        title = "Embedding Dims = " + str( embedDimensions )
-
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.plot(result[:, 0], result[:, 1], linewidth=3)
-        ax.set( xlabel = "S-map Localisation (theta)",
-                ylabel = "Prediction Skill correlation",
-                title = title )
-        show()
 
     return result
