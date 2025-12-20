@@ -12,40 +12,40 @@ from .Utils import ComputeError
 #------------------------------------------------------
 def MultiviewSimplexPred( combo, data, args ) :
 
-    df = API.Simplex( data       = data,
-                      columns         = list( combo ),
-                      target          = args['target'], 
-                      train             = args['train'],
-                      test            = args['test'],
-                      embedDimensions = args[embedDims],
-                      predictionHorizon              = args['predictionHorizon'],
-                      step             = args['step'],
-                      exclusionRadius = args['exclusionRadius'],
-                      embedded        = args['embedded'],
-                      noTime          = args['noTime'],
-                      ignoreNan       = args['ignoreNan'] )
-    return df
+    projection = API.Simplex( data       = data,
+                              columns         = list( combo ),
+                              target          = args['target'],
+                              train             = args['train'],
+                              test            = args['test'],
+                              embedDimensions = args['embedDims'],
+                              predictionHorizon              = args['predictionHorizon'],
+                              step             = args['step'],
+                              exclusionRadius = args['exclusionRadius'],
+                              embedded        = args['embedded'],
+                              noTime          = args['noTime'],
+                              ignoreNan       = args['ignoreNan'] )
+    return projection
 
 #----------------------------------------------------
 # Function to evaluate combo rank (correlation)
 #----------------------------------------------------
 def MultiviewSimplexcorrelation( combo, data, args ) :
 
-    df = API.Simplex( data       = data,
-                      columns         = list( combo ),
-                      target          = args['target'], 
-                      train             = args['train'],
-                      test            = args['test'],
-                      embedDimensions = args[embedDims],
-                      predictionHorizon              = args['predictionHorizon'],
-                      step             = args['step'],
-                      exclusionRadius = args['exclusionRadius'],
-                      embedded        = args['embedded'],
-                      noTime          = args['noTime'],
-                      ignoreNan       = args['ignoreNan'] )
+    projection = API.Simplex( data       = data,
+                              columns         = list( combo ),
+                              target          = args['target'],
+                              train             = args['train'],
+                              test            = args['test'],
+                              embedDimensions = args['embedDims'],
+                              predictionHorizon              = args['predictionHorizon'],
+                              step             = args['step'],
+                              exclusionRadius = args['exclusionRadius'],
+                              embedded        = args['embedded'],
+                              noTime          = args['noTime'],
+                              ignoreNan       = args['ignoreNan'] )
 
-    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( df[:, 1], df[:, 2] )
+    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( projection[:, 1], projection[:, 2] )
     return err['correlation']
 
 #----------------------------------------------------
@@ -53,22 +53,22 @@ def MultiviewSimplexcorrelation( combo, data, args ) :
 #----------------------------------------------------
 def EmbedDimSimplexFunc( embedDimensions, data, args ) :
 
-    df = API.Simplex( data       = data,
-                      columns         = args['columns'],
-                      target          = args['target'], 
-                      train             = args['train'],
-                      test            = args['test'],
-                      embedDimensions = embedDimensions,
-                      predictionHorizon              = args['predictionHorizon'],
-                      step             = args['step'],
-                      exclusionRadius = args['exclusionRadius'],
-                      embedded        = args['embedded'],
-                      validLib        = args['validLib'],
-                      noTime          = args['noTime'],
-                      ignoreNan       = args['ignoreNan'] )
+    projection = API.Simplex( data       = data,
+                              columns         = args['columns'],
+                              target          = args['target'],
+                              train             = args['train'],
+                              test            = args['test'],
+                              embedDimensions = embedDimensions,
+                              predictionHorizon              = args['predictionHorizon'],
+                              step             = args['step'],
+                              exclusionRadius = args['exclusionRadius'],
+                              embedded        = args['embedded'],
+                              validLib        = args['validLib'],
+                              noTime          = args['noTime'],
+                              ignoreNan       = args['ignoreNan'] )
 
-    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( df[:, 1], df[:, 2] )
+    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( projection[:, 1], projection[:, 2] )
     return err['correlation']
 
 #-----------------------------------------------------
@@ -76,22 +76,22 @@ def EmbedDimSimplexFunc( embedDimensions, data, args ) :
 #----------------------------------------------------
 def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
 
-    df = API.Simplex( data       = data,
-                      columns         = args['columns'],
-                      target          = args['target'], 
-                      train             = args['train'],
-                      test            = args['test'],
-                      embedDimensions = args[embedDims],
-                      predictionHorizon              = predictionHorizon,
-                      step             = args['step'],
-                      exclusionRadius = args['exclusionRadius'],
-                      embedded        = args['embedded'],
-                      validLib        = args['validLib'],
-                      noTime          = args['noTime'],
-                      ignoreNan       = args['ignoreNan'] )
+    projection = API.Simplex( data       = data,
+                              columns         = args['columns'],
+                              target          = args['target'],
+                              train             = args['train'],
+                              test            = args['test'],
+                              embedDimensions = args['embedDims'],
+                              predictionHorizon              = predictionHorizon,
+                              step             = args['step'],
+                              exclusionRadius = args['exclusionRadius'],
+                              embedded        = args['embedded'],
+                              validLib        = args['validLib'],
+                              noTime          = args['noTime'],
+                              ignoreNan       = args['ignoreNan'] )
 
-    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( df[:, 1], df[:, 2] )
+    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( projection[:, 1], projection[:, 2] )
     return err['correlation']
 
 #-----------------------------------------------------
@@ -101,10 +101,10 @@ def PredictNLSMapFunc( theta, data, args ) :
 
     S = API.SMap( data       = data,
                   columns         = args['columns'],
-                  target          = args['target'], 
+                  target          = args['target'],
                   train             = args['train'],
                   test            = args['test'],
-                  embedDimensions = args[embedDims],
+                  embedDimensions = args['embedDims'],
                   predictionHorizon              = args['predictionHorizon'],
                   knn             = args['knn'],
                   step             = args['step'],
@@ -116,7 +116,7 @@ def PredictNLSMapFunc( theta, data, args ) :
                   noTime          = args['noTime'],
                   ignoreNan       = args['ignoreNan'] )
 
-    df = S['predictions']
-    # df is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( df[:, 1], df[:, 2] )
+    projection = S['predictions']
+    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+    err = ComputeError( projection[:, 1], projection[:, 2] )
     return err['correlation']

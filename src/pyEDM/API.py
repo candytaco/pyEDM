@@ -71,17 +71,17 @@ def Simplex( data               = None,
                      verbose         = verbose)
 
     if generateSteps :
-        S.Generate()
+        result = S.Generate()
     else :
-        S.Run()
+        result = S.Run()
 
     if showPlot :
-        PlotObsPred( S.Projection, "", S.embedDimensions, S.predictionHorizon )
+        PlotObsPred( result.projection, "", result.embedDimensions, result.predictionHorizon )
 
     if returnObject :
         return S
     else :
-        return S.Projection
+        return result.projection
 
 #------------------------------------------------------------------------
 #
@@ -158,18 +158,18 @@ def SMap( data               = None,
                   verbose         = verbose)
 
     if generateSteps :
-        S.Generate()
+        result = S.Generate()
     else :
-        S.Run()
+        result = S.Run()
 
     if showPlot :
-        PlotObsPred(S.Projection,   "", S.embedDimensions, S.predictionHorizon)
-        PlotCoeff  (S.Coefficients, "", S.embedDimensions, S.predictionHorizon)
+        PlotObsPred(result.projection,      "", result.embedDimensions, result.predictionHorizon)
+        PlotCoeff  (result.coefficients,    "", result.embedDimensions, result.predictionHorizon)
 
     if returnObject :
         return S
     else :
-        SMapDict = { 'predictions'    : S.Projection,
+        SMapDict = { 'predictions'    : result.projection,
                      'coefficients'   : S.Coefficients,
                      'singularValues' : S.SingularValues }
         return SMapDict
@@ -237,22 +237,22 @@ def CCM(data                = None,
     C.RevMap.EmbedData()
     C.RevMap.RemoveNan()
 
-    C.Project()
+    result = C.Run()
 
     if showPlot :
         import matplotlib.pyplot as plt
-        title = f'E = {C.embedDimensions}'
+        title = f'E = {result.embedDimensions}'
         fig, ax = plt.subplots()
 
-        # C.libMeans is numpy array: Column 0 is LibSize, rest are correlation values
-        if C.libMeans.shape[1] == 3 :
+        # result.libMeans is numpy array: Column 0 is LibSize, rest are correlation values
+        if result.libMeans.shape[1] == 3 :
             # CCM of two different variables
-            ax.plot(C.libMeans[:, 0], C.libMeans[:, 1], linewidth=3, label='Col 1')
-            ax.plot(C.libMeans[:, 0], C.libMeans[:, 2], linewidth=3, label='Col 2')
+            ax.plot(result.libMeans[:, 0], result.libMeans[:, 1], linewidth=3, label='Col 1')
+            ax.plot(result.libMeans[:, 0], result.libMeans[:, 2], linewidth=3, label='Col 2')
             ax.legend()
-        elif C.libMeans.shape[1] == 2 :
+        elif result.libMeans.shape[1] == 2 :
             # CCM of degenerate columns : target
-            ax.plot(C.libMeans[:, 0], C.libMeans[:, 1], linewidth=3)
+            ax.plot(result.libMeans[:, 0], result.libMeans[:, 1], linewidth=3)
 
         ax.set( xlabel = "Library Size", ylabel = "CCM correlation", title=title )
         axhline( y = 0, linewidth = 1 )
@@ -262,11 +262,11 @@ def CCM(data                = None,
         return C
     else :
         if includeData :
-            return { 'LibMeans'      : C.libMeans,
-                     'PredictStats1' : C.PredictStats1,
-                     'PredictStats2' : C.PredictStats2 }
+            return { 'LibMeans'      : result.libMeans,
+                     'PredictStats1' : result.predictStats1,
+                     'PredictStats2' : result.predictStats2 }
         else :
-            return C.libMeans
+            return result.libMeans
 
 #------------------------------------------------------------------------
 #
@@ -326,50 +326,15 @@ def Multiview( data               = None,
                         chunksize       = chunksize,
                         returnObject    = returnObject )
 
-    M.Rank()
-    M.Project()
-
-    # multiview averaged prediction
-    # M.topRankProjections is dict of combo : numpy array
-    # Each array has columns: [Time, Observations, Predictions, Pred_Variance]
-    import numpy as np
-
-    # Get first projection for Time and Observations
-    first_proj = next(iter(M.topRankProjections.values()))
-
-    # Collect all predictions (column 2) and average them
-    all_predictions = [proj[:, 2] for proj in M.topRankProjections.values()]
-    multiviewPredict = np.mean(all_predictions, axis=0)
-
-    # Create result array: [Time, Observations, Predictions]
-    M.Projection = np.column_stack([first_proj[:, 0], first_proj[:, 1], multiviewPredict])
-
-    # Create View: rankings of column combinations
-    colCombos = list(M.topRankProjections.keys())
-
-    topRankStats = {}
-    for combo in colCombos :
-        proj = M.topRankProjections[combo]
-        # proj columns: 0=Time, 1=Observations, 2=Predictions, 3=Variance
-        topRankStats[combo] = ComputeError(proj[:, 1], proj[:, 2])
-
-    M.topRankStats = topRankStats
-
-    # Build View array: each row is [combo_as_str, correlation, MAE, CAE, RMSE]
-    view_rows = []
-    for combo in colCombos:
-        stats = topRankStats[combo]
-        view_rows.append([str(combo), stats['correlation'], stats['MAE'], stats['CAE'], stats['RMSE']])
-
-    M.View = view_rows  # List of lists for now
+    result = M.Run()
 
     if showPlot :
-        PlotObsPred( M.Projection, "", M.D, M.predictionHorizon )
+        PlotObsPred( result.projection, "", result.D, result.predictionHorizon )
 
     if returnObject :
         return M
     else :
-        return { 'Predictions' : M.Projection, 'View' : M.View }
+        return { 'Predictions' : result.projection, 'View' : result.view }
 
 #------------------------------------------------------------------------
 #
