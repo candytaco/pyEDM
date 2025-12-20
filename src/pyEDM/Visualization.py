@@ -228,3 +228,93 @@ def PlotCoeff(data, dataName="", embedDimensions=0, predictionHorizon=0, block=T
     """
     plot_smap_coefficients(data, title=dataName, embedDimensions=embedDimensions,
                           predictionHorizon=predictionHorizon, block=block)
+
+
+def plot_embed_dimension(result: np.ndarray,
+                        title: str = "",
+                        block: bool = True):
+    """Plot embedding dimension vs prediction skill.
+
+    Parameters
+    ----------
+    result : numpy.ndarray, shape (maxE, 2)
+        Array with columns [E, correlation]
+    title : str, optional
+        Plot title
+    block : bool, default=True
+        Whether to block execution when showing plot
+
+    Examples
+    --------
+    >>> result = EmbedDimension(data, columns=[1], target=1)
+    >>> plot_embed_dimension(result, "Tent Map Embedding")
+    """
+    plot_title = title or "Embedding Dimension"
+
+    plt.figure()
+    plt.plot(result[:, 0], result[:, 1], 'o-', linewidth=2, markersize=8)
+    plt.xlabel('Embedding Dimension (E)')
+    plt.ylabel('Prediction Skill (correlation)')
+    plt.title(plot_title)
+    plt.grid(True, alpha=0.3)
+    plt.show(block=block)
+
+
+def plot_predict_interval(result: np.ndarray,
+                         title: str = "",
+                         block: bool = True):
+    """Plot prediction interval vs prediction skill.
+
+    Parameters
+    ----------
+    result : numpy.ndarray, shape (maxTp, 2)
+        Array with columns [predictionHorizon, correlation]
+    title : str, optional
+        Plot title
+    block : bool, default=True
+        Whether to block execution when showing plot
+
+    Examples
+    --------
+    >>> result = PredictInterval(data, columns=[1], target=1, embedDimensions=2)
+    >>> plot_predict_interval(result, "Tent Map Prediction Interval")
+    """
+    plot_title = title or "Prediction Interval"
+
+    plt.figure()
+    plt.plot(result[:, 0], result[:, 1], 'o-', linewidth=2, markersize=8)
+    plt.xlabel('Prediction Horizon (Tp)')
+    plt.ylabel('Prediction Skill (correlation)')
+    plt.title(plot_title)
+    plt.grid(True, alpha=0.3)
+    plt.show(block=block)
+
+
+def plot_predict_nonlinear(result: np.ndarray,
+                          title: str = "",
+                          block: bool = True):
+    """Plot theta vs prediction skill for S-Map.
+
+    Parameters
+    ----------
+    result : numpy.ndarray, shape (len(theta), 2)
+        Array with columns [theta, correlation]
+    title : str, optional
+        Plot title
+    block : bool, default=True
+        Whether to block execution when showing plot
+
+    Examples
+    --------
+    >>> result = PredictNonlinear(data, columns=[1], target=1, embedDimensions=2)
+    >>> plot_predict_nonlinear(result, "Tent Map Nonlinearity")
+    """
+    plot_title = title or "S-Map Localization (theta)"
+
+    plt.figure()
+    plt.plot(result[:, 0], result[:, 1], 'o-', linewidth=2, markersize=8)
+    plt.xlabel('S-Map Localization (theta)')
+    plt.ylabel('Prediction Skill (correlation)')
+    plt.title(plot_title)
+    plt.grid(True, alpha=0.3)
+    plt.show(block=block)
