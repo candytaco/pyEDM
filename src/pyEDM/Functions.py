@@ -1,4 +1,6 @@
-"""Interface to Empirical Dynamic Modeling (EDM) pyEDM"""
+"""Functional programming interface to Empirical Dynamic Modeling (EDM) pyEDM.
+While the underlying classes have been refactored, these functions should return roughly the same data structures
+returned by the original pyEDM functions"""
 
 from itertools import repeat
 # python modules
