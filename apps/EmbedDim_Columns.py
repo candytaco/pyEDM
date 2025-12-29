@@ -9,7 +9,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 # Community modules
 from pandas import DataFrame, read_feather, read_csv
-from pyEDM  import EmbedDimension, sampleData
+from pyEDM  import FindOptimalEmbeddingDimensionality, sampleData
 from matplotlib import pyplot as plt
 from numpy import greater, maximum
 from scipy.signal import argrelextrema
@@ -138,21 +138,21 @@ def EmbedDimFunc( column, df, args ):
     else :
         target = column
 
-    ed = EmbedDimension( dataFrame       = df,
-                         columns         = column,
-                         target          = target,
-                         maxE            = args['maxE'],
-                         lib             = args['lib'],
-                         pred            = args['pred'],
-                         Tp              = args['Tp'],
-                         tau             = args['tau'],
-                         exclusionRadius = args['exclusionRadius'],
-                         validLib        = args['validLib'],
-                         noTime          = args['noTime'],
-                         ignoreNan       = args['ignoreNan'],
-                         verbose         = False,
-                         numProcess      = args['EDimCores'],
-                         showPlot        = False )
+    ed = FindOptimalEmbeddingDimensionality(dataFrame       = df,
+                                            columns         = column,
+                                            target          = target,
+                                            maxE            = args['maxE'],
+                                            lib             = args['lib'],
+                                            pred            = args['pred'],
+                                            Tp              = args['Tp'],
+                                            tau             = args['tau'],
+                                            exclusionRadius = args['exclusionRadius'],
+                                            validLib        = args['validLib'],
+                                            noTime          = args['noTime'],
+                                            ignoreNan       = args['ignoreNan'],
+                                            verbose         = False,
+                                            numProcess      = args['EDimCores'],
+                                            showPlot        = False)
 
     # Find max rho(E)
     if args['firstMax'] :

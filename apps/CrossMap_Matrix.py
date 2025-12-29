@@ -8,7 +8,7 @@ from warnings        import filterwarnings
 
 from numpy  import full, nan, fill_diagonal
 from pandas import DataFrame, read_feather, read_csv, concat
-from pyEDM  import Simplex, sampleData, ComputeError
+from pyEDM  import FitSimplex, sampleData, ComputeError
 from matplotlib import pyplot as plt
 
 # numpy/lib/_function_base_impl.py:3000:
@@ -172,17 +172,17 @@ def SimplexFunc( blockPairs, E, argsD, data ):
 
     column, target = blockPairs
 
-    df = Simplex( dataFrame       = data,
-                  columns         = column,
-                  target          = target,
-                  lib             = argsD['lib'],
-                  pred            = argsD['pred'],
-                  E               = E,
-                  exclusionRadius = argsD['exclusionRadius'],
-                  Tp              = argsD['Tp'],
-                  tau             = argsD['tau'],
-                  noTime          = argsD['noTime'],
-                  showPlot        = False )
+    df = FitSimplex(dataFrame       = data,
+                    columns         = column,
+                    target          = target,
+                    lib             = argsD['lib'],
+                    pred            = argsD['pred'],
+                    E               = E,
+                    exclusionRadius = argsD['exclusionRadius'],
+                    Tp              = argsD['Tp'],
+                    tau             = argsD['tau'],
+                    noTime          = argsD['noTime'],
+                    showPlot        = False)
 
     rho = ComputeError( df['Observations'], df['Predictions'] )['rho']
 

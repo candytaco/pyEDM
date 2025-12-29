@@ -6,7 +6,7 @@ from multiprocessing import get_context
 from itertools       import repeat
 
 from pandas import DataFrame, read_csv, concat
-from pyEDM  import Simplex, sampleData
+from pyEDM  import FitSimplex, sampleData
 from matplotlib import pyplot as plt
 
 #----------------------------------------------------------------------------
@@ -85,18 +85,18 @@ def CrossMap_ColumnList( data, columns = [], target = None, E = 0,
 def SimplexFunc( columns, argsD, data ):
     '''Call pyEDM Simplex using the column, args, and data'''
 
-    df = Simplex( dataFrame       = data,
-                  columns         = columns,
-                  target          = argsD['target'],
-                  lib             = argsD['lib'],
-                  pred            = argsD['pred'],
-                  E               = argsD['E'],
-                  embedded        = argsD['embedded'],
-                  exclusionRadius = argsD['exclusionRadius'],
-                  Tp              = argsD['Tp'],
-                  tau             = argsD['tau'],
-                  noTime          = argsD['noTime'],
-                  showPlot        = False )
+    df = FitSimplex(dataFrame       = data,
+                    columns         = columns,
+                    target          = argsD['target'],
+                    lib             = argsD['lib'],
+                    pred            = argsD['pred'],
+                    E               = argsD['E'],
+                    embedded        = argsD['embedded'],
+                    exclusionRadius = argsD['exclusionRadius'],
+                    Tp              = argsD['Tp'],
+                    tau             = argsD['tau'],
+                    noTime          = argsD['noTime'],
+                    showPlot        = False)
 
     return df
 

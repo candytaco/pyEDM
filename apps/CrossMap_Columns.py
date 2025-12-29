@@ -7,7 +7,7 @@ from itertools       import repeat
 from pickle          import dump
 
 from pandas import DataFrame, concat, read_feather, read_csv
-from pyEDM  import ComputeError, Simplex, sampleData
+from pyEDM  import ComputeError, FitSimplex, sampleData
 from numpy  import array
 from matplotlib import pyplot as plt
 
@@ -124,17 +124,17 @@ def CrossMap_Columns( data, target = None, E = 0, Evec = None,
 def SimplexFunc( column, target, E, argsD, data, returnError = False ):
     '''Call pyEDM Simplex using the column, args, and data'''
 
-    df = Simplex( dataFrame       = data,
-                  columns         = column,
-                  target          = target,
-                  lib             = argsD['lib'],
-                  pred            = argsD['pred'],
-                  E               = E,
-                  exclusionRadius = argsD['exclusionRadius'],
-                  Tp              = argsD['Tp'],
-                  tau             = argsD['tau'],
-                  noTime          = argsD['noTime'],
-                  showPlot        = False )
+    df = FitSimplex(dataFrame       = data,
+                    columns         = column,
+                    target          = target,
+                    lib             = argsD['lib'],
+                    pred            = argsD['pred'],
+                    E               = E,
+                    exclusionRadius = argsD['exclusionRadius'],
+                    Tp              = argsD['Tp'],
+                    tau             = argsD['tau'],
+                    noTime          = argsD['noTime'],
+                    showPlot        = False)
 
     if argsD['returnError'] :
         D_err = ComputeError( df['Observations'], df['Predictions'] )

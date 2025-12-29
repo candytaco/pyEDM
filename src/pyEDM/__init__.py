@@ -1,7 +1,7 @@
 '''Python tools for EDM'''
-from .Functions import EmbedDimension, PredictInterval, PredictNonlinear
+from .Functions import FindOptimalEmbeddingDimensionality, FindOptimalPredictionHorizon, FindSMapNeighborhood
 # import EDM functions
-from .Functions import Simplex, SMap, CCM, Multiview
+from .Functions import FitSimplex, FitSMap, FitCCM, FitMultiview
 from .Utils import PlotObsPred, PlotCoeff, ComputeError
 from .Examples import Examples
 from .Utils import SurrogateData

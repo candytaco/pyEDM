@@ -10,34 +10,34 @@ from multiprocessing import get_context
 import pyEDM.PoolFunc as PoolFunc
 # local modules
 from .Utils import IsIterable
-from .CCM import CCM as CCMClass
-from .Multiview import Multiview as MultiviewClass
-from .SMap import SMap as SMapClass
-from .Simplex import Simplex as SimplexClass
+from .CCM import CCM
+from .Multiview import Multiview
+from .SMap import SMap
+from .Simplex import Simplex
 from .Parameters import (EDMParameters, DataSplit, GenerationParameters,
                          SMapParameters, CCMParameters, MultiviewParameters,
                          ExecutionParameters)
 
 
-def Simplex(data = None,
-            columns = None,
-            target = None,
-            train = None,
-            test = None,
-            embedDimensions = 0,
-            predictionHorizon = 1,
-            knn = 0,
-            step = -1,
-            exclusionRadius = 0,
-            embedded = False,
-            validLib = [],
-            noTime = False,
-            generateSteps = 0,
-            generateConcat = False,
-            verbose = False,
-            ignoreNan = True,
-            returnObject = False):
-	"""Simplex prediction using numpy array data.
+def FitSimplex(data = None,
+               columns = None,
+               target = None,
+               train = None,
+               test = None,
+               embedDimensions = 0,
+               predictionHorizon = 1,
+               knn = 0,
+               step = -1,
+               exclusionRadius = 0,
+               embedded = False,
+               validLib = [],
+               noTime = False,
+               generateSteps = 0,
+               generateConcat = False,
+               verbose = False,
+               ignoreNan = True,
+               returnObject = False):
+	"""Simplex prediction.
 
 	Parameters:
 	data : numpy.ndarray, shape (n_samples, n_features)
@@ -69,7 +69,7 @@ def Simplex(data = None,
 	generation = GenerationParameters(generateSteps = generateSteps, generateConcat = generateConcat)
 
 	# Instantiate SimplexClass object using parameter objects
-	S = SimplexClass(params = params, split = split, generation = generation)
+	S = Simplex(params = params, split = split, generation = generation)
 
 	if generateSteps:
 		result = S.Generate()
@@ -82,27 +82,27 @@ def Simplex(data = None,
 		return result.projection
 
 
-def SMap(data = None,
-         columns = None,
-         target = None,
-         train = None,
-         test = None,
-         embedDimensions = 0,
-         predictionHorizon = 1,
-         knn = 0,
-         step = -1,
-         theta = 0,
-         exclusionRadius = 0,
-         solver = None,
-         embedded = False,
-         validLib = [],
-         noTime = False,
-         generateSteps = 0,
-         generateConcat = False,
-         ignoreNan = True,
-         verbose = False,
-         returnObject = False):
-	"""S-Map prediction using numpy array data.
+def FitSMap(data = None,
+            columns = None,
+            target = None,
+            train = None,
+            test = None,
+            embedDimensions = 0,
+            predictionHorizon = 1,
+            knn = 0,
+            step = -1,
+            theta = 0,
+            exclusionRadius = 0,
+            solver = None,
+            embedded = False,
+            validLib = [],
+            noTime = False,
+            generateSteps = 0,
+            generateConcat = False,
+            ignoreNan = True,
+            verbose = False,
+            returnObject = False):
+	"""S-Map prediction.
 
 	Parameters:
 	data : numpy.ndarray, shape (n_samples, n_features)
@@ -135,7 +135,7 @@ def SMap(data = None,
 	smap_params = SMapParameters(theta = theta, solver = solver)
 
 	# Instantiate SMapClass object using parameter objects
-	S = SMapClass(params = params, split = split, generation = generation, smap = smap_params)
+	S = SMap(params = params, split = split, generation = generation, smap = smap_params)
 
 	if generateSteps:
 		result = S.Generate()
@@ -151,26 +151,26 @@ def SMap(data = None,
 		return SMapDict
 
 
-def CCM(data = None,
-        columns = None,
-        target = None,
-        trainSizes = None,
-        sample = 0,
-        embedDimensions = 0,
-        predictionHorizon = 0,
-        knn = 0,
-        step = -1,
-        exclusionRadius = 0,
-        seed = None,
-        embedded = False,
-        validLib = [],
-        includeData = False,
-        noTime = False,
-        ignoreNan = True,
-        mpMethod = None,
-        sequential = False,
-        verbose = False,
-        returnObject = False):
+def FitCCM(data = None,
+           columns = None,
+           target = None,
+           trainSizes = None,
+           sample = 0,
+           embedDimensions = 0,
+           predictionHorizon = 0,
+           knn = 0,
+           step = -1,
+           exclusionRadius = 0,
+           seed = None,
+           embedded = False,
+           validLib = [],
+           includeData = False,
+           noTime = False,
+           ignoreNan = True,
+           mpMethod = None,
+           sequential = False,
+           verbose = False,
+           returnObject = False):
 	"""Convergent Cross Mapping.
 
 	Parameters:
@@ -209,7 +209,7 @@ def CCM(data = None,
 	execution = ExecutionParameters(mpMethod = mpMethod, sequential = sequential)
 
 	# Instantiate CCMClass object using parameter objects
-	C = CCMClass(params = params, ccm = ccm_params, execution = execution)
+	C = CCM(params = params, ccm = ccm_params, execution = execution)
 
 	# Embedding of Forward & Reverse mapping
 	C.FwdMap.EmbedData()
@@ -230,27 +230,27 @@ def CCM(data = None,
 			return result.libMeans
 
 
-def Multiview(data = None,
-              columns = None,
-              target = None,
-              train = None,
-              test = None,
-              D = 0,
-              embedDimensions = 1,
-              predictionHorizon = 1,
-              knn = 0,
-              step = -1,
-              multiview = 0,
-              exclusionRadius = 0,
-              trainLib = True,
-              excludeTarget = False,
-              ignoreNan = True,
-              verbose = False,
-              numProcess = 4,
-              mpMethod = None,
-              chunksize = 1,
-              returnObject = False):
-	"""Multiview prediction using numpy array data.
+def FitMultiview(data = None,
+                 columns = None,
+                 target = None,
+                 train = None,
+                 test = None,
+                 D = 0,
+                 embedDimensions = 1,
+                 predictionHorizon = 1,
+                 knn = 0,
+                 step = -1,
+                 multiview = 0,
+                 exclusionRadius = 0,
+                 trainLib = True,
+                 excludeTarget = False,
+                 ignoreNan = True,
+                 verbose = False,
+                 numProcess = 4,
+                 mpMethod = None,
+                 chunksize = 1,
+                 returnObject = False):
+	"""Multiview prediction
 
 	Parameters:
 	data : numpy.ndarray, shape (n_samples, n_features)
@@ -291,7 +291,7 @@ def Multiview(data = None,
 	)
 
 	# Instantiate MultiviewClass object using parameter objects
-	M = MultiviewClass(params = params, split = split, multiview = multiview_params, execution = execution)
+	M = Multiview(params = params, split = split, multiview = multiview_params, execution = execution)
 
 	result = M.Run()
 
@@ -301,23 +301,23 @@ def Multiview(data = None,
 		return {'Predictions': result.projection, 'View': result.view}
 
 
-def EmbedDimension(data = None,
-                   columns = None,
-                   target = None,
-                   maxE = 10,
-                   train = None,
-                   test = None,
-                   predictionHorizon = 1,
-                   step = -1,
-                   exclusionRadius = 0,
-                   embedded = False,
-                   validLib = [],
-                   noTime = False,
-                   ignoreNan = True,
-                   verbose = False,
-                   numProcess = 4,
-                   mpMethod = None,
-                   chunksize = 1, ):
+def FindOptimalEmbeddingDimensionality(data = None,
+                                       columns = None,
+                                       target = None,
+                                       maxE = 10,
+                                       train = None,
+                                       test = None,
+                                       predictionHorizon = 1,
+                                       step = -1,
+                                       exclusionRadius = 0,
+                                       embedded = False,
+                                       validLib = [],
+                                       noTime = False,
+                                       ignoreNan = True,
+                                       verbose = False,
+                                       numProcess = 4,
+                                       mpMethod = None,
+                                       chunksize = 1, ):
 	"""Estimate optimal embedding dimension [1:maxE].
 
 	Parameters:
@@ -362,23 +362,23 @@ def EmbedDimension(data = None,
 	return result
 
 
-def PredictInterval(data = None,
-                    columns = None,
-                    target = None,
-                    train = None,
-                    test = None,
-                    maxTp = 10,
-                    embedDimensions = 1,
-                    step = -1,
-                    exclusionRadius = 0,
-                    embedded = False,
-                    validLib = [],
-                    noTime = False,
-                    ignoreNan = True,
-                    verbose = False,
-                    numProcess = 4,
-                    mpMethod = None,
-                    chunksize = 1, ):
+def FindOptimalPredictionHorizon(data = None,
+                                 columns = None,
+                                 target = None,
+                                 train = None,
+                                 test = None,
+                                 maxTp = 10,
+                                 embedDimensions = 1,
+                                 step = -1,
+                                 exclusionRadius = 0,
+                                 embedded = False,
+                                 validLib = [],
+                                 noTime = False,
+                                 ignoreNan = True,
+                                 verbose = False,
+                                 numProcess = 4,
+                                 mpMethod = None,
+                                 chunksize = 1, ):
 	"""Estimate optimal prediction interval [1:maxTp].
 
 	Parameters:
@@ -423,27 +423,28 @@ def PredictInterval(data = None,
 	return result
 
 
-def PredictNonlinear(data = None,
-                     columns = None,
-                     target = None,
-                     theta = None,
-                     train = None,
-                     test = None,
-                     embedDimensions = 1,
-                     predictionHorizon = 1,
-                     knn = 0,
-                     step = -1,
-                     exclusionRadius = 0,
-                     solver = None,
-                     embedded = False,
-                     validLib = [],
-                     noTime = False,
-                     ignoreNan = True,
-                     verbose = False,
-                     numProcess = 4,
-                     mpMethod = None,
-                     chunksize = 1, ):
-	"""Estimate S-map localisation over theta.
+def FindSMapNeighborhood(data = None,
+                         columns = None,
+                         target = None,
+                         theta = None,
+                         train = None,
+                         test = None,
+                         embedDimensions = 1,
+                         predictionHorizon = 1,
+                         knn = 0,
+                         step = -1,
+                         exclusionRadius = 0,
+                         solver = None,
+                         embedded = False,
+                         validLib = [],
+                         noTime = False,
+                         ignoreNan = True,
+                         verbose = False,
+                         numProcess = 4,
+                         mpMethod = None,
+                         chunksize = 1, ):
+	"""Estimate the best neighboorhood size for SMap, i.e. the
+	exponential decay factor for weighing neighbors by distance
 
 	Parameters:
 	data : numpy.ndarray, shape (n_samples, n_features)

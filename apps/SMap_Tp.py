@@ -8,7 +8,7 @@ from itertools       import repeat
 from   pandas import read_csv
 import matplotlib.pyplot as plt
 
-from pyEDM import SMap, sampleData
+from pyEDM import FitSMap, sampleData
 
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
@@ -73,18 +73,18 @@ def SMap_Tp( data, TpList = None, target = None, column = None,
 def SMapTpFunc( Tp, argsD, data ):
     '''Call pyEDM SMap using Tp, args, and data'''
     
-    sm = SMap( dataFrame       = data,
-               columns         = argsD['column'],
-               target          = argsD['target'],
-               lib             = argsD['lib'],
-               pred            = argsD['pred'],
-               E               = argsD['E'],
-               Tp              = Tp, # Single value of TpList
-               theta           = argsD['theta'],
-               exclusionRadius = argsD['exclusionRadius'],
-               embedded        = argsD['embedded'],
-               noTime          = argsD['noTime'],
-               showPlot        = False )
+    sm = FitSMap(dataFrame       = data,
+                 columns         = argsD['column'],
+                 target          = argsD['target'],
+                 lib             = argsD['lib'],
+                 pred            = argsD['pred'],
+                 E               = argsD['E'],
+                 Tp              = Tp,  # Single value of TpList
+                 theta           = argsD['theta'],
+                 exclusionRadius = argsD['exclusionRadius'],
+                 embedded        = argsD['embedded'],
+                 noTime          = argsD['noTime'],
+                 showPlot        = False)
 
     return sm
 

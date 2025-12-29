@@ -8,7 +8,7 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing    import get_context
 
 # Community modules
-from pyEDM  import CCM
+from pyEDM  import FitCCM
 from numpy  import array, exp, full, nan, nan_to_num, round, zeros
 from pandas import DataFrame, read_csv, read_feather
 from sklearn.linear_model import LinearRegression
@@ -260,15 +260,15 @@ def CCMFunc( column_target, df, args ):
     tau = args['D_tau'][column]
 
     try :
-        ccm_ = CCM(dataFrame = df,
-                   columns   = column,
-                   target    = target,
-                   trainSizes = args['libSizes'],
-                   sample    = args['sample'],
-                   E         = E,
-                   tau       = tau,
-                   Tp        = args['Tp'],
-                   seed      = 0)
+        ccm_ = FitCCM(dataFrame = df,
+                      columns   = column,
+                      target    = target,
+                      trainSizes = args['libSizes'],
+                      sample    = args['sample'],
+                      E         = E,
+                      tau       = tau,
+                      Tp        = args['Tp'],
+                      seed      = 0)
     except :
         if args['verbose'] :
             print( f'\tCCMFunc() CCM Error: column {column} target {target}.' )

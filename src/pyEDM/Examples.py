@@ -50,13 +50,13 @@ def print_call(func):
 def Examples():
 	'''Canonical EDM API examples using new Result objects and Visualization'''
 
-	EmbedDimension = print_call(EDM.EmbedDimension)
-	PredictInterval = print_call(EDM.PredictInterval)
-	PredictNonlinear = print_call(EDM.PredictNonlinear)
-	Simplex = print_call(EDM.Simplex)
-	Multiview = print_call(EDM.Multiview)
-	SMap = print_call(EDM.SMap)
-	CCM = print_call(EDM.CCM)
+	EmbedDimension = print_call(EDM.FindOptimalEmbeddingDimensionality)
+	PredictInterval = print_call(EDM.FindOptimalPredictionHorizon)
+	PredictNonlinear = print_call(EDM.FindSMapNeighborhood)
+	Simplex = print_call(EDM.FitSimplex)
+	Multiview = print_call(EDM.FitMultiview)
+	SMap = print_call(EDM.FitSMap)
+	CCM = print_call(EDM.FitCCM)
 
 	sampleDataNames = \
 		["TentMap", "TentMapNoise", "circle", "block_3sp", "sardine_anchovy_sst"]
