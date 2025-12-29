@@ -4,7 +4,7 @@
 # package modules
 
 # local modules
-import pyEDM.Functions as API
+from . import Functions
 from .Utils import ComputeError
 
 #------------------------------------------------------
@@ -12,7 +12,7 @@ from .Utils import ComputeError
 #------------------------------------------------------
 def MultiviewSimplexPred( combo, data, args ) :
 
-    projection = API.FitSimplex(data       = data,
+    projection = Functions.FitSimplex(data       = data,
                                 columns         = list( combo ),
                                 target          = args['target'],
                                 train             = args['train'],
@@ -31,7 +31,7 @@ def MultiviewSimplexPred( combo, data, args ) :
 #----------------------------------------------------
 def MultiviewSimplexcorrelation( combo, data, args ) :
 
-    projection = API.FitSimplex(data       = data,
+    projection = Functions.FitSimplex(data       = data,
                                 columns         = list( combo ),
                                 target          = args['target'],
                                 train             = args['train'],
@@ -53,7 +53,7 @@ def MultiviewSimplexcorrelation( combo, data, args ) :
 #----------------------------------------------------
 def EmbedDimSimplexFunc( embedDimensions, data, args ) :
 
-    projection = API.FitSimplex(data       = data,
+    projection = Functions.FitSimplex(data       = data,
                                 columns         = args['columns'],
                                 target          = args['target'],
                                 train             = args['train'],
@@ -76,7 +76,7 @@ def EmbedDimSimplexFunc( embedDimensions, data, args ) :
 #----------------------------------------------------
 def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
 
-    projection = API.FitSimplex(data       = data,
+    projection = Functions.FitSimplex(data       = data,
                                 columns         = args['columns'],
                                 target          = args['target'],
                                 train             = args['train'],
@@ -99,7 +99,7 @@ def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
 #----------------------------------------------------
 def PredictNLSMapFunc( theta, data, args ) :
 
-    S = API.FitSMap(data       = data,
+    S = Functions.FitSMap(data       = data,
                     columns         = args['columns'],
                     target          = args['target'],
                     train             = args['train'],
