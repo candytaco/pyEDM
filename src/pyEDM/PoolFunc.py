@@ -4,7 +4,7 @@
 # package modules
 
 # local modules
-import pyEDM.API as API
+import pyEDM.Functions as API
 from .Utils import ComputeError
 
 #------------------------------------------------------

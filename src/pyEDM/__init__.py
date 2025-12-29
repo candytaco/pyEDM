@@ -1,7 +1,7 @@
 '''Python tools for EDM'''
-from .API import EmbedDimension, PredictInterval, PredictNonlinear
+from .Functions import EmbedDimension, PredictInterval, PredictNonlinear
 # import EDM functions
-from .API import Simplex, SMap, CCM, Multiview
+from .Functions import Simplex, SMap, CCM, Multiview
 from .Utils import PlotObsPred, PlotCoeff, ComputeError
 from .Examples import Examples
 from .Utils import SurrogateData
