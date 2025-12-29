@@ -11,7 +11,7 @@ from numpy import append, array, column_stack, empty, floating, full, integer, n
 from numpy import delete, zeros, apply_along_axis
 from scipy.spatial import KDTree
 
-from .Utils import IsIterable
+from .Utils import IsNonStringIterable
 # local modules
 from .Embed import Embed
 
@@ -876,7 +876,7 @@ class EDM:
 			self.columns = list(range(1, self.Data.shape[1]))
 		elif isinstance(self.columns, int):
 			self.columns = [self.columns]
-		elif not IsIterable(self.columns):
+		elif not IsNonStringIterable(self.columns):
 			raise RuntimeError(f'Validate() {self.name}: columns must be a list of integers or an integer.')
 
 		# Validate all columns are integers within bounds
@@ -892,7 +892,7 @@ class EDM:
 			self.target = [self.columns[0]] if self.columns else [1]
 		elif isinstance(self.target, int):
 			self.target = [self.target]
-		elif not IsIterable(self.target):
+		elif not IsNonStringIterable(self.target):
 			raise RuntimeError(f'Validate() {self.name}: target must be a list of integers or an integer.')
 
 		# Validate all targets are integers within bounds
@@ -913,12 +913,12 @@ class EDM:
 		if self.name != 'CCM':
 			if not len(self.train):
 				raise RuntimeError(f'Validate() {self.name}: train required.')
-			if not IsIterable(self.train):
+			if not IsNonStringIterable(self.train):
 				self.train = [int(i) for i in self.train.split()]
 
 			if not len(self.test):
 				raise RuntimeError(f'Validate() {self.name}: test required.')
-			if not IsIterable(self.test):
+			if not IsNonStringIterable(self.test):
 				self.test = [int(i) for i in self.test.split()]
 
 		# Set knn default based on E and train size, E embedded on num columns

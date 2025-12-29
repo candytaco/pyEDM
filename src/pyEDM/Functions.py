@@ -9,7 +9,7 @@ from multiprocessing import get_context
 
 import pyEDM.PoolFunc as PoolFunc
 # local modules
-from .Utils import IsIterable
+from .Utils import IsNonStringIterable
 from .CCM import CCM
 from .Multiview import Multiview
 from .SMap import SMap
@@ -462,7 +462,7 @@ def FindSMapNeighborhood(data = None,
 	if theta is None:
 		theta = [0.01, 0.1, 0.3, 0.5, 0.75, 1,
 		         1.5, 2, 3, 4, 5, 6, 7, 8, 9]
-	elif not IsIterable(theta):
+	elif not IsNonStringIterable(theta):
 		theta = [float(t) for t in theta.split()]
 
 	# Setup Pool

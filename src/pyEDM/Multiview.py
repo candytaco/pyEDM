@@ -11,7 +11,7 @@ from numpy import argsort, array, column_stack, mean
 import pyEDM.PoolFunc as PoolFunc
 from pyEDM.Embed import Embed
 # local modules
-from .Utils import IsIterable, ComputeError
+from .Utils import IsNonStringIterable, ComputeError
 from .Results import MultiviewResult
 from .Parameters import EDMParameters, DataSplit, MultiviewParameters, ExecutionParameters
 
@@ -341,12 +341,12 @@ class Multiview:
 
         if self.columns is None or not len(self.columns):
             raise RuntimeError( f'Validate() {self.name}: columns required.' )
-        if not IsIterable( self.columns ) :
+        if not IsNonStringIterable(self.columns) :
             raise RuntimeError( f'Validate() {self.name}: columns must be a list of integers.' )
 
         if self.target is None:
             raise RuntimeError( f'Validate() {self.name}: target required.' )
-        if not IsIterable( self.target ) :
+        if not IsNonStringIterable(self.target) :
             self.target = [self.target]
 
         if not self.trainLib :

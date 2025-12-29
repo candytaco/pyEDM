@@ -67,7 +67,7 @@ def Iterable( obj ):
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def IsIterable( obj ):
+def IsNonStringIterable(obj):
     '''Is an object iterable and not a string?'''
 
     if Iterable( obj ) :

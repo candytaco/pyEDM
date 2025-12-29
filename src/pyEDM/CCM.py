@@ -6,7 +6,7 @@ from multiprocessing import get_context
 from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros, column_stack
 from numpy.random import default_rng
 
-from .Utils import ComputeError, IsIterable
+from .Utils import ComputeError, IsNonStringIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .Results import CCMResult
@@ -296,7 +296,7 @@ class CCM:
 
         if not len(self.trainSizes) :
             raise RuntimeError(f'{self.name} Validate(): LibSizes required.')
-        if not IsIterable(self.trainSizes) :
+        if not IsNonStringIterable(self.trainSizes) :
             self.trainSizes = [int(L) for L in self.trainSizes.split()]
 
         if self.sample == 0:
