@@ -271,3 +271,67 @@ class MultiviewParameters:
             raise ValueError("D must be non-negative")
         if self.multiview < 0:
             raise ValueError("multiview must be non-negative")
+
+@dataclass
+class MDEParameters:
+    """Multivariate Delay Embedding specific parameters.
+
+    Parameters
+    ----------
+    target : int
+        Column index of the target column to forecast
+    maxD : int, default=5
+        Maximum number of features to select (including target if include_target=True)
+    include_target : bool, default=True
+        Whether to start with target in feature list
+    conv : bool, default=True
+        Whether to use convergence checking for feature selection
+    optimize_for : str, default="correlation"
+        Metric to optimize: "correlation" or "MAE"
+    batch_size : int, default=1000
+        Number of features to process in each parallel batch
+    """
+    target: int
+    maxD: int = 5
+    include_target: bool = True
+    conv: bool = True
+    optimize_for: str = "correlation"
+    batch_size: int = 1000
+
+    def __post_init__(self):
+        """Validate MDE parameters."""
+        if self.maxD < 1:
+            raise ValueError("maxD must be at least 1")
+        if self.batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        if self.optimize_for not in ["correlation", "MAE"]:
+            raise ValueError("optimize_for must be 'correlation' or 'MAE'")
+
+@dataclass
+class MDECVParameters:
+    """MDE Cross-Validation specific parameters.
+
+    Parameters
+    ----------
+    folds : int, default=5
+        Number of cross-validation folds
+    test_size : float, default=0.2
+        Proportion of data to use for test set
+    final_feature_mode : str, default="best_fold"
+        Method for selecting final features:
+        - "best_fold": Use features from best performing fold
+        - "frequency": Use most frequent features across folds
+        - "best_N": Use top N features based on incremental prediction
+    """
+    folds: int = 5
+    test_size: float = 0.2
+    final_feature_mode: str = "best_fold"
+
+    def __post_init__(self):
+        """Validate MDECV parameters."""
+        if self.folds < 1:
+            raise ValueError("folds must be at least 1")
+        if self.test_size <= 0 or self.test_size >= 1:
+            raise ValueError("test_size must be between 0 and 1")
+        if self.final_feature_mode not in ["best_fold", "frequency", "best_N"]:
+            raise ValueError("final_feature_mode must be 'best_fold', 'frequency', or 'best_N'")
