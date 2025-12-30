@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict
 import numpy as np
 
+from .Utils import ComputeError
+
 
 @dataclass(frozen=True)
 class SimplexResult:
@@ -51,7 +53,6 @@ class SimplexResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        from .Utils import ComputeError
         return ComputeError(self.observations, self.predictions)
 
 
@@ -113,7 +114,6 @@ class SMapResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        from .Utils import ComputeError
         return ComputeError(self.observations, self.predictions)
 
 
@@ -217,7 +217,6 @@ class MultiviewResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        from .Utils import ComputeError
         return ComputeError(self.observations, self.predictions)
 
     def get_combination_stats(self, combo: tuple) -> Dict[str, float]:
@@ -236,3 +235,98 @@ class MultiviewResult:
         if combo not in self.topRankStats:
             raise ValueError(f"Combination {combo} not in top-ranked results")
         return self.topRankStats[combo]
+
+
+@dataclass(frozen=True)
+class MDEResult:
+    """Results from Multivariate Delay Embedding.
+
+    Attributes
+    ----------
+    final_forecast : numpy.ndarray
+        Final forecast array [Time, Observations, Predictions]
+    selected_features : list of int
+        Column indices of selected features
+    accuracy : list of float
+        Correlation/MAE at each feature addition step
+    ccm_values : list of float
+        CCM convergence values for selected features
+    """
+    final_forecast: np.ndarray
+    selected_features: List[int]
+    accuracy: List[float]
+    ccm_values: List[float]
+
+    @property
+    def time(self) -> np.ndarray:
+        """Time values from forecast."""
+        return self.final_forecast[:, 0]
+
+    @property
+    def observations(self) -> np.ndarray:
+        """Observed values from forecast."""
+        return self.final_forecast[:, 1]
+
+    @property
+    def predictions(self) -> np.ndarray:
+        """Predicted values from forecast."""
+        return self.final_forecast[:, 2]
+
+    def compute_error(self) -> Dict[str, float]:
+        """Compute prediction error statistics.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        """
+        return ComputeError(self.observations, self.predictions)
+
+
+@dataclass(frozen=True)
+class MDECVResult:
+    """Results from MDE Cross-Validation.
+
+    Attributes
+    ----------
+    final_forecast : numpy.ndarray
+        Final forecast array from test set prediction
+    selected_features : list of int
+        Final selected feature indices
+    fold_results : list of MDEResult
+        Results from each cross-validation fold
+    accuracy : list of float
+        Test set accuracy for each fold
+    best_fold : int
+        Index of best performing fold
+    """
+    final_forecast: np.ndarray
+    selected_features: List[int]
+    fold_results: List[MDEResult]
+    accuracy: List[float]
+    best_fold: int
+
+    @property
+    def time(self) -> np.ndarray:
+        """Time values from forecast."""
+        return self.final_forecast[:, 0]
+
+    @property
+    def observations(self) -> np.ndarray:
+        """Observed values from forecast."""
+        return self.final_forecast[:, 1]
+
+    @property
+    def predictions(self) -> np.ndarray:
+        """Predicted values from forecast."""
+        return self.final_forecast[:, 2]
+
+    def compute_error(self) -> Dict[str, float]:
+        """Compute prediction error statistics.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        """
+        return ComputeError(self.observations, self.predictions)

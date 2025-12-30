@@ -8,7 +8,7 @@ of truth for parameter definitions.
 
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
-import numpy as np
+import numpy
 from .Execution import ExecutionMode
 
 
@@ -45,7 +45,7 @@ class EDMParameters:
     verbose : bool, default=False
         Print diagnostic messages
     """
-    data: np.ndarray
+    data: numpy.ndarray
     columns: Optional[List[int]] = None
     target: Optional[int] = None
     embedDimensions: int = 0
@@ -284,18 +284,18 @@ class MDEParameters:
         Maximum number of features to select (including target if include_target=True)
     include_target : bool, default=True
         Whether to start with target in feature list
-    conv : bool, default=True
+    convergent : bool, default=True
         Whether to use convergence checking for feature selection
-    optimize_for : str, default="correlation"
-        Metric to optimize: "correlation" or "MAE"
+    metric : str, default="correlation"
+        Metric to use: "correlation" or "MAE"
     batch_size : int, default=1000
         Number of features to process in each parallel batch
     """
     target: int
     maxD: int = 5
     include_target: bool = True
-    conv: bool = True
-    optimize_for: str = "correlation"
+    convergent: bool = True
+    metric: str = "correlation"
     batch_size: int = 1000
 
     def __post_init__(self):
@@ -304,7 +304,7 @@ class MDEParameters:
             raise ValueError("maxD must be at least 1")
         if self.batch_size < 1:
             raise ValueError("batch_size must be positive")
-        if self.optimize_for not in ["correlation", "MAE"]:
+        if self.metric not in ["correlation", "MAE"]:
             raise ValueError("optimize_for must be 'correlation' or 'MAE'")
 
 @dataclass
