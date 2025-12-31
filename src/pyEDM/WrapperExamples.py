@@ -14,8 +14,6 @@ def WrapperExamples():
 	Examples using the new wrapper classes with sklearn-like separate arrays.
 	"""
 
-	# Load sample data
-	sampleDataNames = ["TentMap", "TentMapNoise", "circle", "block_3sp", "sardine_anchovy_sst"]
 
 	# Example 1: SimplexWrapper with block_3sp data (embedded = True)
 	print("Example 1: SimplexWrapper with block_3sp data (embedded = True)")
@@ -54,6 +52,8 @@ def WrapperExamples():
 	YTrain = data[1:100, [1]]  # Target column 1, rows 1-99
 	XTest = data[105:191, [1]]  # Column 1 only, rows 105-190
 	YTest = data[105:191, [1]]  # Target column 1, rows 105-190
+	XTestHistory = data[100:105, [1]]
+	YTestHistory = data[100:105, [1]]
 
 	simplexWrapper2 = SimplexWrapper(
 		XTrain = XTrain,
@@ -65,7 +65,9 @@ def WrapperExamples():
 		KNN = 0,
 		Step = -1,
 		Verbose = False,
-		Embedded = False
+		Embedded = False,
+		XTestHistory = XTestHistory,
+		YTestHistory = YTestHistory
 	)
 
 	result = simplexWrapper2.Run()
@@ -110,6 +112,8 @@ def WrapperExamples():
 	YTrain = data[1:101, [1]]  # Target column 1, rows 1-100
 	XTest = data[110:191, [1, 2]]  # Columns 1-2, rows 110-190
 	YTest = data[110:191, [1]]  # Target column 1, rows 110-190
+	XTestHistory = data[101:110, [1, 2]]  # Columns 1-2, rows 110-190
+	YTestHistory = data[101:110, [1]]  # Target column 1, rows 110-190
 
 	smapWrapper = SMapWrapper(
 		XTrain = XTrain,
@@ -122,7 +126,9 @@ def WrapperExamples():
 		Step = -1,
 		Theta = 4,
 		Verbose = False,
-		Embedded = True
+		Embedded = True,
+		XTestHistory = XTestHistory,
+		YTestHistory = YTestHistory
 	)
 
 	result = smapWrapper.Run()

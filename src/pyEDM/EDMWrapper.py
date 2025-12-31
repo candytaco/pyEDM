@@ -15,13 +15,9 @@ class EDMWrapper:
     to the EDM single-array format using DataAdapter.
     """
 
-    def __init__(self,
-                 XTrain: numpy.ndarray,
-                 YTrain: numpy.ndarray,
-                 XTest: numpy.ndarray,
-                 YTest: numpy.ndarray,
-                 TrainTime: Optional[numpy.ndarray] = None,
-                 TestTime: Optional[numpy.ndarray] = None):
+    def __init__(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+                 XTestHistory = None, YTestHistory = None, TrainTime: Optional[numpy.ndarray] = None,
+                 TestTime: Optional[numpy.ndarray] = None, testHistoryTime = None):
         """
         Initialize EDM wrapper with sklearn-style separate arrays.
 
@@ -39,17 +35,14 @@ class EDMWrapper:
             Time labels for train data
         TestTime : numpy.ndarray, optional
             Time labels for test data
+            :param XTestHistory:
+            :param YTestHistory:
+            :param testHistoryTime:
         """
 
         self.DataAdapter = DataAdapter(XTrain, YTrain, XTest, YTest,
-                                      TrainTime, TestTime)
-
-        self.XTrain = XTrain
-        self.YTrain = YTrain
-        self.XTest = XTest
-        self.YTest = YTest
-        self.TrainTime = TrainTime
-        self.TestTime = TestTime
+        XTestHistory, YTestHistory, testHistoryTime,
+                                       trainTime = TrainTime, testTime = TestTime)
 
     def GetEDMData(self) -> numpy.ndarray:
         """

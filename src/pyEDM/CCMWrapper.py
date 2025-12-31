@@ -41,7 +41,7 @@ class CCMWrapper(EDMWrapper):
 		:param Verbose:
 		"""
 
-		super().__init__(XTrain, YTrain, None, None, None, None)
+		super().__init__(XTrain, YTrain, None, None, TrainTime = None, TestTime = None)
 
 		self.TrainSizes = TrainSizes
 		self.Sample = numRepeats
