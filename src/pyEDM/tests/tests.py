@@ -13,11 +13,11 @@ import pyEDM.Embed
 # Suite of tests
 #----------------------------------------------------------------
 class test_EDM( unittest.TestCase ):
-    '''The examples.py and smapSolverTest.py must also run.
+    """The examples.py and smapSolverTest.py must also run.
 
     NOTE: Bizarre default of unittest class presumes
           methods names to be run begin with "test_" 
-    '''
+    """
     # JP How to pass command line arg to class? verbose = True
     def __init__( self, *args, **kwargs):
         super( test_EDM, self ).__init__( *args, **kwargs )
@@ -34,7 +34,7 @@ class test_EDM( unittest.TestCase ):
     # 
     #------------------------------------------------------------
     def GetValidFiles( self ):
-        '''Create dictionary of DataFrame values from file name keys'''
+        """Create dictionary of DataFrame values from file name keys"""
         self.ValidFiles = {}
 
         validFiles = [ 'CCM_anch_sst_valid.csv',
@@ -70,28 +70,28 @@ class test_EDM( unittest.TestCase ):
     # API
     #------------------------------------------------------------
     def test_API_1( self ):
-        '''API 1'''
+        """API 1"""
         if self.verbose : print ( " --- API 1 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_, columns = 'V1', target = 'V5',
                              train = '1 300', test = '301 310', embedDimensions = 5)
 
     def test_API_2( self ):
-        '''API 2'''
+        """API 2"""
         if self.verbose : print ( "--- API 2 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_, columns = ['V1'], target = 'V5',
                              train = [1, 300], test = [301, 310], embedDimensions = 5)
 
     def test_API_3( self ):
-        '''API 3'''
+        """API 3"""
         if self.verbose : print ( "--- API 3 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_, columns = ['V1', 'V3'], target = 'V5',
                              train = [1, 300], test = [301, 310], embedDimensions = 5)
 
     def test_API_4( self ):
-        '''API 4'''
+        """API 4"""
         if self.verbose : print ( "--- API 4 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_,
@@ -99,21 +99,21 @@ class test_EDM( unittest.TestCase ):
                              train = [1, 300], test = [301, 310], embedDimensions = 5)
 
     def test_API_5( self ):
-        '''API 5'''
+        """API 5"""
         if self.verbose : print ( "--- API 5 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_, columns = 'V1', target = 'V5',
                              train = [1, 300], test = [301, 310], embedDimensions = 5, knn = 0)
 
     def test_API_6( self ):
-        '''API 6'''
+        """API 6"""
         if self.verbose : print ( "--- API 6 ---" )
         df_ = EDM.sampleData['Lorenz5D']
         df  = EDM.FitSimplex(data = df_, columns = 'V1', target = 'V5',
                              train = [1, 300], test = [301, 310], embedDimensions = 5, step = -2)
 
     def test_API_7( self ):
-        '''API 7'''
+        """API 7"""
         if self.verbose : print ( "--- API 7 Column names with space ---" )
         df_ = EDM.sampleData["columnNameSpace"]
         df = EDM.FitSimplex(df_, ['Var 1', 'Var 2'], ["Var 5 1"],
@@ -124,25 +124,25 @@ class test_EDM( unittest.TestCase ):
     # Embed
     #------------------------------------------------------------
     def test_embed( self ):
-        '''Embed'''
+        """Embed"""
         if self.verbose : print ( "--- Embed ---" )
         df_ = EDM.sampleData['circle']
         df  = pyEDM.Embed.Embed(df_, 3, -1, "x", False)
 
     def test_embed2( self ):
-        '''Embed multivariate'''
+        """Embed multivariate"""
         if self.verbose : print ( "--- Embed multivariate ---" )
         df_ = EDM.sampleData['circle']
         df  = pyEDM.Embed.Embed(df_, 3, -1, ['x', 'y'], False)
 
     def test_embed2( self ):
-        '''Embed multivariate'''
+        """Embed multivariate"""
         if self.verbose : print ( "--- Embed includeTime ---" )
         df_ = EDM.sampleData['circle']
         df  = pyEDM.Embed.Embed(df_, 3, -1, ['x', 'y'], True)
 
     def test_embed3( self ):
-        '''Embed from file'''
+        """Embed from file"""
         if self.verbose : print ( "--- Embed from file ---" )
         df  = pyEDM.Embed.Embed(pathIn = '../data/', dataFile = 'circle.csv',
                                 embeddingDimensions = 3, stepSize = -1, columns = ['x', 'y'])
@@ -151,7 +151,7 @@ class test_EDM( unittest.TestCase ):
     # Simplex
     #------------------------------------------------------------
     def test_simplex( self ):
-        '''embedded = False'''
+        """embedded = False"""
         if self.verbose : print ( "--- Simplex embedded = False ---" )
         df_ = EDM.sampleData["block_3sp"]
         df = EDM.FitSimplex(df_, "x_t", "x_t",
@@ -166,7 +166,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex2( self ):
-        '''embedded = True'''
+        """embedded = True"""
         if self.verbose : print ( "--- Simplex embedded = True ---" )
         df_ = EDM.sampleData["block_3sp"]
         df = EDM.FitSimplex(df_, "x_t y_t z_t", "x_t",
@@ -181,7 +181,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex3( self ):
-        '''negative predictionHorizon'''
+        """negative predictionHorizon"""
         if self.verbose : print ( "--- negative predictionHorizon ---" )
         df_ = EDM.sampleData["block_3sp"]
         df = EDM.FitSimplex(df_, "x_t", "y_t",
@@ -196,7 +196,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex4( self ):
-        '''validLib'''
+        """validLib"""
         if self.verbose : print ( "--- validLib ---" )
         df_ = EDM.sampleData["circle"]
         df = EDM.FitSimplex(data = df_, columns = 'x', target = 'x',
@@ -211,7 +211,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex5( self ):
-        '''disjoint train'''
+        """disjoint train"""
         if self.verbose : print ( "--- disjoint train ---" )
         df_ = EDM.sampleData["circle"]
         df = EDM.FitSimplex(data = df_, columns = 'x', target = 'x',
@@ -226,7 +226,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex6( self ):
-        '''disjoint test w/ nan'''
+        """disjoint test w/ nan"""
         if self.verbose : print ( "--- disjoint test w/ nan ---" )
         df_ = EDM.sampleData["Lorenz5D"]
         df_.iloc[ [8,50,501], [1,2] ] = nan
@@ -243,7 +243,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex7( self ):
-        '''exclusion radius'''
+        """exclusion radius"""
         if self.verbose : print ( "--- exclusion radius ---" )
         df_ = EDM.sampleData["circle"]
         df = EDM.FitSimplex(data = df_, columns = 'x', target = 'y',
@@ -258,7 +258,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex8( self ):
-        '''nan'''
+        """nan"""
         if self.verbose : print ( "--- nan ---" )
         df_ = EDM.sampleData["circle"]
         dfn = df_.copy()
@@ -276,7 +276,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex9( self ):
-        '''nan'''
+        """nan"""
         if self.verbose : print ( "--- nan ---" )
         df_ = EDM.sampleData["circle"]
         dfn = df_.copy()
@@ -294,7 +294,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex10( self ):
-        '''DateTime'''
+        """DateTime"""
         if self.verbose : print ( "--- DateTime ---" )
         df_ = EDM.sampleData["SumFlow_1980-2005"]
 
@@ -312,7 +312,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex11( self ):
-        '''knn = 1'''
+        """knn = 1"""
         if self.verbose : print ( "--- knn = 1 ---" )
         df_ = EDM.sampleData["Lorenz5D"]
 
@@ -326,7 +326,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_simplex12( self ):
-        '''exclusion Radius '''
+        """exclusion Radius """
         if self.verbose : print ( "--- exclusion Radius ---" )
         df_ = EDM.sampleData["Lorenz5D"]
         x   = [i+1 for i in range(1000)]
@@ -344,7 +344,7 @@ class test_EDM( unittest.TestCase ):
     # S-map
     #------------------------------------------------------------
     def test_smap( self ):
-        '''SMap'''
+        """SMap"""
         if self.verbose : print ( "--- SMap ---" )
         df_ = EDM.sampleData["circle"]
         S = EDM.FitSMap(data = df_, columns = 'x', target = 'x',
@@ -360,7 +360,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_smap2( self ):
-        '''SMap embedded = True'''
+        """SMap embedded = True"""
         if self.verbose : print ( "--- SMap embedded = True ---" )
         df_ = EDM.sampleData["circle"]
         S = EDM.FitSMap(data = df_, columns = ['x', 'y'], target = 'x',
@@ -381,7 +381,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_smap3( self ):
-        '''SMap nan'''
+        """SMap nan"""
         if self.verbose : print ( "--- SMap nan ---" )
         df_ = EDM.sampleData["circle"]
         dfn = df_.copy()
@@ -401,7 +401,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_smap4( self ):
-        '''DateTime'''
+        """DateTime"""
         if self.verbose : print ( "--- noTime ---" )
         df_ = EDM.sampleData["circle_noTime"]
 
@@ -436,7 +436,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_ccm2( self ):
-        '''CCM Multivariate'''
+        """CCM Multivariate"""
         with catch_warnings():
             # Python-3.13 multiprocessing fork DeprecationWarning 
             filterwarnings( "ignore", category = DeprecationWarning )
@@ -453,7 +453,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_ccm3( self ):
-        '''CCM nan'''
+        """CCM nan"""
         with catch_warnings():
             # Python-3.13 multiprocessing fork DeprecationWarning 
             filterwarnings( "ignore", category = DeprecationWarning )
@@ -474,7 +474,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_ccm4( self ):
-        '''CCM Multivariate names with spaces'''
+        """CCM Multivariate names with spaces"""
         with catch_warnings():
             # Python-3.13 multiprocessing fork DeprecationWarning 
             filterwarnings( "ignore", category = DeprecationWarning )
@@ -588,7 +588,7 @@ class test_EDM( unittest.TestCase ):
     # Generative mode
     #------------------------------------------------------------
     def test_generate__simplex1( self ):
-        '''Simplex Generate 1'''
+        """Simplex Generate 1"""
         if self.verbose : print ( "--- Simplex Generate 1 ---" )
         df_ = EDM.sampleData["circle"]
 
@@ -601,7 +601,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_generate_simplex2( self ):
-        '''Simplex generateSteps 2'''
+        """Simplex generateSteps 2"""
         if self.verbose : print ( "--- Simplex generateSteps 2 ---" )
         df_ = EDM.sampleData["Lorenz5D"]
 
@@ -613,7 +613,7 @@ class test_EDM( unittest.TestCase ):
 
     #------------------------------------------------------------
     def test_generate_smap1( self ):
-        '''DateTime'''
+        """DateTime"""
         if self.verbose : print ( "--- SMap Generate ---" )
         df_ = EDM.sampleData["circle"]
 

@@ -10,56 +10,103 @@ from .Utils import ComputeError, IsNonStringIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .Results import CCMResult
-from .Parameters import EDMParameters, DataSplit, CCMParameters, ExecutionParameters
 
 
 #------------------------------------------------------------
 class CCM:
-    '''CCM class : Base class. Contains two Simplex instances'''
+    """CCM class : Base class. Contains two Simplex instances"""
 
     def __init__(self,
-                 params: EDMParameters,
-                 ccm: CCMParameters,
-                 execution: ExecutionParameters = None):
-        '''Initialize CCM using parameter objects.
+                 data,
+                 columns=None,
+                 target=None,
+                 trainSizes=None,
+                 sample=0,
+                 embedDimensions=0,
+                 predictionHorizon=1,
+                 knn=0,
+                 step=-1,
+                 exclusionRadius=0,
+                 seed=None,
+                 embedded=False,
+                 validLib=None,
+                 includeData=False,
+                 noTime=False,
+                 ignoreNan=True,
+                 mpMethod=None,
+                 sequential=False,
+                 verbose=False):
+        """Initialize CCM using plain arguments.
 
         Parameters
         ----------
-        params : EDMParameters
-            Common EDM parameters (data, columns, target, etc.)
-        ccm : CCMParameters
-            CCM-specific parameters (trainSizes, sample, seed, includeData)
-        execution : ExecutionParameters, optional
-            Execution and multiprocessing configuration
-        '''
+        data : numpy.ndarray
+            2D numpy array where column 0 is time (unless noTime=True)
+        columns : list of int, optional
+            Column indices to use (defaults to all except time)
+        target : int or list of int, optional
+            Target column index (defaults to column 1)
+        trainSizes : list of int, optional
+            Library sizes to evaluate [start, stop, increment].
+            For example, [10, 100, 10] tests library sizes 10, 20, ..., 100.
+        sample : int, default=0
+            Number of random samples at each library size. If 0, uses all available.
+        embedDimensions : int, default=0
+            Embedding dimension (E). If 0, will be set by Validate()
+        predictionHorizon : int, default=1
+            Prediction time horizon (Tp)
+        knn : int, default=0
+            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        step : int, default=-1
+            Time delay step size (tau). Negative values indicate lag
+        exclusionRadius : int, default=0
+            Temporal exclusion radius for neighbors
+        seed : int, optional
+            Random seed for reproducible sampling
+        embedded : bool, default=False
+            Whether data is already embedded
+        validLib : list, optional
+            Boolean mask for valid library points
+        includeData : bool, default=False
+            Whether to include detailed prediction statistics in results
+        noTime : bool, default=False
+            Whether first column is time or data
+        ignoreNan : bool, default=True
+            Remove NaN values from embedding
+        mpMethod : ExecutionMode, optional
+            Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER)
+            If None, uses platform default
+        sequential : bool, default=False
+            Use sequential execution instead of multiprocessing
+        verbose : bool, default=False
+            Print diagnostic messages
+        """
 
-        # Assign parameters from dataclasses
+        # Assign parameters directly
         self.name            = 'CCM'
-        self.Data            = params.data
-        self.columns         = params.columns
-        self.target          = params.target
-        self.embedDimensions = params.embedDimensions
-        self.predictionHorizon = params.predictionHorizon
-        self.knn             = params.knn
-        self.step            = params.step
-        self.exclusionRadius = params.exclusionRadius
-        self.embedded        = params.embedded
-        self.validLib        = params.validLib
-        self.noTime          = params.noTime
-        self.ignoreNan       = params.ignoreNan
-        self.verbose         = params.verbose
+        self.Data            = data
+        self.columns         = columns
+        self.target          = target
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon = predictionHorizon
+        self.knn             = knn
+        self.step            = step
+        self.exclusionRadius = exclusionRadius
+        self.embedded        = embedded
+        self.validLib        = validLib if validLib is not None else []
+        self.noTime          = noTime
+        self.ignoreNan       = ignoreNan
+        self.verbose         = verbose
 
-        # Extract CCM parameters
-        self.trainSizes   = ccm.trainSizes
-        self.sample       = ccm.sample
-        self.seed         = ccm.seed
-        self.includeData  = ccm.includeData
+        # Assign CCM parameters
+        self.trainSizes   = trainSizes if trainSizes is not None else []
+        self.sample       = sample
+        self.seed         = seed
+        self.includeData  = includeData
 
-        # Extract execution parameters
-        if execution is None:
-            execution = ExecutionParameters()
-        self.mpMethod    = execution.mpMethod
-        self.sequential  = execution.sequential
+        # Assign execution parameters
+        self.mpMethod    = mpMethod
+        self.sequential  = sequential
 
         # Set full train & test
         self.train = self.test = [ 1, self.Data.shape[0] ]
@@ -72,43 +119,39 @@ class CCM:
         # Setup
         self.Validate() # CCM Method
 
-        # Instantiate Forward and Reverse Mapping objects using parameter objects
-        fwd_params = EDMParameters(
-            data=params.data,
-            columns=params.columns,
-            target=params.target,
-            embedDimensions=params.embedDimensions,
-            predictionHorizon=params.predictionHorizon,
-            knn=params.knn,
-            step=params.step,
-            exclusionRadius=params.exclusionRadius,
-            embedded=params.embedded,
-            validLib=params.validLib,
-            noTime=params.noTime,
-            ignoreNan=params.ignoreNan,
-            verbose=params.verbose
-        )
-        fwd_split = DataSplit(train=self.train, test=self.test)
-        self.FwdMap = SimplexClass(params=fwd_params, split=fwd_split)
+        # Instantiate Forward and Reverse Mapping objects using plain arguments
+        self.FwdMap = SimplexClass(data=data,
+                                   columns=columns,
+                                   target=target,
+                                   train=self.train,
+                                   test=self.test,
+                                   embedDimensions=embedDimensions,
+                                   predictionHorizon=predictionHorizon,
+                                   knn=knn,
+                                   step=step,
+                                   exclusionRadius=exclusionRadius,
+                                   embedded=embedded,
+                                   validLib=validLib,
+                                   noTime=noTime,
+                                   ignoreNan=ignoreNan,
+                                   verbose=verbose)
 
         # For reverse map, swap columns and target
-        rev_params = EDMParameters(
-            data=params.data,
-            columns=params.target,
-            target=params.columns,
-            embedDimensions=params.embedDimensions,
-            predictionHorizon=params.predictionHorizon,
-            knn=params.knn,
-            step=params.step,
-            exclusionRadius=params.exclusionRadius,
-            embedded=params.embedded,
-            validLib=params.validLib,
-            noTime=params.noTime,
-            ignoreNan=params.ignoreNan,
-            verbose=params.verbose
-        )
-        rev_split = DataSplit(train=self.train, test=self.test)
-        self.RevMap = SimplexClass(params=rev_params, split=rev_split)
+        self.RevMap = SimplexClass(data=data,
+                                   columns=target,
+                                   target=columns,
+                                   train=self.train,
+                                   test=self.test,
+                                   embedDimensions=embedDimensions,
+                                   predictionHorizon=predictionHorizon,
+                                   knn=knn,
+                                   step=step,
+                                   exclusionRadius=exclusionRadius,
+                                   embedded=embedded,
+                                   validLib=validLib,
+                                   noTime=noTime,
+                                   ignoreNan=ignoreNan,
+                                   verbose=verbose)
 
     #-------------------------------------------------------------------
     # Methods
@@ -133,7 +176,7 @@ class CCM:
 
     #-------------------------------------------------------------------
     def Project( self, sequential = False ) :
-        '''CCM both directions with CrossMap()'''
+        """CCM both directions with CrossMap()"""
 
         if self.verbose:
             print( f'{self.name}: Project()' )

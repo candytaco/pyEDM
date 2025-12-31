@@ -8,8 +8,8 @@ provides methods for selecting final features.
 
 from typing import List, Optional, Tuple
 import numpy
+from tqdm import tqdm as ProgressBar
 from sklearn.model_selection import train_test_split, KFold
-from .Parameters import EDMParameters, DataSplit, SMapParameters, MDEParameters, MDECVParameters
 from .Results import MDECVResult, MDEResult
 from .MDE import MDE
 
@@ -24,34 +24,119 @@ class MDECV:
 
 	def __init__(self,
 				 trainData: numpy.ndarray,
-				 MDEparameters: MDEParameters,
-				 EDMparameters: EDMParameters,
-				 CrossValidationParameters: MDECVParameters,
+				 target: int,
+				 maxD: int = 5,
+				 include_target: bool = True,
+				 convergent: bool = True,
+				 metric: str = "correlation",
+				 batch_size: int = 1000,
+				 folds: int = 5,
+				 test_size: float = 0.2,
+				 final_feature_mode: str = "best_fold",
+				 columns=None,
+				 train=None,
+				 test=None,
+				 embedDimensions=0,
+				 predictionHorizon=1,
+				 knn=0,
+				 step=-1,
+				 exclusionRadius=0,
+				 embedded=False,
+				 validLib=None,
+				 noTime=False,
+				 ignoreNan=True,
+				 verbose=False,
 				 useSMap: bool = False,
-				 SMapParameters: Optional[SMapParameters] = None):
+				 theta: float = 0.0,
+				 solver=None):
 		"""Initialize MDECV with data and parameters.
 
 		Parameters
 		----------
 		trainData : numpy.ndarray
 			train data for cross-validation 0 is time (unless noTime=True)
-		MDEparameters : MDEParameters
-			MDE-specific parameters
-		EDMparameters : EDMParameters
-			Core EDM parameters
-		CrossValidationParameters : MDECVParameters
-			Cross-validation specific parameters
+		target : int
+			Column index of the target column to forecast
+		maxD : int, default=5
+			Maximum number of features to select (including target if include_target=True)
+		include_target : bool, default=True
+			Whether to start with target in feature list
+		convergent : bool, default=True
+			Whether to use convergence checking for feature selection
+		metric : str, default="correlation"
+			Metric to use: "correlation" or "MAE"
+		batch_size : int, default=1000
+			Number of features to process in each parallel batch
+		folds : int, default=5
+			Number of cross-validation folds
+		test_size : float, default=0.2
+			Proportion of data to use for test set
+		final_feature_mode : str, default="best_fold"
+			Method for selecting final features:
+			- "best_fold": Use features from best performing fold
+			- "frequency": Use most frequent features across folds
+			- "best_N": Use top N features based on incremental prediction
+		columns : list of int, optional
+			Column indices to use for embedding (defaults to all except time)
+		train : tuple of (int, int), optional
+			Training set indices [start, end]
+		test : tuple of (int, int), optional
+			Test set indices [start, end]
+		embedDimensions : int, default=0
+			Embedding dimension (E). If 0, will be set by Validate()
+		predictionHorizon : int, default=1
+			Prediction time horizon (Tp)
+		knn : int, default=0
+			Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+		step : int, default=-1
+			Time delay step size (tau). Negative values indicate lag
+		exclusionRadius : int, default=0
+			Temporal exclusion radius for neighbors
+		embedded : bool, default=False
+			Whether data is already embedded
+		validLib : list, optional
+			Boolean mask for valid library points
+		noTime : bool, default=False
+			Whether first column is time or data
+		ignoreNan : bool, default=True
+			Remove NaN values from embedding
+		verbose : bool, default=False
+			Print diagnostic messages
 		useSMap : bool, default=False
 			Whether to use SMap instead of Simplex
-		SMapParameters : SMapParameters, optional
-			S-Map specific parameters (required if use_smap = True)
+		theta : float, default=0.0
+			S-Map localization parameter. theta=0 is global linear map,
+			larger values increase localization
+		solver : object, optional
+			Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
+			Can be any sklearn-compatible regressor.
 		"""
 		self.data = trainData
-		self.MDEParameters = MDEparameters
-		self.EDMParameters = EDMparameters
-		self.CrossValidationParameters = CrossValidationParameters
+		self.target = target
+		self.maxD = maxD
+		self.include_target = include_target
+		self.convergent = convergent
+		self.metric = metric
+		self.batch_size = batch_size
+		self.folds = folds
+		self.test_size = test_size
+		self.final_feature_mode = final_feature_mode
+		self.columns = columns
+		self.train = train
+		self.test = test
+		self.embedDimensions = embedDimensions
+		self.predictionHorizon = predictionHorizon
+		self.knn = knn
+		self.step = step
+		self.exclusionRadius = exclusionRadius
+		self.embedded = embedded
+		self.validLib = validLib if validLib is not None else []
+		self.noTime = noTime
+		self.ignoreNan = ignoreNan
+		self.verbose = verbose
 		self.useSMap = useSMap
-		self.SMapParameters = SMapParameters
+		self.theta = theta
+		self.solver = solver
 
 		# Cross-validation results
 		self.fold_results = []
@@ -64,20 +149,22 @@ class MDECV:
 		"""Perform cross-validation using MDE in each fold."""
 
 		# Build fold indices
-		if self.CrossValidationParameters.folds <= 1:
+		if self.folds <= 1:
 			trainIndices = numpy.arange(len(self.data))
 			fold_indices = [(trainIndices, trainIndices)]
 		else:
-			kFolds = KFold(n_splits = self.CrossValidationParameters.folds, shuffle = False)
+			kFolds = KFold(n_splits = self.folds, shuffle = False)
 			fold_indices = [
 				(train_idx, val_idx)
 				for train_idx, val_idx in kFolds.split(self.data)
 			]
 
 		# Process each fold
+		progressBar = ProgressBar(total = self.folds, desc = 'MDE CV Fold', leave = False)
 		for fold, (trainIndices, validationIndices) in enumerate(fold_indices, start = 1):
 			fold_result = self.fitSingleFold(self.data[trainIndices], self.data[validationIndices])
 			self.fold_results.append(fold_result)
+			progressBar.update(1)
 
 		# Identify best fold
 		self.test_accuracy = [r.compute_error()["correlation"] for r in self.fold_results]
@@ -103,20 +190,31 @@ class MDECV:
 		# Create fold-specific data
 		fold_data = numpy.vstack([train_data, val_data])
 
-		# Create split parameters for this fold
-		train_split = DataSplit(
-			train = (0, len(train_data) - 1),
-			test = (len(train_data), len(fold_data) - 1)
-		)
-
 		# Run MDE on this fold
 		mde = MDE(
 			data = fold_data,
-			MDEparameters = self.MDEParameters,
-			EDMparameters = self.EDMParameters,
-			split = train_split,
+			target = self.target,
+			maxD = self.maxD,
+			include_target = self.include_target,
+			convergent = self.convergent,
+			metric = self.metric,
+			batch_size = self.batch_size,
+			columns = self.columns,
+			train = (0, len(train_data) - 1),
+			test = (len(train_data), len(fold_data) - 1),
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = self.predictionHorizon,
+			knn = self.knn,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			noTime = self.noTime,
+			ignoreNan = self.ignoreNan,
+			verbose = self.verbose,
 			useSMap = self.useSMap,
-			SMapParameters = self.SMapParameters
+			theta = self.theta,
+			solver = self.solver
 		)
 
 		return mde.Run()
@@ -131,9 +229,9 @@ class MDECV:
 		:return: Cross-validation results including final prediction
 		"""
 		# Decide final features based on mode
-		if self.CrossValidationParameters.final_feature_mode == "best_fold":
+		if self.final_feature_mode == "best_fold":
 			features = self.best_fold_features
-		elif self.CrossValidationParameters.final_feature_mode == "frequency":
+		elif self.final_feature_mode == "frequency":
 			features = self._get_frequency_features()
 		else:
 			features = self._get_best_n_features()
@@ -141,18 +239,30 @@ class MDECV:
 		stackedData = numpy.vstack((self.data, testData))
 
 		# Run final prediction on test set
-		test_split = DataSplit(
-			train = (0, self.data.shape[0] - 1),
-			test = (self.data.shape[0] - 1, stackedData.shape[0] - 1)
-		)
-
 		mde = MDE(
 			data = stackedData,
-			MDEparameters = self.MDEParameters,
-			EDMparameters = self.EDMParameters,
-			split = test_split,
+			target = self.target,
+			maxD = self.maxD,
+			include_target = self.include_target,
+			convergent = self.convergent,
+			metric = self.metric,
+			batch_size = self.batch_size,
+			columns = self.columns,
+			train = (0, self.data.shape[0] - 1),
+			test = (self.data.shape[0] - 1, stackedData.shape[0] - 1),
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = self.predictionHorizon,
+			knn = self.knn,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			noTime = self.noTime,
+			ignoreNan = self.ignoreNan,
+			verbose = self.verbose,
 			useSMap = self.useSMap,
-			SMapParameters = self.SMapParameters
+			theta = self.theta,
+			solver = self.solver
 		)
 
 		final_result = mde.Run()
@@ -184,7 +294,7 @@ class MDECV:
 
 		# Sort by frequency and return top features
 		sorted_features = sorted(feature_counts.items(), key = lambda x: x[1], reverse = True)
-		return [feat for feat, count in sorted_features[:self.MDEParameters.maxD]]
+		return [feat for feat, count in sorted_features[:self.maxD]]
 
 	def _get_best_n_features(self) -> List[int]:
 		"""Get top N features based on incremental prediction.

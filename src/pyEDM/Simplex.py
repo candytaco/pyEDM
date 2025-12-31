@@ -8,58 +8,94 @@ from numpy import linspace, power, subtract, sum, zeros, column_stack
 # local modules
 from .EDM import EDM
 from .Results import SimplexResult
-from .Parameters import EDMParameters, DataSplit, GenerationParameters
 
 #-----------------------------------------------------------
 class Simplex(EDM):
-    '''Simplex class : child of EDM
+    """Simplex class : child of EDM
        CCM & Multiview inhereted from Simplex
-       To Do : Neighbor ties'''
+       To Do : Neighbor ties"""
 
     def __init__(self,
-                 params: EDMParameters,
-                 split: DataSplit = None,
-                 generation: GenerationParameters = None):
-        '''Initialize Simplex as child of EDM using parameter objects.
+                 data,
+                 columns=None,
+                 target=None,
+                 train=None,
+                 test=None,
+                 embedDimensions=0,
+                 predictionHorizon=1,
+                 knn=0,
+                 step=-1,
+                 exclusionRadius=0,
+                 embedded=False,
+                 validLib=None,
+                 noTime=False,
+                 ignoreNan=True,
+                 verbose=False,
+                 generateSteps=0,
+                 generateConcat=False):
+        """Initialize Simplex as child of EDM.
 
         Parameters
         ----------
-        params : EDMParameters
-            Common EDM parameters (data, columns, target, etc.)
-        split : DataSplit, optional
-            Train/test split configuration
-        generation : GenerationParameters, optional
-            Iterative generation configuration
-        '''
+        data : numpy.ndarray
+            2D numpy array where column 0 is time (unless noTime=True)
+        columns : list of int, optional
+            Column indices to use for embedding (defaults to all except time)
+        target : int, optional
+            Target column index (defaults to column 1)
+        train : tuple of (int, int), optional
+            Training set indices [start, end]
+        test : tuple of (int, int), optional
+            Test set indices [start, end]
+        embedDimensions : int, default=0
+            Embedding dimension (E). If 0, will be set by Validate()
+        predictionHorizon : int, default=1
+            Prediction time horizon (Tp)
+        knn : int, default=0
+            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        step : int, default=-1
+            Time delay step size (tau). Negative values indicate lag
+        exclusionRadius : int, default=0
+            Temporal exclusion radius for neighbors
+        embedded : bool, default=False
+            Whether data is already embedded
+        validLib : list, optional
+            Boolean mask for valid library points
+        noTime : bool, default=False
+            Whether first column is time or data
+        ignoreNan : bool, default=True
+            Remove NaN values from embedding
+        verbose : bool, default=False
+            Print diagnostic messages
+        generateSteps : int, default=0
+            Number of iterative generation steps. If 0, uses standard prediction.
+        generateConcat : bool, default=False
+            Whether to concatenate generated predictions
+        """
 
         # Instantiate EDM class: inheret EDM members to self
-        super(Simplex, self).__init__(params.data, isEmbedded=False, name='Simplex')
+        super(Simplex, self).__init__(data, isEmbedded=False, name='Simplex')
 
-        # Extract parameters from dataclasses
-        self.columns         = params.columns
-        self.target          = params.target
-        self.embedDimensions = params.embedDimensions
-        self.predictionHorizon = params.predictionHorizon
-        self.knn             = params.knn
-        self.step            = params.step
-        self.exclusionRadius = params.exclusionRadius
-        self.embedded        = params.embedded
-        self.validLib        = params.validLib
-        self.noTime          = params.noTime
-        self.ignoreNan       = params.ignoreNan
-        self.verbose         = params.verbose
+        self.columns         = columns
+        self.target          = target
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon = predictionHorizon
+        self.knn             = knn
+        self.step            = step
+        self.exclusionRadius = exclusionRadius
+        self.embedded        = embedded
+        self.validLib        = validLib if validLib is not None else []
+        self.noTime          = noTime
+        self.ignoreNan       = ignoreNan
+        self.verbose         = verbose
 
-        # Extract split parameters
-        if split is None:
-            split = DataSplit()
-        self.train = split.train if split.train is not None else []
-        self.test = split.test if split.test is not None else []
+        # Assign split parameters
+        self.train = train if train is not None else []
+        self.test = test if test is not None else []
 
-        # Extract generation parameters
-        if generation is None:
-            generation = GenerationParameters()
-        self.generateSteps = generation.generateSteps
-        self.generateConcat = generation.generateConcat
+        # Assign generation parameters
+        self.generateSteps = generateSteps
+        self.generateConcat = generateConcat
 
         # Map API parameter names to EDM base class names
         self.embedStep         = self.step
@@ -106,8 +142,8 @@ class Simplex(EDM):
     #-------------------------------------------------------------------
     def Project( self ) :
     #-------------------------------------------------------------------
-        '''Simplex Projection
-           Sugihara & May (1990) doi.org/10.1038/344734a0'''
+        """Simplex Projection
+           Sugihara & May (1990) doi.org/10.1038/344734a0"""
         if self.verbose:
             print( f'{self.name}: Project()' )
 
@@ -146,13 +182,13 @@ class Simplex(EDM):
     #-------------------------------------------------------------------
     def Generate( self ) :
     #-------------------------------------------------------------------
-        '''Simplex Generation
+        """Simplex Generation
            Given train: override test for single prediction at end of train
            Replace self.Projection with G.Projection
 
            Note: Generation with datetime time values fails: incompatible
                  numpy.datetime64, timedelta64 and python datetime, timedelta
-        '''
+        """
         if self.verbose:
             print( f'{self.name}: Generate()' )
 

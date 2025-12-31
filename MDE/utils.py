@@ -1,12 +1,12 @@
 import logging
-import numpy as np
-import pandas as pd
+import numpy
+import pandas
 from sklearn.linear_model import LinearRegression
 import pyEDM
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import matplotlib.pyplot as plt
+from matplotlib import pyplot
 
-def check_convergence(ts_df: pd.DataFrame, target: str, candidate: str, E: int, libSizes: str, plot: bool = False) -> bool:
+def check_convergence(ts_df: pandas.DataFrame, target: str, candidate: str, E: int, libSizes: str, plot: bool = False) -> bool:
     """
     Check the convergence of a candidate variable using CCM.
     """
@@ -36,7 +36,7 @@ def check_convergence(ts_df: pd.DataFrame, target: str, candidate: str, E: int, 
         conv = False
     return bool(conv), final_ccm
 
-def check_convergence_improved(ts_df: pd.DataFrame, target: str, candidate: str, E: int, libSizes: str, plot: bool = False):
+def check_convergence_improved(ts_df: pandas.DataFrame, target: str, candidate: str, E: int, libSizes: str, plot: bool = False):
 
     try:
         ccm = pyEDM.CCM(
@@ -54,19 +54,19 @@ def check_convergence_improved(ts_df: pd.DataFrame, target: str, candidate: str,
         y = ccm[key].values
 
         if plot:
-            plt.figure(figsize=(6, 4))
-            plt.plot(x, y, marker='o')
-            plt.title(f'CCM convergence: {candidate} → {target}')
-            plt.xlabel('Library Size')
-            plt.ylabel('Cross Map Skill (ρ)')
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+            pyplot.figure(figsize=(6, 4))
+            pyplot.plot(x, y, marker= 'o')
+            pyplot.title(f'CCM convergence: {candidate} → {target}')
+            pyplot.xlabel('Library Size')
+            pyplot.ylabel('Cross Map Skill (ρ)')
+            pyplot.grid(True)
+            pyplot.tight_layout()
+            pyplot.show()
 
         # New logic
         net_gain = y[-1] - y[0]
         early_gain = y[1] - y[0] if len(y) > 1 else 0
-        final_close_to_max = y[-1] >= 0.9 * np.max(y)
+        final_close_to_max = y[-1] >= 0.9 * numpy.max(y)
 
         conv = (net_gain > 0.01) and (early_gain > 0) and final_close_to_max
         final_ccm = y[-1]
@@ -81,32 +81,32 @@ def check_convergence_improved(ts_df: pd.DataFrame, target: str, candidate: str,
     return bool(conv), final_ccm
 
 
-def reset_time_column(df: pd.DataFrame) -> pd.DataFrame:
+def reset_time_column(df: pandas.DataFrame) -> pandas.DataFrame:
     """
     Reset the 'time' column in the DataFrame by dropping any existing 'time'
     column and inserting a new one based on the current row order.
     """
     if "time" in df.columns:
         df = df.drop(columns=["time"])
-    df.insert(0, "time", np.arange(len(df)))
+    df.insert(0, "time", numpy.arange(len(df)))
     return df
 
-def compute_correlation(observations: np.ndarray, predictions: np.ndarray) -> float:
+def compute_correlation(observations: numpy.ndarray, predictions: numpy.ndarray) -> float:
     """
     Compute the Pearson correlation coefficient between observations and predictions.
     """
     if len(observations) == 0 or len(predictions) == 0:
-        return np.nan
-    corr_matrix = np.corrcoef(observations, predictions)
+        return numpy.nan
+    corr_matrix = numpy.corrcoef(observations, predictions)
     return corr_matrix[0, 1]
 
-def compute_cae(observations: np.ndarray, predictions: np.ndarray) -> float:
+def compute_cae(observations: numpy.ndarray, predictions: numpy.ndarray) -> float:
     """
     Compute the cumulative absolute error (CAE) between observations and predictions.
     """
     if len(observations) == 0 or len(predictions) == 0:
-        return np.nan
-    return np.sum(np.abs(observations - predictions))
+        return numpy.nan
+    return numpy.sum(numpy.abs(observations - predictions))
 
 def configure_logging(level=logging.INFO):
     """
@@ -137,9 +137,9 @@ def plot_training_accuracy(accuracy, target):
 
 
 def regression_metrics(y_true, y_pred):
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    rmse = numpy.sqrt(mean_squared_error(y_true, y_pred))
     mae = mean_absolute_error(y_true, y_pred)
-    corr = np.corrcoef(y_true, y_pred)[0, 1]
+    corr = numpy.corrcoef(y_true, y_pred)[0, 1]
 
     # print(f'RMSE: {rmse:.3f}')
     # print(f'MAE: {mae:.3f}')
@@ -148,11 +148,11 @@ def regression_metrics(y_true, y_pred):
     return rmse, mae, corr
 
 
-def estimate_best_params(ts_df: pd.DataFrame, target: str, tau_values=None, max_E: int = 10):
+def estimate_best_params(ts_df: pandas.DataFrame, target: str, tau_values=None, max_E: int = 10):
     if tau_values is None:
         tau_values = [-1, -2, -3]
 
-    best_rho = -np.inf
+    best_rho = -numpy.inf
     best_E = None
     best_tau = None
 
@@ -168,14 +168,14 @@ def estimate_best_params(ts_df: pd.DataFrame, target: str, tau_values=None, max_
             exclusionRadius=0,
             showPlot=False
         )
-        E_star = out_E['E'][np.argmax(out_E['rho'])]
-        rho = out_E['rho'][np.argmax(out_E['rho'])]
+        E_star = out_E['E'][numpy.argmax(out_E['rho'])]
+        rho = out_E['rho'][numpy.argmax(out_E['rho'])]
         if rho > best_rho:
             best_rho = rho
             best_E = E_star
             best_tau = tau
 
-    return pd.DataFrame([{
+    return pandas.DataFrame([{
         'target': target,
         'tau': best_tau,
         'E': int(best_E),

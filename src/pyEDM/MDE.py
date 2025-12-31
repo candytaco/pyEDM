@@ -9,9 +9,9 @@ or S-Map predictions with parallel processing.
 from typing import List, Optional, Tuple
 
 import numpy
+from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed
 
-from .Parameters import EDMParameters, DataSplit, SMapParameters, MDEParameters
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
@@ -27,34 +27,104 @@ class MDE:
 
 	def __init__(self,
 				 data: numpy.ndarray,
-				 MDEparameters: MDEParameters,
-				 EDMparameters: EDMParameters,
-				 split: DataSplit,
+				 target: int,
+				 maxD: int = 5,
+				 include_target: bool = True,
+				 convergent: bool = True,
+				 metric: str = "correlation",
+				 batch_size: int = 1000,
+				 columns=None,
+				 train=None,
+				 test=None,
+				 embedDimensions=0,
+				 predictionHorizon=1,
+				 knn=0,
+				 step=-1,
+				 exclusionRadius=0,
+				 embedded=False,
+				 validLib=None,
+				 noTime=False,
+				 ignoreNan=True,
+				 verbose=False,
 				 useSMap: bool = False,
-				 SMapParameters: Optional[SMapParameters] = None):
+				 theta: float = 0.0,
+				 solver=None):
 		"""Initialize MDE with data and parameters.
 
 		Parameters
 		----------
 		data : numpy.ndarray
 			2D numpy array where column 0 is time (unless noTime=True)
-		MDEparameters : MDEParameters
-			MDE-specific parameters
-		EDMparameters : EDMParameters
-			Core EDM parameters
-		split : DataSplit
-			Train/test split configuration
+		target : int
+			Column index of the target column to forecast
+		maxD : int, default=5
+			Maximum number of features to select (including target if include_target=True)
+		include_target : bool, default=True
+			Whether to start with target in feature list
+		convergent : bool, default=True
+			Whether to use convergence checking for feature selection
+		metric : str, default="correlation"
+			Metric to use: "correlation" or "MAE"
+		batch_size : int, default=1000
+			Number of features to process in each parallel batch
+		columns : list of int, optional
+			Column indices to use for embedding (defaults to all except time)
+		train : tuple of (int, int), optional
+			Training set indices [start, end]
+		test : tuple of (int, int), optional
+			Test set indices [start, end]
+		embedDimensions : int, default=0
+			Embedding dimension (E). If 0, will be set by Validate()
+		predictionHorizon : int, default=1
+			Prediction time horizon (Tp)
+		knn : int, default=0
+			Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+		step : int, default=-1
+			Time delay step size (tau). Negative values indicate lag
+		exclusionRadius : int, default=0
+			Temporal exclusion radius for neighbors
+		embedded : bool, default=False
+			Whether data is already embedded
+		validLib : list, optional
+			Boolean mask for valid library points
+		noTime : bool, default=False
+			Whether first column is time or data
+		ignoreNan : bool, default=True
+			Remove NaN values from embedding
+		verbose : bool, default=False
+			Print diagnostic messages
 		useSMap : bool, default=False
 			Whether to use SMap instead of Simplex
-		SMapParameters : SMapParameters, optional
-			S-Map specific parameters (required if use_smap=True)
+		theta : float, default=0.0
+			S-Map localization parameter. theta=0 is global linear map,
+			larger values increase localization
+		solver : object, optional
+			Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
+			Can be any sklearn-compatible regressor.
 		"""
 		self.data = data
-		self.MDEParameters = MDEparameters
-		self.EDMParameters = EDMparameters
-		self.split = split
+		self.target = target
+		self.maxD = maxD
+		self.include_target = include_target
+		self.convergent = convergent
+		self.metric = metric
+		self.batch_size = batch_size
+		self.columns = columns
+		self.train = train
+		self.test = test
+		self.embedDimensions = embedDimensions
+		self.predictionHorizon = predictionHorizon
+		self.knn = knn
+		self.step = step
+		self.exclusionRadius = exclusionRadius
+		self.embedded = embedded
+		self.validLib = validLib if validLib is not None else []
+		self.noTime = noTime
+		self.ignoreNan = ignoreNan
+		self.verbose = verbose
 		self.useSMap = useSMap
-		self.SMapParameters = SMapParameters
+		self.theta = theta
+		self.solver = solver
 
 		# Initialize feature selection state
 		self.selectedVariables = []
@@ -89,13 +159,13 @@ class MDE:
 		"""Perform iterative feature selection with parallel processing."""
 
 		# do we include Y in the predictors that we select?
-		if self.MDEParameters.include_target:
-			self.selectedVariables = [self.MDEParameters.target]
+		if self.include_target:
+			self.selectedVariables = [self.target]
 		else:
 			self.selectedVariables = []
 
 		# Initial prediction
-		initial_result = self._run_edm(self.EDMParameters.columns)
+		initial_result = self._run_edm(self.columns)
 		score = self._compute_performance(initial_result)
 		self.accuracy.append(score)
 
@@ -103,11 +173,12 @@ class MDE:
 		remaining_variables = self._get_remaining_variables()
 
 		# Iteratively add variables up to maxD
-		while (len(self.selectedVariables) < self.MDEParameters.maxD) and (len(remaining_variables) > 0):
+		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
+		while (len(self.selectedVariables) < self.maxD) and (len(remaining_variables) > 0):
 			# Break up remaining columns into parallel-friendly batches
 			batches = [
-				remaining_variables[i:(i + self.MDEParameters.batch_size)]
-				for i in range(0, len(remaining_variables), self.MDEParameters.batch_size)
+				remaining_variables[i:(i + self.batch_size)]
+				for i in range(0, len(remaining_variables), self.batch_size)
 			]
 
 			# Evaluate correlation/MAE for each possible addition in parallel
@@ -123,7 +194,7 @@ class MDE:
 			best_score = None
 
 			# If conv=True, use first convergent variable
-			if self.MDEParameters.convergent:
+			if self.convergent:
 				for c, score in metric_results:
 					if c is None or numpy.isnan(score):
 						continue
@@ -147,6 +218,7 @@ class MDE:
 				self.selectedVariables.append(best_var)
 				remaining_variables.remove(best_var)
 				self.accuracy.append(best_score)
+				progressBar.update(1)
 			else:
 				# No more valid candidates
 				break
@@ -189,42 +261,46 @@ class MDE:
 		SimplexResult or SMapResult
 			Prediction results
 		"""
-		# Create EDM parameters with specified columns
-		theseVariables = EDMParameters(
-			data = self.data,
-			columns = variables,
-			target = self.MDEParameters.target,
-			embedDimensions = self.EDMParameters.embedDimensions,
-			predictionHorizon = self.EDMParameters.predictionHorizon,
-			knn = self.EDMParameters.knn,
-			step = self.EDMParameters.step,
-			exclusionRadius = self.EDMParameters.exclusionRadius,
-			embedded = self.EDMParameters.embedded,
-			validLib = self.EDMParameters.validLib,
-			noTime = self.EDMParameters.noTime,
-			ignoreNan = self.EDMParameters.ignoreNan,
-			verbose = self.EDMParameters.verbose
-		)
-
-		# Create split parameters
-		split = DataSplit(
-			train = self.split.train,
-			test = self.split.test
-		)
-
 		# Run prediction
 		if self.useSMap:
 			smap = SMap(
-				params = theseVariables,
-				split = split,
-				smap = self.SMapParameters
+				data = self.data,
+				columns = variables,
+				target = self.target,
+				train = self.train,
+				test = self.test,
+				embedDimensions = self.embedDimensions,
+				predictionHorizon = self.predictionHorizon,
+				knn = self.knn,
+				step = self.step,
+				exclusionRadius = self.exclusionRadius,
+				theta = self.theta,
+				solver = self.solver,
+				embedded = self.embedded,
+				validLib = self.validLib,
+				noTime = self.noTime,
+				ignoreNan = self.ignoreNan,
+				verbose = self.verbose
 			)
 			result = smap.Run()
-			return result.prediction_result
+			return result
 		else:
 			simplex = Simplex(
-				params = theseVariables,
-				split = split
+				data = self.data,
+				columns = variables,
+				target = self.target,
+				train = self.train,
+				test = self.test,
+				embedDimensions = self.embedDimensions,
+				predictionHorizon = self.predictionHorizon,
+				knn = self.knn,
+				step = self.step,
+				exclusionRadius = self.exclusionRadius,
+				embedded = self.embedded,
+				validLib = self.validLib,
+				noTime = self.noTime,
+				ignoreNan = self.ignoreNan,
+				verbose = self.verbose
 			)
 			return simplex.Run()
 
@@ -241,7 +317,7 @@ class MDE:
 		float
 			Metric value (correlation or MAE)
 		"""
-		if self.MDEParameters.metric == "correlation":
+		if self.metric == "correlation":
 			return result.compute_error()["correlation"]
 		else:
 			return result.compute_error()["MAE"]
@@ -256,8 +332,8 @@ class MDE:
 		"""
 		all_columns = list(range(self.data.shape[1]))
 		excluded = []
-		if not self.MDEParameters.include_target:
-			excluded.append(self.MDEParameters.target)
+		if not self.include_target:
+			excluded.append(self.target)
 		excluded += self.selectedVariables
 
 		return [c for c in all_columns if c not in excluded and c != 0]

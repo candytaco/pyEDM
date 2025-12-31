@@ -9,66 +9,103 @@ from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 # local modules
 from .EDM import EDM
 from .Results import SMapResult
-from .Parameters import EDMParameters, DataSplit, GenerationParameters, SMapParameters
 
 
 #-----------------------------------------------------------
 class SMap(EDM):
-    '''SMap class : child of EDM'''
+    """SMap class : child of EDM"""
 
     def __init__(self,
-                 params: EDMParameters,
-                 split: DataSplit = None,
-                 generation: GenerationParameters = None,
-                 smap: SMapParameters = None):
-        '''Initialize SMap as child of EDM using parameter objects.
+                 data,
+                 columns=None,
+                 target=None,
+                 train=None,
+                 test=None,
+                 embedDimensions=0,
+                 predictionHorizon=1,
+                 knn=0,
+                 step=-1,
+                 theta=0.0,
+                 exclusionRadius=0,
+                 solver=None,
+                 embedded=False,
+                 validLib=None,
+                 noTime=False,
+                 ignoreNan=True,
+                 verbose=False,
+                 generateSteps=0,
+                 generateConcat=False):
+        """Initialize SMap as child of EDM.
 
         Parameters
         ----------
-        params : EDMParameters
-            Common EDM parameters (data, columns, target, etc.)
-        split : DataSplit, optional
-            Train/test split configuration
-        generation : GenerationParameters, optional
-            Iterative generation configuration
-        smap : SMapParameters, optional
-            S-Map specific parameters (theta, solver)
-        '''
+        data : numpy.ndarray
+            2D numpy array where column 0 is time (unless noTime=True)
+        columns : list of int, optional
+            Column indices to use for embedding (defaults to all except time)
+        target : int, optional
+            Target column index (defaults to column 1)
+        train : tuple of (int, int), optional
+            Training set indices [start, end]
+        test : tuple of (int, int), optional
+            Test set indices [start, end]
+        embedDimensions : int, default=0
+            Embedding dimension (E). If 0, will be set by Validate()
+        predictionHorizon : int, default=1
+            Prediction time horizon (Tp)
+        knn : int, default=0
+            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        step : int, default=-1
+            Time delay step size (tau). Negative values indicate lag
+        theta : float, default=0.0
+            S-Map localization parameter. theta=0 is global linear map,
+            larger values increase localization
+        exclusionRadius : int, default=0
+            Temporal exclusion radius for neighbors
+        solver : object, optional
+            Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
+            Can be any sklearn-compatible regressor.
+        embedded : bool, default=False
+            Whether data is already embedded
+        validLib : list, optional
+            Boolean mask for valid library points
+        noTime : bool, default=False
+            Whether first column is time or data
+        ignoreNan : bool, default=True
+            Remove NaN values from embedding
+        verbose : bool, default=False
+            Print diagnostic messages
+        generateSteps : int, default=0
+            Number of iterative generation steps. If 0, uses standard prediction.
+        generateConcat : bool, default=False
+            Whether to concatenate generated predictions
+        """
 
         # Instantiate EDM class: inheret all members to self
-        super(SMap, self).__init__(params.data, isEmbedded=False, name='SMap')
+        super(SMap, self).__init__(data, isEmbedded=False, name='SMap')
 
-        # Extract parameters from dataclasses
-        self.columns         = params.columns
-        self.target          = params.target
-        self.embedDimensions = params.embedDimensions
-        self.predictionHorizon = params.predictionHorizon
-        self.knn             = params.knn
-        self.step            = params.step
-        self.exclusionRadius = params.exclusionRadius
-        self.embedded        = params.embedded
-        self.validLib        = params.validLib
-        self.noTime          = params.noTime
-        self.ignoreNan       = params.ignoreNan
-        self.verbose         = params.verbose
+        self.columns         = columns
+        self.target          = target
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon = predictionHorizon
+        self.knn             = knn
+        self.step            = step
+        self.theta           = theta
+        self.exclusionRadius = exclusionRadius
+        self.solver          = solver if solver is not None else lstsq
+        self.embedded        = embedded
+        self.validLib        = validLib if validLib is not None else []
+        self.noTime          = noTime
+        self.ignoreNan       = ignoreNan
+        self.verbose         = verbose
 
-        # Extract split parameters
-        if split is None:
-            split = DataSplit()
-        self.train = split.train if split.train is not None else []
-        self.test = split.test if split.test is not None else []
+        # Assign split parameters
+        self.train = train if train is not None else []
+        self.test = test if test is not None else []
 
-        # Extract generation parameters
-        if generation is None:
-            generation = GenerationParameters()
-        self.generateSteps = generation.generateSteps
-        self.generateConcat = generation.generateConcat
-
-        # Extract SMap parameters
-        if smap is None:
-            smap = SMapParameters()
-        self.theta = smap.theta
-        self.solver = smap.solver if smap.solver is not None else lstsq
+        # Assign generation parameters
+        self.generateSteps = generateSteps
+        self.generateConcat = generateConcat
 
         # Map API parameter names to EDM base class names
         self.embedStep         = self.step
@@ -125,7 +162,7 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Project( self ) :
     #-------------------------------------------------------------------
-        '''For each prediction row compute projection as the linear
+        """For each prediction row compute projection as the linear
            combination of regression coefficients (C) of weighted
            embedding vectors (A) against target vector (B) : AC = B.
 
@@ -136,7 +173,7 @@ class SMap(EDM):
            to enable a linear intercept/bias term.
 
            Sugihara (1994) doi.org/10.1098/rsta.1994.0106
-        '''
+        """
 
         if self.verbose:
             print( f'{self.name}: Project()' )
@@ -235,7 +272,7 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Solver( self, A, wB ) :
     #-------------------------------------------------------------------
-        '''Call SMap solver. Default is numpy.lstsq'''
+        """Call SMap solver. Default is numpy.lstsq"""
 
         if self.solver.__class__.__name__ in \
            [ 'function', '_ArrayFunctionDispatcher' ] and \
@@ -266,13 +303,13 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Generate( self ) :
     #-------------------------------------------------------------------
-        '''SMap Generation
+        """SMap Generation
            Given train: override test to be single prediction at end of train
            Replace self.Projection with G.Projection
 
            Note: Generation with datetime time values fails: incompatible
                  numpy.datetime64, timedelta64 and python datetime, timedelta
-        '''
+        """
         if self.verbose:
             print( f'{self.name}: Generate()' )
 

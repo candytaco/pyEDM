@@ -19,8 +19,8 @@ from .Embed import Embed
 # --------------------------------------------------------------------
 class EDM:
 	# --------------------------------------------------------------------
-	'''EDM class : data container
-	   Simplex, SMap, CCM inherited from EDM'''
+	"""EDM class : data container
+	   Simplex, SMap, CCM inherited from EDM"""
 
 	def __init__(self, data, isEmbedded = False, name = 'EDM'):
 		self.predictionHorizon: int = None
@@ -54,7 +54,7 @@ class EDM:
 
 	def FindNeighbors(self):
 		# --------------------------------------------------------------------
-		'''Use Scipy KDTree to find neighbors
+		"""Use Scipy KDTree to find neighbors
 
 		   Note: If dimensionality is k, the number of points n in
 		   the data should be n >> 2^k, otherwise KDTree efficiency is low.
@@ -86,7 +86,7 @@ class EDM:
 		   Writes to EDM object:
 			 knn_distances : sorted knn distances
 			 knn_neighbors : library neighbor rows of knn_distances
-		'''
+		"""
 		if self.verbose:
 			print(f'{self.name}: FindNeighbors()')
 
@@ -203,8 +203,8 @@ class EDM:
 			# Function to apply the knn_lib_map in apply_along_axis()
 			# --------------------------------------------------------
 			def knnMapFunc(knn, knn_lib_map):
-				'''Function for apply_along_axis() on knn_neighbors.
-				   Maps the KDTree returned knn_neighbor indices to lib_i'''
+				"""Function for apply_along_axis() on knn_neighbors.
+				   Maps the KDTree returned knn_neighbor indices to lib_i"""
 				out = zeros(len(knn), dtype = int)
 				for i in range(len(knn)):
 					idx = knn[i]
@@ -261,9 +261,9 @@ class EDM:
 			# Function to select knn from each row of self.knn_neighbors
 			# -----------------------------------------------------------
 			def ExclusionRad(knnRow, knnDist, excludeRow):
-				'''Search excludeRow for each element of knnRow
+				"""Search excludeRow for each element of knnRow
 				   If knnRow is in excludeRow : exclude the neighbor
-				   Return knn length arrays of neighbors, distances'''
+				   Return knn length arrays of neighbors, distances"""
 
 				knn_neighbors = full(self.knn, -1E6, dtype = int)
 				knn_distances = full(self.knn, -1E6, dtype = float)
@@ -320,14 +320,14 @@ class EDM:
 	# -------------------------------------------------------------------
 	def FormatProjection(self):
 		# -------------------------------------------------------------------
-		'''Create Projection, Coefficients, SingularValues DataFrames
+		"""Create Projection, Coefficients, SingularValues DataFrames
 		   AddTime() attempts to extend forecast time if needed
 
 		   NOTE: self.pred_i had all nan removed for KDTree by RemoveNan().
 				 self.predList only had leading/trailing embedding nan removed.
 				 Here we want to include any nan observation rows so we
 				 process predList & pred_i_all, not self.pred_i.
-		'''
+		"""
 		if self.verbose:
 			print(f'{self.name}: FormatProjection()')
 
@@ -525,9 +525,9 @@ class EDM:
 	# -------------------------------------------------------------------
 	def ConvertTime(self):
 		# -------------------------------------------------------------------
-		'''Replace self.time with ndarray numerically operable values
+		"""Replace self.time with ndarray numerically operable values
 		   ISO 8601 formats are supported in the time & datetime modules
-		'''
+		"""
 		if self.verbose:
 			print(f'{self.name}: ConvertTime()')
 
@@ -575,9 +575,9 @@ class EDM:
 	# -------------------------------------------------------------------
 	def AddTime(self, Tp_magnitude, outSize, obs_i, obsOut_i):
 		# -------------------------------------------------------------------
-		'''Prepend or append time values to self.time if needed
+		"""Prepend or append time values to self.time if needed
 		   Return timeOut vector with additional predictionHorizon points
-		'''
+		"""
 		if self.verbose:
 			print(f'{self.name}: AddTime()')
 
@@ -626,7 +626,7 @@ class EDM:
 		return timeOut
 
 	def EmbedData(self):
-		'''Embed data : If not embedded call API.Embed()'''
+		"""Embed data : If not embedded call API.Embed()"""
 
 		if not self.isEmbedded:
 			self.Embedding = Embed(data = self.Data, embeddingDimensions = self.embedDimensions,
@@ -636,9 +636,9 @@ class EDM:
 
 	# TODO: change this to properly inherit and override
 	def RemoveNan(self):
-		'''KDTree in Neighbors does not accept nan
+		"""KDTree in Neighbors does not accept nan
 		   If ignoreNan remove Embedding rows with nan from lib_i, pred_i
-		'''
+		"""
 
 		if self.ignoreNan:
 			# Check for nan in all Embedding columns (axis = 1) of lib_i...
@@ -672,10 +672,10 @@ class EDM:
 
 	# TODO: properly override these in inheritance
 	def CreateIndices(self):
-		'''Populate array index vectors lib_i, pred_i
+		"""Populate array index vectors lib_i, pred_i
 		   Indices specified in list of pairs [ 1,10, 31,40... ]
 		   where each pair is start:stop span of data rows.
-		'''
+		"""
 
 		# Convert self.train from flat list to list of (start, stop) pairs
 		if len(self.train) % 2:
@@ -850,8 +850,8 @@ class EDM:
 	# --------------------------------------------------------------------
 	def PredictionValid(self):
 		# --------------------------------------------------------------------
-		'''Validate there are pred_i to make a prediction
-		'''
+		"""Validate there are pred_i to make a prediction
+		"""
 
 		if len(self.testIndices) == 0:
 			raise ValueError("No valid predictions")

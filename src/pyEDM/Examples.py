@@ -48,7 +48,7 @@ def print_call(func):
 
 
 def Examples():
-	'''Canonical EDM API examples using new Result objects and Visualization'''
+	"""Canonical EDM API examples using new Result objects and Visualization"""
 
 	EmbedDimension = print_call(EDM.FindOptimalEmbeddingDimensionality)
 	PredictInterval = print_call(EDM.FindOptimalPredictionHorizon)

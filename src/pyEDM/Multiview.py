@@ -13,12 +13,11 @@ from pyEDM.Embed import Embed
 # local modules
 from .Utils import IsNonStringIterable, ComputeError
 from .Results import MultiviewResult
-from .Parameters import EDMParameters, DataSplit, MultiviewParameters, ExecutionParameters
 
 
 #------------------------------------------------------------------
 class Multiview:
-    '''Multiview class : Base class. Contains a Simplex instance
+    """Multiview class : Base class. Contains a Simplex instance
 
        D represents the number of variables to combine for each
        assessment, if not specified, it is the number of columns.
@@ -59,60 +58,106 @@ class Multiview:
 
        NOTE: When trainLib = True and no train/test are specified, the data
              is automatically split 50/50 for the final projection phase.
-    '''
+    """
 
     def __init__( self,
-                  params: EDMParameters,
-                  split: DataSplit = None,
-                  multiview: MultiviewParameters = None,
-                  execution: ExecutionParameters = None):
-        '''Initialize Multiview using parameter objects.
+                  data,
+                  columns=None,
+                  target=None,
+                  train=None,
+                  test=None,
+                  D=0,
+                  embedDimensions=0,
+                  predictionHorizon=1,
+                  knn=0,
+                  step=-1,
+                  multiview=0,
+                  exclusionRadius=0,
+                  trainLib=True,
+                  excludeTarget=False,
+                  ignoreNan=True,
+                  verbose=False,
+                  numProcess=4,
+                  mpMethod=None,
+                  chunksize=1):
+        """Initialize Multiview using plain arguments.
 
         Parameters
         ----------
-        params : EDMParameters
-            Common EDM parameters (data, columns, target, etc.)
-        split : DataSplit, optional
-            Train/test split configuration
-        multiview : MultiviewParameters, optional
-            Multiview-specific parameters (D, multiview, trainLib, excludeTarget)
-        execution : ExecutionParameters, optional
-            Execution and multiprocessing configuration
-        '''
+        data : numpy.ndarray
+            2D numpy array where column 0 is time (unless noTime=True)
+        columns : list of int, optional
+            Column indices to use (defaults to all except time)
+        target : int or None
+            Target column index (defaults to column 1)
+        train : tuple of (int, int), optional
+            Training set indices [start, end]
+        test : tuple of (int, int), optional
+            Test set indices [start, end]
+        D : int, default=0
+            State-space dimension (number of variables to combine for each
+            assessment). If 0, defaults to number of columns.
+        embedDimensions : int, default=0
+            Embedding dimension (E). If 0, will be set by Validate()
+        predictionHorizon : int, default=1
+            Prediction time horizon (Tp)
+        knn : int, default=0
+            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        step : int, default=-1
+            Time delay step size (tau). Negative values indicate lag
+        multiview : int, default=0
+            Number of top-ranked D-dimensional predictions for final ensemble
+            (parameter k in Ye & Sugihara). If 0, defaults to sqrt(m) where m
+            is the number of combinations C(n,D).
+        exclusionRadius : int, default=0
+            Temporal exclusion radius for neighbors
+        trainLib : bool, default=True
+            Evaluation strategy for ranking column combinations:
+            - True: Use in-sample evaluation (test=train during Rank phase).
+                    Faster but may overfit to arbitrary vectors.
+            - False: Use proper out-of-sample evaluation with specified train/test.
+                    More rigorous but computationally expensive.
+                    Requires explicit train and test parameters.
+        excludeTarget : bool, default=False
+            Whether to exclude target column from embedding combinations
+        ignoreNan : bool, default=True
+            Remove NaN values from embedding
+        verbose : bool, default=False
+            Print diagnostic messages
+        numProcess : int, default=4
+            Number of processes for multiprocessing
+        mpMethod : ExecutionMode, optional
+            Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER)
+            If None, uses platform default
+        chunksize : int, default=1
+            Chunk size for pool.starmap operations
+        """
 
-        # Assign parameters from dataclasses
+        # Assign parameters directly
         self.name            = 'Multiview'
-        self.Data            = params.data
-        self.columns         = params.columns
-        self.target          = params.target
-        self.embedDimensions = params.embedDimensions
-        self.predictionHorizon = params.predictionHorizon
-        self.knn             = params.knn
-        self.step            = params.step
-        self.exclusionRadius = params.exclusionRadius
-        self.ignoreNan       = params.ignoreNan
-        self.verbose         = params.verbose
+        self.Data            = data
+        self.columns         = columns
+        self.target          = target
+        self.embedDimensions = embedDimensions
+        self.predictionHorizon = predictionHorizon
+        self.knn             = knn
+        self.step            = step
+        self.D               = D
+        self.multiview       = multiview
+        self.exclusionRadius = exclusionRadius
+        self.trainLib        = trainLib
+        self.excludeTarget   = excludeTarget
+        self.ignoreNan       = ignoreNan
+        self.verbose         = verbose
 
-        # Extract split parameters
-        if split is None:
-            split = DataSplit()
-        self.train = split.train if split.train is not None else []
-        self.test = split.test if split.test is not None else []
+        # Assign split parameters
+        self.train = train if train is not None else []
+        self.test = test if test is not None else []
 
-        # Extract multiview parameters
-        if multiview is None:
-            multiview = MultiviewParameters()
-        self.D             = multiview.D
-        self.multiview     = multiview.multiview
-        self.trainLib      = multiview.trainLib
-        self.excludeTarget = multiview.excludeTarget
-
-        # Extract execution parameters
-        if execution is None:
-            execution = ExecutionParameters()
-        self.numProcess = execution.numProcess
-        self.mpMethod   = execution.mpMethod
-        self.chunksize  = execution.chunksize
+        # Assign execution parameters
+        self.numProcess = numProcess
+        self.mpMethod   = mpMethod
+        self.chunksize  = chunksize
 
         self.Embedding  = None # numpy array
         self.View       = None # numpy array
@@ -191,7 +236,7 @@ class Multiview:
 
     #-------------------------------------------------------------------
     def Rank( self ) :
-        '''Multiprocess to rank top multiview vectors'''
+        """Multiprocess to rank top multiview vectors"""
 
         if self.verbose:
             print( f'{self.name}: Rank()' )
@@ -230,7 +275,7 @@ class Multiview:
     # 
     #-------------------------------------------------------------------
     def Project( self ) :
-        '''Projection with top multiview vectors'''
+        """Projection with top multiview vectors"""
 
         if self.verbose:
             print( f'{self.name}: Project()' )
@@ -260,8 +305,8 @@ class Multiview:
     #--------------------------------------------------------------------
     def Setup( self ):
     #--------------------------------------------------------------------
-        '''Set D, train, test, combos. Embed Data.
-        '''
+        """Set D, train, test, combos. Embed Data.
+        """
         if self.verbose:
             print( f'{self.name}: Setup()' )
 

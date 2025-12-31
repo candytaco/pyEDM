@@ -1,4 +1,4 @@
-'''Python tools for EDM'''
+"""Python tools for EDM"""
 from .Functions import FindOptimalEmbeddingDimensionality, FindOptimalPredictionHorizon, FindSMapNeighborhood
 # import EDM functions
 from .Functions import FitSimplex, FitSMap, FitCCM, FitMultiview
@@ -7,16 +7,7 @@ from .Examples import Examples
 from .Utils import SurrogateData
 from .Embed import Embed
 from .LoadData import sampleData
-# Import parameter configuration objects
-from .Parameters import (
-    EDMParameters,
-    DataSplit,
-    GenerationParameters,
-    SMapParameters,
-    CCMParameters,
-    MultiviewParameters,
-    ExecutionParameters
-)
+
 # Import result objects
 from .Results import (
     SimplexResult,

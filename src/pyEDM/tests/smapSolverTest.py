@@ -10,7 +10,7 @@ import pyEDM as EDM
 #------------------------------------------------------------
 #------------------------------------------------------------
 def main():
-    '''Test sklearn.linear_model solvers'''
+    """Test sklearn.linear_model solvers"""
 
     circle = EDM.sampleData['circle']
 

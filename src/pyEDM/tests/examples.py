@@ -5,7 +5,7 @@ import pyEDM as EDM
 #------------------------------------------------------------
 #------------------------------------------------------------
 def main():
-    '''pyEDM examples.'''
+    """pyEDM examples."""
 
     df = EDM.FindOptimalEmbeddingDimensionality(dataFrame = EDM.sampleData["TentMap"],
                                                 columns = "TentMap", target = "TentMap",

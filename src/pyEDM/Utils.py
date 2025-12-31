@@ -1,4 +1,4 @@
-'''Auxiliary functions:
+"""Auxiliary functions:
 
    ComputeError    Pearson correlation, RMSE, MAE, CAE
    Iterable        Is an object iterable?
@@ -7,7 +7,7 @@
    PlotObsPred     Plot observations & predictions
    PlotCoef        Plot s-map coefficients
    Examples        Canonical examples
-'''
+"""
 
 from cmath import exp
 # python modules
@@ -66,7 +66,7 @@ def ComputeError(actual, predicted, metric, digits = 6):
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def Iterable( obj ):
-    '''Is an object iterable?'''
+    """Is an object iterable?"""
 
     try:
         it = iter( obj )
@@ -77,7 +77,7 @@ def Iterable( obj ):
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def IsNonStringIterable(obj):
-    '''Is an object iterable and not a string?'''
+    """Is an object iterable and not a string?"""
 
     if Iterable( obj ) :
         if isinstance( obj, str ) :
@@ -95,7 +95,7 @@ def SurrogateData( data     = None,
                    alpha         = None,
                    smooth        = 0.8,
                    outputFile    = None ):
-    '''Three methods:
+    """Three methods:
 
     random_shuffle :
       Sample the data with a uniform distribution.
@@ -116,7 +116,7 @@ def SurrogateData( data     = None,
       Each surrogate is a summation of the trend, resampled residuals,
       and possibly additive Gaussian noise. Default noise has a standard
       deviation that is the data range / 5.
-    '''
+    """
 
     if data is None :
         raise RuntimeError( "SurrogateData() empty data array." )
@@ -218,12 +218,12 @@ def SurrogateData( data     = None,
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def PlotObsPred( data, dataName = "", embedDimensions = 0, predictionHorizon = 0, block = True ):
-    '''Plot observations and predictions
+    """Plot observations and predictions
 
     Parameters:
     data : numpy array with shape (n_samples, 4)
         Column 0: Time, Column 1: Observations, Column 2: Predictions, Column 3: Pred_Variance
-    '''
+    """
     import matplotlib.pyplot as plt
 
     # stats: {'MAE': 0., 'RMSE': 0., 'correlation': 0. }
@@ -246,12 +246,12 @@ def PlotObsPred( data, dataName = "", embedDimensions = 0, predictionHorizon = 0
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
 def PlotCoeff( data, dataName = "", embedDimensions = 0, predictionHorizon = 0, block = True ):
-    '''Plot S-Map coefficients
+    """Plot S-Map coefficients
 
     Parameters:
     data : numpy array with shape (n_samples, n_coeff + 1)
         Column 0: Time, Columns 1+: coefficients
-    '''
+    """
     import matplotlib.pyplot as plt
 
     title = dataName + "\nEmbedding Dims = " + str(embedDimensions) + " predictionHorizon=" + str(predictionHorizon) +\

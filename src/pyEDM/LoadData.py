@@ -1,4 +1,4 @@
-'''Loading of example data.'''
+"""Loading of example data."""
 
 import importlib.resources  # Get data file pathnames from EDM package
 
