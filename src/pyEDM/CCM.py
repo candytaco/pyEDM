@@ -266,10 +266,9 @@ class CCM:
                 elif S.predictionHorizon < 0 :
                     projection_[ S.predictionHorizon: ] = nan
 
-                err = ComputeError(S.targetVec[ S.testIndices, 0],
-                                   projection_, digits = 5)
+                err = ComputeError(S.targetVec[S.testIndices, 0], projection_, None, digits = 5)
 
-                correlations[ s ] = err['correlation']
+                correlations[ s ] = err
 
                 if self.includeData :
                     predictStats[s] = err

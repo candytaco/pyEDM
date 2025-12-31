@@ -184,7 +184,7 @@ def SimplexFunc( blockPairs, E, argsD, data ):
                     noTime          = argsD['noTime'],
                     showPlot        = False)
 
-    rho = ComputeError( df['Observations'], df['Predictions'] )['rho']
+    rho = ComputeError(df['Observations'], df['Predictions'], None)
 
     return rho
 

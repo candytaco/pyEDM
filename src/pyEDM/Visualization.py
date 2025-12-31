@@ -53,15 +53,16 @@ def plot_prediction(result: Union['SimplexResult', 'SMapResult', 'MultiviewResul
 		Tp = predictionHorizon or 0
 
 	# Compute error statistics
-	stats = ComputeError(data[:, 1], data[:, 2])
+	corr = ComputeError(data[:, 1], data[:, 2], None)
+	RMSE = ComputeError(data[:, 1], data[:, 2], 'RMSE')
 
 	# Build title
 	plot_title = title
 	if plot_title:
 		plot_title += "\n"
 	plot_title += f"Embedding Dims = {E}  predictionHorizon={Tp}  " \
-				  f"correlation={round(stats['correlation'], 3)}  " \
-				  f"RMSE={round(stats['RMSE'], 3)}"
+				  f"correlation={round(corr, 3)}  " \
+				  f"RMSE={round(RMSE, 3)}"
 
 	# Create plot
 	plt.figure()

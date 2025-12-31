@@ -23,36 +23,45 @@ from scipy.interpolate import UnivariateSpline
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
-def ComputeError( obs, test, digits = 6 ):
-    '''Pearson correlation, MAE, CAE, RMSE
-       Remove nan from obs, test for corrcoeff.
-    '''
+def ComputeError(actual, predicted, metric, digits = 6):
+    """
+    Compute performance metrics. This is a bad function because it computes errors, which we want to minimize, and also
+    performance, which we want to maximize
+    :param metric: metric to use
+    :param actual:
+    :param predicted:
+    :param digits:
+    :return:
+    """
 
-    notNan = isfinite( test )
+    notNan = isfinite(predicted)
     if any( ~notNan ) :
-        test = test[ notNan ]
-        obs  = obs [ notNan ]
+        predicted = predicted[ notNan]
+        actual  = actual [ notNan]
 
-    notNan = isfinite( obs )
+    notNan = isfinite(actual)
     if any( ~notNan ) :
-        test = test[ notNan ]
-        obs  = obs [ notNan ]
+        predicted = predicted[ notNan]
+        actual  = actual [ notNan]
 
-    if len( test ) < 5 :
-        msg = f'ComputeError(): Not enough data ({len(test)}) to ' +\
+    if len(predicted) < 5 :
+        msg = f'ComputeError(): Not enough data ({len(predicted)}) to ' +\
                ' compute error statistics.'
         print( msg )
         return { 'correlation' : nan, 'MAE' : nan, 'RMSE' : nan }
 
-    correlation  = round( corrcoef( obs, test )[0,1], digits )
-    err  = obs - test
-    MAE  = round( max( err ), digits )
-    CAE  = round( absolute( err ).sum(), digits )
-    RMSE = round( sqrt( mean( err**2 ) ), digits )
+    if metric is None:
+        return round(corrcoef(actual, predicted)[0,1], digits)
 
-    D = { 'correlation' : correlation, 'MAE' : MAE, 'CAE' : CAE, 'RMSE' : RMSE }
+    err  = actual - predicted
+    if metric == 'MAE':
+        return round( max( err ), digits )
+    if metric == 'CAE':
+        return round( absolute( err ).sum(), digits )
+    if metric == 'RMSE':
+        return round( sqrt( mean( err**2 ) ), digits )
 
-    return D
+    raise ValueError('Unknown metric {}'.format(metric))
 
 #------------------------------------------------------------------------
 #------------------------------------------------------------------------
@@ -218,11 +227,14 @@ def PlotObsPred( data, dataName = "", embedDimensions = 0, predictionHorizon = 0
     import matplotlib.pyplot as plt
 
     # stats: {'MAE': 0., 'RMSE': 0., 'correlation': 0. }
-    stats = ComputeError( data[:, 1], data[:, 2] )
+    stats = [ComputeError(data[:, 1], data[:, 2], None),
+             ComputeError(data[:, 1], data[:, 2], 'MAE'),
+             ComputeError(data[:, 1], data[:, 2], 'CAE'),
+             ComputeError(data[:, 1], data[:, 2], 'RMSE')]
 
     title = dataName + "\nEmbedding Dims = " + str(embedDimensions) + " predictionHorizon=" + str(predictionHorizon) +\
-            "  correlation="   + str( round( stats['correlation'],  3 ) )   +\
-            " RMSE=" + str( round( stats['RMSE'], 3 ) )
+            "  correlation="   + str( round( stats[0],  3 ) )   +\
+            " RMSE=" + str( round( stats[3], 3 ) )
 
     plt.figure()
     plt.plot(data[:, 0], data[:, 1], label='Observations', linewidth=3)

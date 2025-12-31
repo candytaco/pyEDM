@@ -137,7 +137,7 @@ def SimplexFunc( column, target, E, argsD, data, returnError = False ):
                     showPlot        = False)
 
     if argsD['returnError'] :
-        D_err = ComputeError( df['Observations'], df['Predictions'] )
+        D_err = ComputeError(df['Observations'], df['Predictions'], None)
         df = DataFrame( D_err, index = [ f'{column}:{target}' ] )
 
     return df

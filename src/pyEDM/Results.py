@@ -45,7 +45,7 @@ class SimplexResult:
         """Predicted values from projection."""
         return self.projection[:, 2]
 
-    def compute_error(self) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> Dict[str, float]:
         """Compute prediction error statistics.
 
         Returns
@@ -53,7 +53,7 @@ class SimplexResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        return ComputeError(self.observations, self.predictions)
+        return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
@@ -106,7 +106,7 @@ class SMapResult:
             predictionHorizon=self.predictionHorizon
         )
 
-    def compute_error(self) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> Dict[str, float]:
         """Compute prediction error statistics.
 
         Returns
@@ -114,7 +114,7 @@ class SMapResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        return ComputeError(self.observations, self.predictions)
+        return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
@@ -209,7 +209,7 @@ class MultiviewResult:
         """Get list of top-ranked column combinations."""
         return list(self.topRankProjections.keys())
 
-    def compute_error(self) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> Dict[str, float]:
         """Compute prediction error statistics for ensemble prediction.
 
         Returns
@@ -217,7 +217,7 @@ class MultiviewResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        return ComputeError(self.observations, self.predictions)
+        return ComputeError(self.observations, self.predictions, metric)
 
     def get_combination_stats(self, combo: tuple) -> Dict[str, float]:
         """Get error statistics for a specific column combination.
@@ -272,7 +272,7 @@ class MDEResult:
         """Predicted values from forecast."""
         return self.final_forecast[:, 2]
 
-    def compute_error(self) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> Dict[str, float]:
         """Compute prediction error statistics.
 
         Returns
@@ -280,7 +280,7 @@ class MDEResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        return ComputeError(self.observations, self.predictions)
+        return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
@@ -321,7 +321,7 @@ class MDECVResult:
         """Predicted values from forecast."""
         return self.final_forecast[:, 2]
 
-    def compute_error(self) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> Dict[str, float]:
         """Compute prediction error statistics.
 
         Returns
@@ -329,4 +329,4 @@ class MDECVResult:
         dict
             Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
-        return ComputeError(self.observations, self.predictions)
+        return ComputeError(self.observations, self.predictions, metric)

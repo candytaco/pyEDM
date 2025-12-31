@@ -45,8 +45,7 @@ def MultiviewSimplexcorrelation( combo, data, args ) :
                                 ignoreNan       = args['ignoreNan'])
 
     # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( projection[:, 1], projection[:, 2] )
-    return err['correlation']
+    return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #----------------------------------------------------
 # Function to evaluate Simplex in EmbedDimension Pool
@@ -68,8 +67,7 @@ def EmbedDimSimplexFunc( embedDimensions, data, args ) :
                                 ignoreNan       = args['ignoreNan'])
 
     # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( projection[:, 1], projection[:, 2] )
-    return err['correlation']
+    return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #-----------------------------------------------------
 # Function to evaluate Simplex in PredictInterval Pool
@@ -91,8 +89,7 @@ def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
                                 ignoreNan       = args['ignoreNan'])
 
     # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( projection[:, 1], projection[:, 2] )
-    return err['correlation']
+    return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #-----------------------------------------------------
 # Function to evaluate SMap in PredictNonlinear Pool
@@ -118,5 +115,4 @@ def PredictNLSMapFunc( theta, data, args ) :
 
     projection = S['predictions']
     # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    err = ComputeError( projection[:, 1], projection[:, 2] )
-    return err['correlation']
+    return ComputeError(projection[:, 1], projection[:, 2], None)

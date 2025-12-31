@@ -163,7 +163,11 @@ class Multiview:
         for combo in colCombos :
             proj = self.topRankProjections[combo]
             # proj columns: 0=Time, 1=Observations, 2=Predictions, 3=Variance
-            topRankStats[combo] = ComputeError(proj[:, 1], proj[:, 2])
+            metrics = [ComputeError(proj[:, 1], proj[:, 2], None),
+                       ComputeError(proj[:, 1], proj[:, 2], 'MAE'),
+                       ComputeError(proj[:, 1], proj[:, 2], 'CAE'),
+                       ComputeError(proj[:, 1], proj[:, 2], 'RMSE')]
+            topRankStats[combo] = metrics
 
         self.topRankStats = topRankStats
 
@@ -171,7 +175,7 @@ class Multiview:
         view_rows = []
         for combo in colCombos:
             stats = topRankStats[combo]
-            view_rows.append([str(combo), stats['correlation'], stats['MAE'], stats['CAE'], stats['RMSE']])
+            view_rows.append([str(combo), stats[0], stats[1], stats[2], stats[3]])
 
         self.View = view_rows  # List of lists
 
