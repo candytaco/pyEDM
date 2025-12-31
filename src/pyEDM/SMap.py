@@ -7,13 +7,13 @@ from numpy import full, linspace, mean, nan, power, sum, array
 from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 
 # local modules
-from .EDM import EDM as EDMClass
+from .EDM import EDM
 from .Results import SMapResult
 from .Parameters import EDMParameters, DataSplit, GenerationParameters, SMapParameters
 
 
 #-----------------------------------------------------------
-class SMap( EDMClass ):
+class SMap(EDM):
     '''SMap class : child of EDM'''
 
     def __init__(self,

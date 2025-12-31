@@ -6,12 +6,12 @@ from numpy import array, divide, exp, fmax, full, nan
 from numpy import linspace, power, subtract, sum, zeros, column_stack
 
 # local modules
-from .EDM import EDM as EDMClass
+from .EDM import EDM
 from .Results import SimplexResult
 from .Parameters import EDMParameters, DataSplit, GenerationParameters
 
 #-----------------------------------------------------------
-class Simplex( EDMClass ):
+class Simplex(EDM):
     '''Simplex class : child of EDM
        CCM & Multiview inhereted from Simplex
        To Do : Neighbor ties'''
