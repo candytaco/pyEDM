@@ -99,7 +99,6 @@ def FitterExamples():
 
 	# Example 4: SMapWrapper with circle data
 	print("\nExample 4: SMap with circle data")
-	print("=" * 60)
 
 	data = sampleData["circle"]
 	XTrain = data[1:101, [1, 2]]  # Columns 1-2 (features), rows 1-100
