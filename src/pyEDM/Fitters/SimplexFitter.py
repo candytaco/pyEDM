@@ -5,8 +5,9 @@ from typing import Optional
 
 import numpy
 
-from .EDMFitter import EDMFitter
 from pyEDM.EDM.Simplex import Simplex
+from .EDMFitter import EDMFitter
+
 
 class SimplexFitter(EDMFitter):
 	"""
@@ -101,19 +102,19 @@ class SimplexFitter(EDMFitter):
 		Target = YIndex
 
 		self.Simplex = Simplex(
-			data=Data,
-			columns=Columns,
-			target=Target,
-			train=TrainIndices,
-			test=TestIndices,
-			embedDimensions=self.EmbedDimensions,
-			predictionHorizon=self.PredictionHorizon,
-			knn=self.KNN,
-			step=self.Step,
-			exclusionRadius=self.ExclusionRadius,
-			noTime=NoTime,
-			verbose=self.Verbose,
-			embedded=self.Embedded
+			data = Data,
+			columns = Columns,
+			target = Target,
+			train = TrainIndices,
+			test = TestIndices,
+			embedDimensions = self.EmbedDimensions,
+			predictionHorizon = self.PredictionHorizon,
+			knn = self.KNN,
+			step = self.Step,
+			exclusionRadius = self.ExclusionRadius,
+			noTime = NoTime,
+			verbose = self.Verbose,
+			embedded = self.Embedded
 		)
 
 		return self.Simplex.Run()

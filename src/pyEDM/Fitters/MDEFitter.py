@@ -5,8 +5,9 @@ from typing import Optional, List
 
 import numpy
 
-from .EDMFitter import EDMFitter
 from pyEDM.EDM.MDE import MDE
+from .EDMFitter import EDMFitter
+
 
 class MDEFitter(EDMFitter):
 	"""
@@ -88,7 +89,8 @@ class MDEFitter(EDMFitter):
 			S-Map localization parameter
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime, TestTime = TestTime)
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime,
+						 TestTime = TestTime)
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget
@@ -137,25 +139,25 @@ class MDEFitter(EDMFitter):
 			Target = YIndex
 
 		self.MDE = MDE(
-			data=Data,
-			target=Target,
-			maxD=self.MaxD,
-			include_target=self.IncludeTarget,
-			convergent=self.Convergent,
-			metric=self.Metric,
-			batch_size=self.BatchSize,
-			columns=Columns,
-			train=TrainIndices,
-			test=TestIndices,
-			embedDimensions=self.EmbedDimensions,
-			predictionHorizon=self.PredictionHorizon,
-			knn=self.KNN,
-			step=self.Step,
-			exclusionRadius=self.ExclusionRadius,
-			noTime=NoTime,
-			verbose=self.Verbose,
-			useSMap=self.UseSMap,
-			theta=self.Theta
+			data = Data,
+			target = Target,
+			maxD = self.MaxD,
+			include_target = self.IncludeTarget,
+			convergent = self.Convergent,
+			metric = self.Metric,
+			batch_size = self.BatchSize,
+			columns = Columns,
+			train = TrainIndices,
+			test = TestIndices,
+			embedDimensions = self.EmbedDimensions,
+			predictionHorizon = self.PredictionHorizon,
+			knn = self.KNN,
+			step = self.Step,
+			exclusionRadius = self.ExclusionRadius,
+			noTime = NoTime,
+			verbose = self.Verbose,
+			useSMap = self.UseSMap,
+			theta = self.Theta
 		)
 
 		return self.MDE.Run()

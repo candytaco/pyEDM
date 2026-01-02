@@ -5,8 +5,9 @@ from typing import Optional
 
 import numpy
 
-from .EDMFitter import EDMFitter
 from pyEDM.EDM.SMap import SMap
+from .EDMFitter import EDMFitter
+
 
 class SMapFitter(EDMFitter):
 	"""
@@ -105,20 +106,20 @@ class SMapFitter(EDMFitter):
 		Target = YIndex
 
 		self.SMap = SMap(
-			data=Data,
-			columns=Columns,
-			target=Target,
-			train=TrainIndices,
-			test=TestIndices,
-			embedDimensions=self.EmbedDimensions,
-			predictionHorizon=self.PredictionHorizon,
-			knn=self.KNN,
-			step=self.Step,
-			theta=self.Theta,
-			exclusionRadius=self.ExclusionRadius,
-			noTime=NoTime,
-			verbose=self.Verbose,
-			embedded=self.Embedded
+			data = Data,
+			columns = Columns,
+			target = Target,
+			train = TrainIndices,
+			test = TestIndices,
+			embedDimensions = self.EmbedDimensions,
+			predictionHorizon = self.PredictionHorizon,
+			knn = self.KNN,
+			step = self.Step,
+			theta = self.Theta,
+			exclusionRadius = self.ExclusionRadius,
+			noTime = NoTime,
+			verbose = self.Verbose,
+			embedded = self.Embedded
 		)
 
 		return self.SMap.Run()

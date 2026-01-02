@@ -5,8 +5,9 @@ from typing import Optional
 
 import numpy
 
-from .EDMFitter import EDMFitter
 from pyEDM.EDM.Multiview import Multiview
+from .EDMFitter import EDMFitter
+
 
 class MultiviewFitter(EDMFitter):
 	"""
@@ -112,21 +113,21 @@ class MultiviewFitter(EDMFitter):
 		Target = YIndex
 
 		self.Multiview = Multiview(
-			data=Data,
-			columns=Columns,
-			target=Target,
-			train=TrainIndices,
-			test=TestIndices,
-			D=self.D,
-			embedDimensions=self.EmbedDimensions,
-			predictionHorizon=self.PredictionHorizon,
-			knn=self.KNN,
-			step=self.Step,
-			multiview=self.NumMultiview,
-			exclusionRadius=self.ExclusionRadius,
-			trainLib=self.TrainLib,
-			excludeTarget=self.ExcludeTarget,
-			verbose=self.Verbose
+			data = Data,
+			columns = Columns,
+			target = Target,
+			train = TrainIndices,
+			test = TestIndices,
+			D = self.D,
+			embedDimensions = self.EmbedDimensions,
+			predictionHorizon = self.PredictionHorizon,
+			knn = self.KNN,
+			step = self.Step,
+			multiview = self.NumMultiview,
+			exclusionRadius = self.ExclusionRadius,
+			trainLib = self.TrainLib,
+			excludeTarget = self.ExcludeTarget,
+			verbose = self.Verbose
 		)
 
 		return self.Multiview.Run()
