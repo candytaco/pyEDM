@@ -1,11 +1,10 @@
 """
 MDECV wrapper for sklearn-like API.
 """
-from typing import Optional, List
 
 import numpy
 
-from pyEDM.EDM.MDECV import MDECV
+from ..EDM.MDECV import MDECV
 
 
 class MDEFitterCV:
@@ -26,8 +25,6 @@ class MDEFitterCV:
 				 Folds: int = 5,
 				 TestSize: float = 0.2,
 				 FinalFeatureMode: str = "best_fold",
-				 Columns: Optional[List[int]] = None,
-				 Target: Optional[int] = None,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -51,8 +48,6 @@ class MDEFitterCV:
 		:param Folds: 				Number of cross-validation folds
 		:param TestSize: 			Proportion of data to use for test set
 		:param FinalFeatureMode: 	Method for selecting final features
-		:param Columns: 			Column indices to use for embedding
-		:param Target: 				Target column index
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
 		:param KNN: 				Number of nearest neighbors
@@ -75,8 +70,6 @@ class MDEFitterCV:
 		self.Folds = Folds
 		self.TestSize = TestSize
 		self.FinalFeatureMode = FinalFeatureMode
-		self.Columns = Columns
-		self.Target = Target
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
@@ -97,17 +90,8 @@ class MDEFitterCV:
 		# Combine train data
 		TrainData = numpy.hstack([self.XTrain, self.YTrain])
 
-		# Determine columns to use
-		if self.Columns is not None:
-			Columns = self.Columns
-		else:
-			Columns = list(range(self.XTrain.shape[1]))
-
-		# Determine target
-		if self.Target is not None:
-			Target = self.Target
-		else:
-			Target = self.XTrain.shape[1]
+		Columns = list(range(0, self.XTrain.shape[0] - 1))
+		Target = TrainData.shape[1] - 1
 
 		self.MDECV = MDECV(
 			trainData = TrainData,
