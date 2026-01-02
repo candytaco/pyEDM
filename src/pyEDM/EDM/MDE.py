@@ -12,9 +12,9 @@ import numpy
 from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed
 
-from pyEDM.EDM.Results import MDEResult, SimplexResult
-from pyEDM.EDM.SMap import SMap
-from pyEDM.EDM.Simplex import Simplex
+from .Results import MDEResult, SimplexResult
+from .SMap import SMap
+from .Simplex import Simplex
 
 
 class MDE:

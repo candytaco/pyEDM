@@ -10,7 +10,7 @@ from typing import List
 import numpy
 from tqdm import tqdm as ProgressBar
 from sklearn.model_selection import KFold
-from pyEDM.EDM.Results import MDECVResult, MDEResult
+from .Results import MDECVResult, MDEResult
 from .MDE import MDE
 
 

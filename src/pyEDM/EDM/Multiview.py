@@ -8,10 +8,10 @@ from warnings import warn
 # package modules
 from numpy import argsort, array, column_stack, mean
 
-import pyEDM.EDM.PoolFunc as PoolFunc
-from pyEDM.EDM.Embed import Embed
 # local modules
-from pyEDM.Utils import IsNonStringIterable, ComputeError
+from . import PoolFunc
+from .Embed import Embed
+from ..Utils import IsNonStringIterable, ComputeError
 from .Results import MultiviewResult
 
 

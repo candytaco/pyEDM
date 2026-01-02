@@ -9,7 +9,7 @@ from pyEDM.Fitters.SimplexFitter import SimplexFitter
 from pyEDM.Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm)
 
 
-def WrapperExamples():
+def FitterExamples():
 	"""
 	Examples using the new wrapper classes with sklearn-like separate arrays.
 	"""
