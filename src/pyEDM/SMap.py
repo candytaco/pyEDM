@@ -114,6 +114,8 @@ class SMap(EDM):
         # SMap storage
         self.Coefficients   = None # DataFrame SMap API output
         self.SingularValues = None # DataFrame SMap API output
+
+        # TODO: check what these actually do - they shadow the capitalized things but are written into differently??
         self.coefficients   = None # ndarray SMap output (N_pred, E+1)
         self.singularValues = None # ndarray SMap output (N_pred, E+1)
 
@@ -152,8 +154,8 @@ class SMap(EDM):
 
         return SMapResult(
             projection=self.Projection,
-            coefficients=self.coefficients,
-            singularValues=self.singularValues,
+            coefficients=self.Coefficients,
+            singularValues=self.SingularValues,
             embedDimensions=self.embedDimensions,
             predictionHorizon=self.predictionHorizon,
             theta=self.theta

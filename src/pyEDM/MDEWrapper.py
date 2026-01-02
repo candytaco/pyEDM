@@ -18,6 +18,10 @@ class MDEWrapper(EDMWrapper):
 				 YTrain: numpy.ndarray,
 				 XTest: numpy.ndarray,
 				 YTest: numpy.ndarray,
+				 TrainStart: int = 0,
+				 TrainEnd: int = 0,
+				 TestStart: int = 0,
+				 TestEnd: int = 0,
 				 MaxD: int = 5,
 				 IncludeTarget: bool = True,
 				 Convergent: bool = True,
@@ -84,7 +88,7 @@ class MDEWrapper(EDMWrapper):
 			S-Map localization parameter
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainTime = TrainTime, TestTime = TestTime)
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime, TestTime = TestTime)
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget

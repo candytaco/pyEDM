@@ -18,8 +18,10 @@ class SimplexWrapper(EDMWrapper):
 				 YTrain: numpy.ndarray,
 				 XTest: numpy.ndarray,
 				 YTest: numpy.ndarray,
-				 Columns: Optional[List[int]] = None,
-				 Target: Optional[int] = None,
+				 TrainStart: int = 0,
+				 TrainEnd: int = 0,
+				 TestStart: int = 0,
+				 TestEnd: int = 0,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -28,10 +30,7 @@ class SimplexWrapper(EDMWrapper):
 				 Embedded: bool = False,
 				 TrainTime: Optional[numpy.ndarray] = None,
 				 TestTime: Optional[numpy.ndarray] = None,
-				 Verbose: bool = False,
-				 XTestHistory = None,
-				 YTestHistory = None,
-				 TestHistoryTime = None):
+				 Verbose: bool = False):
 		"""
 		Initialize Simplex wrapper with sklearn-style separate arrays.
 
@@ -69,11 +68,9 @@ class SimplexWrapper(EDMWrapper):
 			Print diagnostic messages
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, XTestHistory, YTestHistory,
-					 TrainTime, TestTime, TestHistoryTime)
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+						 TrainTime = TrainTime, TestTime = TestTime)
 
-		self.Columns = Columns
-		self.Target = Target
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
@@ -99,21 +96,9 @@ class SimplexWrapper(EDMWrapper):
 		YIndex = self.GetYIndex()
 		NoTime = not self.HasTime()
 
-		# Determine columns to use
 		XStart, XEnd = self.GetXIndices()
-		if self.Columns is not None:
-			# Map wrapper columns to EDM data columns
-			Columns = [XStart + col for col in self.Columns]
-		else:
-			# Use all X columns
-			Columns = list(range(XStart, XEnd + 1))
-
-		# Determine target
-		if self.Target is not None:
-			# Map wrapper target to EDM data columns
-			Target = XStart + self.Target
-		else:
-			Target = YIndex
+		Columns = list(range(XStart, XEnd + 1))
+		Target = YIndex
 
 		self.Simplex = Simplex(
 			data=Data,

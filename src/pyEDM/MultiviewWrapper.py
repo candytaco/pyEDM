@@ -19,8 +19,10 @@ class MultiviewWrapper(EDMWrapper):
 				 XTest: numpy.ndarray,
 				 YTest: numpy.ndarray,
 				 D: int = 0,
-				 Columns: Optional[List[int]] = None,
-				 Target: Optional[int] = None,
+				 TrainStart: int = 0,
+				 TrainEnd: int = 0,
+				 TestStart: int = 0,
+				 TestEnd: int = 0,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -31,10 +33,7 @@ class MultiviewWrapper(EDMWrapper):
 				 ExcludeTarget: bool = False,
 				 TrainTime: Optional[numpy.ndarray] = None,
 				 TestTime: Optional[numpy.ndarray] = None,
-				 Verbose: bool = False,
-				 XTestHistory = None,
-				 YTestHistory = None,
-				 TestHistoryTime = None):
+				 Verbose: bool = False):
 		"""
 		Initialize Multiview wrapper with sklearn-style separate arrays.
 
@@ -78,12 +77,10 @@ class MultiviewWrapper(EDMWrapper):
 			Print diagnostic messages
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, XTestHistory, YTestHistory,
-						 TrainTime, TestTime, TestHistoryTime)
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+						 TrainTime = TrainTime, TestTime = TestTime)
 
 		self.D = D
-		self.Columns = Columns
-		self.Target = Target
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
@@ -110,22 +107,9 @@ class MultiviewWrapper(EDMWrapper):
 		TestIndices = self.GetTestIndices()
 		YIndex = self.GetYIndex()
 
-		# Determine columns to use
 		XStart, XEnd = self.GetXIndices()
-		if self.Columns is not None:
-			# Map wrapper columns to EDM data columns
-			Columns = [XStart + col for col in self.Columns]
-		else:
-			# Use all X columns
-			Columns = list(range(XStart, XEnd + 1))
-
-		# Determine target
-		if self.Target is not None:
-			# Map wrapper target to EDM data columns
-			Target = XStart + self.Target
-		else:
-			Target = YIndex
-
+		Columns = list(range(XStart, XEnd + 1))
+		Target = YIndex
 
 		self.Multiview = Multiview(
 			data=Data,

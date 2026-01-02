@@ -12,48 +12,42 @@ import numpy
 
 class DataAdapter:
 
-	def __init__(self, X_train: numpy.ndarray, Y_train: numpy.ndarray, X_test: Optional[numpy.ndarray] = None,
-				 Y_test: Optional[numpy.ndarray] = None, X_testHistory: Optional[numpy.ndarray] = None,
-				 Y_testHistory: Optional[numpy.ndarray] = None, testHistoryTime: Optional[numpy.ndarray] = None,
+	def __init__(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: Optional[numpy.ndarray] = None,
+				 YTest: Optional[numpy.ndarray] = None, TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
 				 trainTime: Optional[numpy.ndarray] = None, testTime: Optional[numpy.ndarray] = None):
 		"""
 		Data adapter init
-		:param X_testHistory:
-		:param Y_testHistory:
-		:param X_train: 	training features
-		:param X_test: 		testing features
-		:param Y_train: 	training value to predict, should be just a single column
-		:param Y_test: 		testing value to predict, should be just a single column
-		:param X_testHistory: past values for X_test to include, but to not bleed into the training data
-		:param Y_testHistory: past values for Y_test to include, but to not bleed into the training data
-		:param testHistoryTime: time labels for the test history
+		:param TrainStart:
+		:param TestStart:
+		:param XTrain: 		training features
+		:param XTest: 		testing features
+		:param YTrain: 		training value to predict, should be just a single column
+		:param YTest: 		testing value to predict, should be just a single column
+		:param TrainStart:	index at which to start the train data; used to provide history for the first train sample
+		:param TrainEnd:	number of additional data samples at end of train data to ignore
+		:param TestEnd:		number of additional data samples at end of test data to ignore
+		:param TestStart:	index at which to start the test data; used to provide history for the first test sample
 		:param trainTime: 	time labels for train data
 		:param testTime: 	time labels for test data
 		"""
 
-		self.X_train = X_train
-		self.X_test = X_test
-		self.Y_train = Y_train.squeeze()[:, None]
-		self.X_testHistory = X_testHistory
-		self.Y_testHistory = Y_testHistory
+		self.X_train = XTrain
+		self.X_test = XTest
+		self.Y_train = YTrain.squeeze()[:, None]
 		self.trainTime = trainTime
 		self.testTime = testTime
-		self.testHistoryTime = testHistoryTime
 		self.hasTime = False
-		if Y_test is not None:
-			self.Y_test = Y_test.squeeze()[:, None]
-		if self.Y_testHistory is not None:
-			self.Y_testHistory = Y_testHistory.squeeze()[:, None]
+		if YTest is not None:
+			self.Y_test = YTest.squeeze()[:, None]
 
-		train = numpy.hstack([X_train, Y_train])
-		self.testOffset = 0
+		train = numpy.hstack([XTrain, YTrain])
+		self.trainOffset = TrainStart
+		self.trainEnd = TrainEnd
+		self.testOffset = TestStart + TrainStart + TrainEnd
+		self.testEnd = TestEnd
 
-		if Y_test is not None:
-			test = numpy.hstack([X_test, Y_test])
-			if Y_testHistory is not None:
-				history = numpy.hstack([X_testHistory, Y_testHistory])
-				test = numpy.vstack([history, test])
-				self.testOffset = history.shape[0]
+		if YTest is not None:
+			test = numpy.hstack([XTest, YTest])
 			data = numpy.vstack([train, test])
 		else:
 			data = train
@@ -63,11 +57,7 @@ class DataAdapter:
 			self.trainTime = self.trainTime.squeeze()
 			if testTime is not None:
 				self.testTime = self.testTime.squeeze()
-				if testHistoryTime is not None:
-					self.testHistoryTime = self.testHistoryTime.squeeze()
-					time = numpy.concatenate([self.trainTime, self.testHistoryTime, self.testTime])
-				else:
-					time = numpy.concatenate([self.trainTime, self.testTime])
+				time = numpy.concatenate([self.trainTime, self.testTime])
 			else:
 				time = self.trainTime
 			data = numpy.hstack([time[:, None], data])
@@ -82,12 +72,12 @@ class DataAdapter:
 	@property
 	def TrainIndices(self) -> Tuple[int, int]:
 		# returning with 1 subtracted because EDM functions are stop-inclusive
-		return (0, self.X_train.shape[0] - 1)
+		return (self.trainOffset, self.X_train.shape[0] - 1 + self.trainOffset - self.trainEnd)
 
 	@property
 	def TestIndices(self) -> Tuple[int, int]:
 		if self.Y_test is not None:
-			return (self.X_train.shape[0] + self.testOffset, self.fullData.shape[0] - 1)
+			return (self.X_train.shape[0] + self.testOffset, self.fullData.shape[0] - 1 - self.testEnd)
 		else:
 			raise ValueError('No test data')
 

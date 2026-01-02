@@ -50,24 +50,21 @@ def WrapperExamples():
 	data = sampleData["block_3sp"]
 	XTrain = data[1:100, [1]]  # Column 1 only, rows 1-99
 	YTrain = data[1:100, [1]]  # Target column 1, rows 1-99
-	XTest = data[105:191, [1]]  # Column 1 only, rows 105-190
-	YTest = data[105:191, [1]]  # Target column 1, rows 105-190
-	XTestHistory = data[100:105, [1]]
-	YTestHistory = data[100:105, [1]]
+	XTest = data[100:191, [1]]  # Column 1 only, rows 105-190
+	YTest = data[100:191, [1]]  # Target column 1, rows 105-190
 
 	simplexWrapper2 = SimplexWrapper(
 		XTrain = XTrain,
 		YTrain = YTrain,
 		XTest = XTest,
 		YTest = YTest,
+		TestStart = 5,	# the first 5 samples are to provide a history for the first real test sample
 		EmbedDimensions = 3,
 		PredictionHorizon = 1,
 		KNN = 0,
 		Step = -1,
 		Verbose = False,
 		Embedded = False,
-		XTestHistory = XTestHistory,
-		YTestHistory = YTestHistory
 	)
 
 	result = simplexWrapper2.Run()
@@ -110,16 +107,19 @@ def WrapperExamples():
 	data = sampleData["circle"]
 	XTrain = data[1:101, [1, 2]]  # Columns 1-2 (features), rows 1-100
 	YTrain = data[1:101, [1]]  # Target column 1, rows 1-100
-	XTest = data[110:191, [1, 2]]  # Columns 1-2, rows 110-190
-	YTest = data[110:191, [1]]  # Target column 1, rows 110-190
-	XTestHistory = data[101:110, [1, 2]]  # Columns 1-2, rows 110-190
-	YTestHistory = data[101:110, [1]]  # Target column 1, rows 110-190
+	XTest = data[101:201, [1, 2]]  # Columns 1-2, rows 110-190
+	YTest = data[101:201, [1]]  # Target column 1, rows 110-190
+
+	# note SMAP appears to have some sort of tail-of-data problems and needs additional
+	# data beyond the end of the test data
 
 	smapWrapper = SMapWrapper(
 		XTrain = XTrain,
 		YTrain = YTrain,
 		XTest = XTest,
 		YTest = YTest,
+		TestStart = 9,	# only use the 9:-10 entries of the test data because there's some sort of look-forward happening
+		TestEnd = 10,
 		EmbedDimensions = 2,
 		PredictionHorizon = 1,
 		KNN = 0,
@@ -127,8 +127,6 @@ def WrapperExamples():
 		Theta = 4,
 		Verbose = False,
 		Embedded = True,
-		XTestHistory = XTestHistory,
-		YTestHistory = YTestHistory
 	)
 
 	result = smapWrapper.Run()
