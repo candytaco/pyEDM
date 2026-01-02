@@ -7,7 +7,7 @@ return roughly the same data structures returned by the original pyEDM functions
 from itertools import repeat
 # python modules
 from multiprocessing import get_context
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 import numpy
 
 # local modules
@@ -347,7 +347,6 @@ def FindOptimalEmbeddingDimensionality(data: numpy.ndarray,
 									   validLib: List = [],
 									   noTime: bool = False,
 									   ignoreNan: bool = True,
-									   verbose: bool = False,
 									   numProcess: int = 4,
 									   mpMethod: Any = None,
 									   chunksize: int = 1) -> numpy.ndarray:
@@ -367,7 +366,6 @@ def FindOptimalEmbeddingDimensionality(data: numpy.ndarray,
 	:param validLib: 			Valid library indices
 	:param noTime: 				Whether to exclude time column
 	:param ignoreNan: 			Whether to ignore NaN values
-	:param verbose: 			Print diagnostic messages
 	:param numProcess: 			Number of processes for multiprocessing
 	:param mpMethod: 			Multiprocessing method
 	:param chunksize: 			Chunk size for pool.starmap
@@ -415,7 +413,6 @@ def FindOptimalPredictionHorizon(data: numpy.ndarray,
 								 validLib: List = [],
 								 noTime: bool = False,
 								 ignoreNan: bool = True,
-								 verbose: bool = False,
 								 numProcess: int = 4,
 								 mpMethod: Any = None,
 								 chunksize: int = 1) -> numpy.ndarray:
@@ -435,7 +432,6 @@ def FindOptimalPredictionHorizon(data: numpy.ndarray,
 	:param validLib: 		Valid library indices
 	:param noTime: 			Whether to exclude time column
 	:param ignoreNan: 		Whether to ignore NaN values
-	:param verbose: 		Print diagnostic messages
 	:param numProcess: 		Number of processes for multiprocessing
 	:param mpMethod: 		Multiprocessing method
 	:param chunksize: 		Chunk size for pool.starmap
@@ -487,7 +483,6 @@ def FindSMapNeighborhood(data: numpy.ndarray,
 						 validLib: List = [],
 						 noTime: bool = False,
 						 ignoreNan: bool = True,
-						 verbose: bool = False,
 						 numProcess: int = 4,
 						 mpMethod: Any = None,
 						 chunksize: int = 1) -> numpy.ndarray:
@@ -511,7 +506,6 @@ def FindSMapNeighborhood(data: numpy.ndarray,
 	:param validLib: 			Valid library indices
 	:param noTime: 				Whether to exclude time column
 	:param ignoreNan: 			Whether to ignore NaN values
-	:param verbose: 			Print diagnostic messages
 	:param numProcess: 			Number of processes for multiprocessing
 	:param mpMethod: 			Multiprocessing method
 	:param chunksize: 			Chunk size for pool.starmap
