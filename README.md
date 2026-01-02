@@ -24,11 +24,10 @@ For example usage see:
 The OOP API provides sklearn-like wrappers with explicit train/test separation. These are ideal for machine learning workflows.
 
 ```python
-from pyEDM import Fitters
-import numpy
+import pyEDM
 
 # Load data
-data = numpy.loadtxt('data/TentMap.csv', delimiter = ',')
+data = pyEDM.sampleData['TentMap']
 
 # Split data
 XTrain = data[0:100, 1]
@@ -37,7 +36,7 @@ XTest = data[100:200, 1]
 YTest = data[100:200, 1]
 
 # Create fitter
-fitter = Fitters.SimplexFitter(
+fitter = pyEDM.Fitters.SimplexFitter(
     XTrain = XTrain,
     YTrain = YTrain,
     XTest = XTest,
@@ -59,14 +58,13 @@ Other than the numpy-nativeness, these functions largely keep the same
 argument syntax as the pyEDM package.
 
 ```python
-from pyEDM import Functions
-import numpy
+import pyEDM
 
 # Load data
-data = numpy.loadtxt('data/TentMap.csv', delimiter = ',')
+data = pyEDM.sampleData['TentMap']
 
 # Simplex prediction
-result = Functions.FitSimplex(
+result = pyEDM.Functions.FitSimplex(
     data = data,
     columns = [1],
     target = 1,
