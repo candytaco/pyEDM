@@ -4,8 +4,8 @@ import os
 import pickle
 from joblib import Parallel, delayed
 from sklearn.model_selection import train_test_split, KFold
-from pyEDM import Simplex, SMap, EmbedDimension
-import matplotlib.pyplot as plt
+from pyEDM import EmbedDimension
+from pyEDM.EDM import Simplex, SMap
 import warnings
 
 warnings.filterwarnings(
@@ -16,9 +16,7 @@ warnings.filterwarnings(
 
 from .utils import (
 	reset_time_column,
-	check_convergence,
 	check_convergence_improved,
-	plot_training_accuracy,
 	regression_metrics
 )
 

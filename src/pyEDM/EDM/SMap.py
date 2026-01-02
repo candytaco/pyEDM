@@ -7,7 +7,7 @@ from numpy import full, linspace, mean, nan, power, sum, array
 from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 
 # local modules
-from .EDM import EDM
+from pyEDM.EDM import EDM
 from .Results import SMapResult
 
 

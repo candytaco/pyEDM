@@ -7,13 +7,13 @@ from itertools import repeat
 from multiprocessing import get_context
 
 
-import pyEDM.PoolFunc as PoolFunc
+import pyEDM.EDM.PoolFunc as PoolFunc
 # local modules
 from .Utils import IsNonStringIterable
-from .CCM import CCM
-from .Multiview import Multiview
-from .SMap import SMap
-from .Simplex import Simplex
+from pyEDM.EDM.CCM import CCM
+from pyEDM.EDM.Multiview import Multiview
+from pyEDM.EDM.SMap import SMap
+from pyEDM.EDM.Simplex import Simplex
 
 
 def FitSimplex(data = None,
@@ -325,7 +325,7 @@ def FindOptimalEmbeddingDimensionality(data = None,
 	mpContext = get_context(mpMethod)
 	with mpContext.Pool(processes = numProcess) as pool:
 		correlationList = pool.starmap(PoolFunc.EmbedDimSimplexFunc, poolArgs,
-		                               chunksize = chunksize)
+									   chunksize = chunksize)
 
 	import numpy as np
 	result = np.column_stack([Evals, correlationList])
@@ -386,7 +386,7 @@ def FindOptimalPredictionHorizon(data = None,
 	mpContext = get_context(mpMethod)
 	with mpContext.Pool(processes = numProcess) as pool:
 		correlationList = pool.starmap(PoolFunc.PredictIntervalSimplexFunc, poolArgs,
-		                               chunksize = chunksize)
+									   chunksize = chunksize)
 
 	import numpy as np
 	result = np.column_stack([Evals, correlationList])
@@ -459,7 +459,7 @@ def FindSMapNeighborhood(data = None,
 	mpContext = get_context(mpMethod)
 	with mpContext.Pool(processes = numProcess) as pool:
 		correlationList = pool.starmap(PoolFunc.PredictNLSMapFunc, poolArgs,
-		                               chunksize = chunksize)
+									   chunksize = chunksize)
 
 	import numpy as np
 	result = np.column_stack([theta, correlationList])

@@ -1,15 +1,14 @@
 """Python tools for EDM"""
-from .Functions import FindOptimalEmbeddingDimensionality, FindOptimalPredictionHorizon, FindSMapNeighborhood
+from .FunctionalExamples import FindOptimalEmbeddingDimensionality, FindOptimalPredictionHorizon, FindSMapNeighborhood
 # import EDM functions
-from .Functions import FitSimplex, FitSMap, FitCCM, FitMultiview
+from .FunctionalExamples import FitSimplex, FitSMap, FitCCM, FitMultiview
 from .Utils import PlotObsPred, PlotCoeff, ComputeError
 from .Examples import Examples
 from .Utils import SurrogateData
-from .Embed import Embed
 from .LoadData import sampleData
 
 # Import result objects
-from .Results import (
+from pyEDM.EDM.Results import (
     SimplexResult,
     SMapResult,
     CCMResult,
@@ -26,7 +25,6 @@ from .Visualization import (
     plot_predict_nonlinear
 )
 # Import execution configuration
-from .Execution import ExecutionMode
 
-__version__     = "2.3.2"
-__versionDate__ = "2025-11-17"
+__version__     = "3"
+__versionDate__ = "2026-01-02"

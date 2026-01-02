@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict
 import numpy as np
 
-from .Utils import ComputeError
+from pyEDM.Utils import ComputeError
 
 
 @dataclass(frozen=True)

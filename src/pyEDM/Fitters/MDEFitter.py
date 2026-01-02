@@ -5,10 +5,10 @@ from typing import Optional, List
 
 import numpy
 
-from .EDMWrapper import EDMWrapper
-from .MDE import MDE
+from .EDMFitter import EDMFitter
+from pyEDM.EDM.MDE import MDE
 
-class MDEWrapper(EDMWrapper):
+class MDEFitter(EDMFitter):
 	"""
 	Wrapper class for MDE that provides sklearn-like API.
 	"""

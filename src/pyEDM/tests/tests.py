@@ -6,7 +6,7 @@ from numpy import nan, array, array_equal
 from pandas import DataFrame, read_csv
 
 import pyEDM as EDM
-import pyEDM.Embed
+import pyEDM.EDM.Embed
 
 
 #----------------------------------------------------------------

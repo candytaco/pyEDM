@@ -6,7 +6,7 @@ from numpy import array, divide, exp, fmax, full, nan
 from numpy import linspace, power, subtract, sum, zeros, column_stack
 
 # local modules
-from .EDM import EDM
+from pyEDM.EDM import EDM
 from .Results import SimplexResult
 
 #-----------------------------------------------------------

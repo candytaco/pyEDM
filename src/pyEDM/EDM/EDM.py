@@ -11,7 +11,7 @@ from numpy import append, array, column_stack, empty, floating, full, integer, n
 from numpy import delete, zeros, apply_along_axis
 from scipy.spatial import KDTree
 
-from .Utils import IsNonStringIterable
+from pyEDM.Utils import IsNonStringIterable
 # local modules
 from .Embed import Embed
 

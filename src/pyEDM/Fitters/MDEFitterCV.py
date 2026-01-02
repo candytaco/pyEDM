@@ -5,7 +5,7 @@ from typing import Optional, List
 
 import numpy
 
-from .MDECV import MDECV
+from pyEDM.EDM.MDECV import MDECV
 
 class MDECVWrapper:
     """

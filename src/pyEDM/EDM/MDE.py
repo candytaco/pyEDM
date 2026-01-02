@@ -6,15 +6,15 @@ feature selection by evaluating combinations of features using Simplex
 or S-Map predictions with parallel processing.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy
 from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed
 
-from .Results import MDEResult, SimplexResult
-from .SMap import SMap
-from .Simplex import Simplex
+from pyEDM.EDM.Results import MDEResult, SimplexResult
+from pyEDM.EDM.SMap import SMap
+from pyEDM.EDM.Simplex import Simplex
 
 
 class MDE:

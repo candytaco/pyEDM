@@ -5,11 +5,11 @@ from typing import Optional, List
 
 import numpy
 
-from .CCM import CCM
-from .EDMWrapper import EDMWrapper
+from pyEDM.EDM.CCM import CCM
+from .EDMFitter import EDMFitter
 
 
-class CCMWrapper(EDMWrapper):
+class CCMFitter(EDMFitter):
 	"""
 	Wrapper class for CCM that provides sklearn-like API.
 	CCM is done on two timeseries only! Even though the EDM API allows you to pass a list

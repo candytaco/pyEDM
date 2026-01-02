@@ -4,8 +4,8 @@
 # package modules
 
 # local modules
-from . import Functions
-from .Utils import ComputeError
+from pyEDM import FunctionalExamples
+from pyEDM.Utils import ComputeError
 
 #------------------------------------------------------
 # Function to evaluate multiview predictions top combos

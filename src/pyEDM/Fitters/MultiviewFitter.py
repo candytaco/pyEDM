@@ -1,14 +1,14 @@
 """
 Multiview wrapper for sklearn-like API.
 """
-from typing import Optional, List
+from typing import Optional
 
 import numpy
 
-from .EDMWrapper import EDMWrapper
-from .Multiview import Multiview
+from .EDMFitter import EDMFitter
+from pyEDM.EDM.Multiview import Multiview
 
-class MultiviewWrapper(EDMWrapper):
+class MultiviewFitter(EDMFitter):
 	"""
 	Wrapper class for Multiview that provides sklearn-like API.
 	"""

@@ -2,7 +2,7 @@ import functools
 import inspect
 import numpy as np
 from .LoadData import sampleData
-from pyEDM import Functions as EDM
+from pyEDM import FunctionalExamples as EDM
 from pyEDM.Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm,
                                  plot_embed_dimension, plot_predict_interval,
                                  plot_predict_nonlinear)

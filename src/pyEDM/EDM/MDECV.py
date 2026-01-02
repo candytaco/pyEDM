@@ -6,11 +6,11 @@ performs feature selection within each cross-validation fold and
 provides methods for selecting final features.
 """
 
-from typing import List, Optional, Tuple
+from typing import List
 import numpy
 from tqdm import tqdm as ProgressBar
-from sklearn.model_selection import train_test_split, KFold
-from .Results import MDECVResult, MDEResult
+from sklearn.model_selection import KFold
+from pyEDM.EDM.Results import MDECVResult, MDEResult
 from .MDE import MDE
 
 

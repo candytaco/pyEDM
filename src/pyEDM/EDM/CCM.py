@@ -6,7 +6,7 @@ from multiprocessing import get_context
 from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros, column_stack
 from numpy.random import default_rng
 
-from .Utils import ComputeError, IsNonStringIterable
+from pyEDM.Utils import ComputeError, IsNonStringIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .Results import CCMResult

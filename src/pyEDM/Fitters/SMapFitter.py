@@ -1,16 +1,16 @@
 """
-Simplex wrapper for sklearn-like API.
+SMap wrapper for sklearn-like API.
 """
-from typing import Optional, List
+from typing import Optional
 
 import numpy
 
-from .EDMWrapper import EDMWrapper
-from .Simplex import Simplex
+from .EDMFitter import EDMFitter
+from pyEDM.EDM.SMap import SMap
 
-class SimplexWrapper(EDMWrapper):
+class SMapFitter(EDMFitter):
 	"""
-	Wrapper class for Simplex that provides sklearn-like API.
+	Wrapper class for SMap that provides sklearn-like API.
 	"""
 
 	def __init__(self,
@@ -26,13 +26,14 @@ class SimplexWrapper(EDMWrapper):
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
 				 Step: int = -1,
+				 Theta: float = 0.0,
 				 ExclusionRadius: int = 0,
 				 Embedded: bool = False,
 				 TrainTime: Optional[numpy.ndarray] = None,
 				 TestTime: Optional[numpy.ndarray] = None,
 				 Verbose: bool = False):
 		"""
-		Initialize Simplex wrapper with sklearn-style separate arrays.
+		Initialize SMap wrapper with sklearn-style separate arrays.
 
 		Parameters
 		----------
@@ -56,6 +57,8 @@ class SimplexWrapper(EDMWrapper):
 			Number of nearest neighbors
 		Step : int, default=-1
 			Time delay step size (tau)
+		Theta : float, default=0.0
+			S-Map localization parameter
 		ExclusionRadius : int, default=0
 			Temporal exclusion radius for neighbors
 		Embedded : bool, default=False
@@ -75,19 +78,20 @@ class SimplexWrapper(EDMWrapper):
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
 		self.Step = Step
+		self.Theta = Theta
 		self.ExclusionRadius = ExclusionRadius
 		self.Embedded = Embedded
 		self.Verbose = Verbose
 
-		self.Simplex = None
+		self.SMap = None
 
 	def Run(self):
 		"""
-		Run Simplex prediction.
+		Run SMap prediction.
 
 		Returns
 		-------
-		SimplexResult
+		SMapResult
 			Prediction results
 		"""
 		Data = self.GetEDMData()
@@ -100,7 +104,7 @@ class SimplexWrapper(EDMWrapper):
 		Columns = list(range(XStart, XEnd + 1))
 		Target = YIndex
 
-		self.Simplex = Simplex(
+		self.SMap = SMap(
 			data=Data,
 			columns=Columns,
 			target=Target,
@@ -110,10 +114,11 @@ class SimplexWrapper(EDMWrapper):
 			predictionHorizon=self.PredictionHorizon,
 			knn=self.KNN,
 			step=self.Step,
+			theta=self.Theta,
 			exclusionRadius=self.ExclusionRadius,
 			noTime=NoTime,
 			verbose=self.Verbose,
 			embedded=self.Embedded
 		)
 
-		return self.Simplex.Run()
+		return self.SMap.Run()

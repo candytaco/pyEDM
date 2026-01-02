@@ -7,7 +7,7 @@ import numpy
 
 from .DataAdapter import DataAdapter
 
-class EDMWrapper:
+class EDMFitter:
     """
     Base wrapper class for EDM methods that provides sklearn-like API.
 

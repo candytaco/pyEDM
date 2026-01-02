@@ -8,10 +8,10 @@ from warnings import warn
 # package modules
 from numpy import argsort, array, column_stack, mean
 
-import pyEDM.PoolFunc as PoolFunc
-from pyEDM.Embed import Embed
+import pyEDM.EDM.PoolFunc as PoolFunc
+from pyEDM.EDM.Embed import Embed
 # local modules
-from .Utils import IsNonStringIterable, ComputeError
+from pyEDM.Utils import IsNonStringIterable, ComputeError
 from .Results import MultiviewResult
 
 
@@ -262,8 +262,8 @@ class Multiview:
         # Multiargument starmap : MultiviewSimplexcorrelation in PoolFunc
         mpContext = get_context( self.mpMethod.value if self.mpMethod else None )
         with mpContext.Pool( processes = self.numProcess ) as pool :
-            correlationList = pool.starmap( PoolFunc.MultiviewSimplexcorrelation, poolArgs,
-                                    chunksize = self.chunksize )
+            correlationList = pool.starmap(PoolFunc.MultiviewSimplexcorrelation, poolArgs,
+										   chunksize = self.chunksize)
 
         correlationVec    = array( correlationList, dtype = float )
         rank_i    = argsort( correlationVec )[::-1] # Reverse results 
@@ -298,7 +298,7 @@ class Multiview:
         # Multiargument starmap : MultiviewSimplexPred in PoolFunc
         mpContext = get_context( self.mpMethod.value if self.mpMethod else None )
         with mpContext.Pool( processes = self.numProcess ) as pool :
-            dfList = pool.starmap( PoolFunc.MultiviewSimplexPred, poolArgs )
+            dfList = pool.starmap(PoolFunc.MultiviewSimplexPred, poolArgs)
 
         self.topRankProjections = dict( zip( self.topRankCombos, dfList ) )
 
