@@ -1,13 +1,14 @@
 """
 Functional programming interface to Empirical Dynamic Modeling (EDM) pyEDM.
-While the underlying classes have been refactored, these functions should 
+While the underlying classes have been refactored, these functions should
 return roughly the same data structures returned by the original pyEDM functions
 """
 
 from itertools import repeat
 # python modules
 from multiprocessing import get_context
-
+from typing import Any, Dict, List, Optional, Tuple, Union
+import numpy
 
 # local modules
 from .EDM import PoolFunc
@@ -18,24 +19,24 @@ from .EDM.SMap import SMap
 from .EDM.Simplex import Simplex
 
 
-def FitSimplex(data = None,
-               columns = None,
-               target = None,
-               train = None,
-               test = None,
-               embedDimensions = 0,
-               predictionHorizon = 1,
-               knn = 0,
-               step = -1,
-               exclusionRadius = 0,
-               embedded = False,
-               validLib = [],
-               noTime = False,
-               generateSteps = 0,
-               generateConcat = False,
-               verbose = False,
-               ignoreNan = True,
-               returnObject = False):
+def FitSimplex(data: numpy.ndarray,
+			   columns: List[int] = None,
+			   target: int = None,
+			   train: Tuple[int, int] = None,
+			   test: Tuple[int, int] = None,
+			   embedDimensions: int = 0,
+			   predictionHorizon: int = 1,
+			   knn: int = 0,
+			   step: int = -1,
+			   exclusionRadius: float = 0,
+			   embedded: bool = False,
+			   validLib: List = [],
+			   noTime: bool = False,
+			   generateSteps: int = 0,
+			   generateConcat: bool = False,
+			   verbose: bool = False,
+			   ignoreNan: bool = True,
+			   returnObject: bool = False) -> Union[numpy.ndarray, Simplex]:
 	"""
 	Simplex prediction.
 
@@ -90,26 +91,26 @@ def FitSimplex(data = None,
 		return result.projection
 
 
-def FitSMap(data = None,
-            columns = None,
-            target = None,
-            train = None,
-            test = None,
-            embedDimensions = 0,
-            predictionHorizon = 1,
-            knn = 0,
-            step = -1,
-            theta = 0,
-            exclusionRadius = 0,
-            solver = None,
-            embedded = False,
-            validLib = [],
-            noTime = False,
-            generateSteps = 0,
-            generateConcat = False,
-            ignoreNan = True,
-            verbose = False,
-            returnObject = False):
+def FitSMap(data: numpy.ndarray,
+			columns: List[int] = None,
+			target: int = None,
+			train: Tuple[int, int] = None,
+			test: Tuple[int, int] = None,
+			embedDimensions: int = 0,
+			predictionHorizon: int = 1,
+			knn: int = 0,
+			step: int = -1,
+			theta: float = 0,
+			exclusionRadius: float = 0,
+			solver: Any = None,
+			embedded: bool = False,
+			validLib: List = [],
+			noTime: bool = False,
+			generateSteps: int = 0,
+			generateConcat: bool = False,
+			ignoreNan: bool = True,
+			verbose: bool = False,
+			returnObject: bool = False) -> Union[Dict[str, Any], SMap]:
 	"""
 	S-Map prediction.
 
@@ -166,31 +167,32 @@ def FitSMap(data = None,
 		return S
 	else:
 		SMapDict = {'predictions': result.projection,
-		            'coefficients': S.Coefficients,
-		            'singularValues': S.SingularValues}
+					'coefficients': S.Coefficients,
+					'singularValues': S.SingularValues}
 		return SMapDict
 
+
 # TODO: mpMethod and sequential are redundant given the execution enum includes a sequential method
-def FitCCM(data = None,
-           columns = None,
-           target = None,
-           trainSizes = None,
-           sample = 0,
-           embedDimensions = 0,
-           predictionHorizon = 0,
-           knn = 0,
-           step = -1,
-           exclusionRadius = 0,
-           seed = None,
-           embedded = False,
-           validLib = [],
-           includeData = False,
-           noTime = False,
-           ignoreNan = True,
-           mpMethod = None,
-           sequential = False,
-           verbose = False,
-           returnObject = False):
+def FitCCM(data: numpy.ndarray,
+		   columns: List[int] = None,
+		   target: int = None,
+		   trainSizes: Any = None,
+		   sample: int = 0,
+		   embedDimensions: int = 0,
+		   predictionHorizon: int = 0,
+		   knn: int = 0,
+		   step: int = -1,
+		   exclusionRadius: float = 0,
+		   seed: Any = None,
+		   embedded: bool = False,
+		   validLib: List = [],
+		   includeData: bool = False,
+		   noTime: bool = False,
+		   ignoreNan: bool = True,
+		   mpMethod: Any = None,
+		   sequential: bool = False,
+		   verbose: bool = False,
+		   returnObject: bool = False) -> Union[Dict[str, Any], CCM]:
 	"""
 	Convergent Cross Mapping.
 
@@ -251,32 +253,32 @@ def FitCCM(data = None,
 	else:
 		if includeData:
 			return {'LibMeans': result.libMeans,
-			        'PredictStats1': result.predictStats1,
-			        'PredictStats2': result.predictStats2}
+					'PredictStats1': result.predictStats1,
+					'PredictStats2': result.predictStats2}
 		else:
 			return result.libMeans
 
 
-def FitMultiview(data = None,
-                 columns = None,
-                 target = None,
-                 train = None,
-                 test = None,
-                 D = 0,
-                 embedDimensions = 1,
-                 predictionHorizon = 1,
-                 knn = 0,
-                 step = -1,
-                 multiview = 0,
-                 exclusionRadius = 0,
-                 trainLib = True,
-                 excludeTarget = False,
-                 ignoreNan = True,
-                 verbose = False,
-                 numProcess = 4,
-                 mpMethod = None,
-                 chunksize = 1,
-                 returnObject = False):
+def FitMultiview(data: numpy.ndarray,
+				 columns: List[int] = None,
+				 target: int = None,
+				 train: Tuple[int, int] = None,
+				 test: Tuple[int, int] = None,
+				 D: int = 0,
+				 embedDimensions: int = 1,
+				 predictionHorizon: int = 1,
+				 knn: int = 0,
+				 step: int = -1,
+				 multiview: int = 0,
+				 exclusionRadius: float = 0,
+				 trainLib: bool = True,
+				 excludeTarget: bool = False,
+				 ignoreNan: bool = True,
+				 verbose: bool = False,
+				 numProcess: int = 4,
+				 mpMethod: Any = None,
+				 chunksize: int = 1,
+				 returnObject: bool = False) -> Union[Dict[str, Any], Multiview]:
 	"""
 	Multiview prediction.
 
@@ -332,23 +334,23 @@ def FitMultiview(data = None,
 		return {'Predictions': result.projection, 'View': result.view}
 
 
-def FindOptimalEmbeddingDimensionality(data = None,
-                                       columns = None,
-                                       target = None,
-                                       maxE = 10,
-                                       train = None,
-                                       test = None,
-                                       predictionHorizon = 1,
-                                       step = -1,
-                                       exclusionRadius = 0,
-                                       embedded = False,
-                                       validLib = [],
-                                       noTime = False,
-                                       ignoreNan = True,
-                                       verbose = False,
-                                       numProcess = 4,
-                                       mpMethod = None,
-                                       chunksize = 1, ):
+def FindOptimalEmbeddingDimensionality(data: numpy.ndarray,
+									   columns: List[int] = None,
+									   target: int = None,
+									   maxE: int = 10,
+									   train: Tuple[int, int] = None,
+									   test: Tuple[int, int] = None,
+									   predictionHorizon: int = 1,
+									   step: int = -1,
+									   exclusionRadius: float = 0,
+									   embedded: bool = False,
+									   validLib: List = [],
+									   noTime: bool = False,
+									   ignoreNan: bool = True,
+									   verbose: bool = False,
+									   numProcess: int = 4,
+									   mpMethod: Any = None,
+									   chunksize: int = 1) -> numpy.ndarray:
 	"""
 	Estimate optimal embedding dimension [1:maxE].
 
@@ -395,29 +397,28 @@ def FindOptimalEmbeddingDimensionality(data = None,
 		correlationList = pool.starmap(PoolFunc.EmbedDimSimplexFunc, poolArgs,
 									   chunksize = chunksize)
 
-	import numpy as np
-	result = np.column_stack([Evals, correlationList])
+	result = numpy.column_stack([Evals, correlationList])
 
 	return result
 
 
-def FindOptimalPredictionHorizon(data = None,
-                                 columns = None,
-                                 target = None,
-                                 train = None,
-                                 test = None,
-                                 maxTp = 10,
-                                 embedDimensions = 1,
-                                 step = -1,
-                                 exclusionRadius = 0,
-                                 embedded = False,
-                                 validLib = [],
-                                 noTime = False,
-                                 ignoreNan = True,
-                                 verbose = False,
-                                 numProcess = 4,
-                                 mpMethod = None,
-                                 chunksize = 1, ):
+def FindOptimalPredictionHorizon(data: numpy.ndarray,
+								 columns: List[int] = None,
+								 target: int = None,
+								 train: Tuple[int, int] = None,
+								 test: Tuple[int, int] = None,
+								 maxTp: int = 10,
+								 embedDimensions: int = 1,
+								 step: int = -1,
+								 exclusionRadius: float = 0,
+								 embedded: bool = False,
+								 validLib: List = [],
+								 noTime: bool = False,
+								 ignoreNan: bool = True,
+								 verbose: bool = False,
+								 numProcess: int = 4,
+								 mpMethod: Any = None,
+								 chunksize: int = 1) -> numpy.ndarray:
 	"""
 	Estimate optimal prediction interval [1:maxTp].
 
@@ -444,16 +445,16 @@ def FindOptimalPredictionHorizon(data = None,
 	# Setup Pool
 	Evals = [predictionHorizon for predictionHorizon in range(1, maxTp + 1)]
 	args = {'columns': columns,
-	        'target': target,
-	        'train': train,
-	        'test': test,
-	        'embedDims': embedDimensions,
-	        'step': step,
-	        'exclusionRadius': exclusionRadius,
-	        'embedded': embedded,
-	        'validLib': validLib,
-	        'noTime': noTime,
-	        'ignoreNan': ignoreNan}
+			'target': target,
+			'train': train,
+			'test': test,
+			'embedDims': embedDimensions,
+			'step': step,
+			'exclusionRadius': exclusionRadius,
+			'embedded': embedded,
+			'validLib': validLib,
+			'noTime': noTime,
+			'ignoreNan': ignoreNan}
 
 	# Create iterable for Pool.starmap, use repeated copies of data, args
 	poolArgs = zip(Evals, repeat(data), repeat(args))
@@ -470,28 +471,28 @@ def FindOptimalPredictionHorizon(data = None,
 	return result
 
 
-def FindSMapNeighborhood(data = None,
-                         columns = None,
-                         target = None,
-                         theta = None,
-                         train = None,
-                         test = None,
-                         embedDimensions = 1,
-                         predictionHorizon = 1,
-                         knn = 0,
-                         step = -1,
-                         exclusionRadius = 0,
-                         solver = None,
-                         embedded = False,
-                         validLib = [],
-                         noTime = False,
-                         ignoreNan = True,
-                         verbose = False,
-                         numProcess = 4,
-                         mpMethod = None,
-                         chunksize = 1, ):
+def FindSMapNeighborhood(data: numpy.ndarray,
+						 columns: List[int] = None,
+						 target: int = None,
+						 theta: Any = None,
+						 train: Tuple[int, int] = None,
+						 test: Tuple[int, int] = None,
+						 embedDimensions: int = 1,
+						 predictionHorizon: int = 1,
+						 knn: int = 0,
+						 step: int = -1,
+						 exclusionRadius: float = 0,
+						 solver: Any = None,
+						 embedded: bool = False,
+						 validLib: List = [],
+						 noTime: bool = False,
+						 ignoreNan: bool = True,
+						 verbose: bool = False,
+						 numProcess: int = 4,
+						 mpMethod: Any = None,
+						 chunksize: int = 1) -> numpy.ndarray:
 	"""
-	Estimate the best neighborhood size for SMap, i.e. the 
+	Estimate the best neighborhood size for SMap, i.e. the
 	exponential decay factor for weighing neighbors by distance.
 
 	:param data: 				2D numpy array where column 0 is time
@@ -519,25 +520,25 @@ def FindSMapNeighborhood(data = None,
 
 	if theta is None:
 		theta = [0.01, 0.1, 0.3, 0.5, 0.75, 1,
-		         1.5, 2, 3, 4, 5, 6, 7, 8, 9]
+				 1.5, 2, 3, 4, 5, 6, 7, 8, 9]
 	elif not IsNonStringIterable(theta):
 		theta = [float(t) for t in theta.split()]
 
 	# Setup Pool
 	args = {'columns': columns,
-	        'target': target,
-	        'train': train,
-	        'test': test,
-	        'embedDims': embedDimensions,
-	        'predictionHorizon': predictionHorizon,
-	        'knn': knn,
-	        'step': step,
-	        'exclusionRadius': exclusionRadius,
-	        'solver': solver,
-	        'embedded': embedded,
-	        'validLib': validLib,
-	        'noTime': noTime,
-	        'ignoreNan': ignoreNan}
+			'target': target,
+			'train': train,
+			'test': test,
+			'embedDims': embedDimensions,
+			'predictionHorizon': predictionHorizon,
+			'knn': knn,
+			'step': step,
+			'exclusionRadius': exclusionRadius,
+			'solver': solver,
+			'embedded': embedded,
+			'validLib': validLib,
+			'noTime': noTime,
+			'ignoreNan': ignoreNan}
 
 	# Create iterable for Pool.starmap, use repeated copies of data, args
 	poolArgs = zip(theta, repeat(data), repeat(args))
