@@ -1,467 +1,119 @@
-"""Functional programming interface to Empirical Dynamic Modeling (EDM) pyEDM.
-While the underlying classes have been refactored, these functions should return roughly the same data structures
-returned by the original pyEDM functions"""
-
-from itertools import repeat
-# python modules
-from multiprocessing import get_context
-
-
-import pyEDM.EDM.PoolFunc as PoolFunc
-# local modules
-from .Utils import IsNonStringIterable
-from pyEDM.EDM.CCM import CCM
-from pyEDM.EDM.Multiview import Multiview
-from pyEDM.EDM.SMap import SMap
-from pyEDM.EDM.Simplex import Simplex
+import functools
+import inspect
+import numpy as np
+from .ExampleData import sampleData
+from pyEDM import Functions as EDM
+from pyEDM.Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm,
+                                 plot_embed_dimension, plot_predict_interval,
+                                 plot_predict_nonlinear)
 
 
-def FitSimplex(data = None,
-               columns = None,
-               target = None,
-               train = None,
-               test = None,
-               embedDimensions = 0,
-               predictionHorizon = 1,
-               knn = 0,
-               step = -1,
-               exclusionRadius = 0,
-               embedded = False,
-               validLib = [],
-               noTime = False,
-               generateSteps = 0,
-               generateConcat = False,
-               verbose = False,
-               ignoreNan = True,
-               returnObject = False):
-	"""Simplex prediction.
+def print_call(func):
+	"""Decorator that prints function calls with their arguments."""
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use for embedding (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-	"""
+	@functools.wraps(func)
+	def wrapper(*args, **kwargs):
+		func_name = func.__name__
 
-	# Instantiate SimplexClass object
-	S = Simplex(data = data,
-				columns = columns,
-				target = target,
-				train = train,
-				test = test,
-				embedDimensions = embedDimensions,
-				predictionHorizon = predictionHorizon,
-				knn = knn,
-				step = step,
-				exclusionRadius = exclusionRadius,
-				embedded = embedded,
-				validLib = validLib,
-				noTime = noTime,
-				generateSteps = generateSteps,
-				generateConcat = generateConcat,
-				ignoreNan = ignoreNan,
-				verbose = verbose)
+		arg_parts = []
 
-	if generateSteps:
-		result = S.Generate()
-	else:
-		result = S.Run()
+		if args:
+			sig = inspect.signature(func)
+			param_names = list(sig.parameters.keys())
+			for i, arg in enumerate(args):
+				if i < len(param_names):
+					if isinstance(arg, np.ndarray):
+						arg_parts.append(f"{param_names[i]} = array(shape={arg.shape}, dtype={arg.dtype})")
+					else:
+						arg_parts.append(f"{param_names[i]} = {repr(arg)}")
+				else:
+					if isinstance(arg, np.ndarray):
+						arg_parts.append(f"array(shape={arg.shape}, dtype={arg.dtype})")
+					else:
+						arg_parts.append(repr(arg))
 
-	if returnObject:
-		return S
-	else:
-		return result.projection
+		for key, value in kwargs.items():
+			if isinstance(value, np.ndarray):
+				arg_parts.append(f"{key} = array(shape={value.shape}, dtype={value.dtype})")
+			else:
+				arg_parts.append(f"{key} = {repr(value)}")
+
+		args_str = ", ".join(arg_parts)
+		print(f"EDM.{func_name}({args_str})")
+		print()
+
+		return func(*args, **kwargs)
+
+	return wrapper
 
 
-def FitSMap(data = None,
-            columns = None,
-            target = None,
-            train = None,
-            test = None,
-            embedDimensions = 0,
-            predictionHorizon = 1,
-            knn = 0,
-            step = -1,
-            theta = 0,
-            exclusionRadius = 0,
-            solver = None,
-            embedded = False,
-            validLib = [],
-            noTime = False,
-            generateSteps = 0,
-            generateConcat = False,
-            ignoreNan = True,
-            verbose = False,
-            returnObject = False):
-	"""S-Map prediction.
+def Examples():
+	"""Canonical EDM API examples using new Result objects and Visualization"""
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use for embedding (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-	"""
+	EmbedDimension = print_call(EDM.FindOptimalEmbeddingDimensionality)
+	PredictInterval = print_call(EDM.FindOptimalPredictionHorizon)
+	PredictNonlinear = print_call(EDM.FindSMapNeighborhood)
+	Simplex = print_call(EDM.FitSimplex)
+	Multiview = print_call(EDM.FitMultiview)
+	SMap = print_call(EDM.FitSMap)
+	CCM = print_call(EDM.FitCCM)
 
-	# Instantiate SMapClass object
-	S = SMap(data = data,
-			 columns = columns,
-			 target = target,
-			 train = train,
-			 test = test,
-			 embedDimensions = embedDimensions,
-			 predictionHorizon = predictionHorizon,
-			 knn = knn,
-			 step = step,
-			 theta = theta,
-			 exclusionRadius = exclusionRadius,
-			 solver = solver,
-			 embedded = embedded,
-			 validLib = validLib,
-			 noTime = noTime,
-			 generateSteps = generateSteps,
-			 generateConcat = generateConcat,
-			 ignoreNan = ignoreNan,
-			 verbose = verbose)
+	sampleDataNames = \
+		["TentMap", "TentMapNoise", "circle", "block_3sp", "sardine_anchovy_sst"]
 
-	if generateSteps:
-		result = S.Generate()
-	else:
-		result = S.Run()
+	for dataName in sampleDataNames:
+		if dataName not in sampleData:
+			raise Exception("Examples(): Failed to find sample data " + \
+			                dataName + " in EDM package")
 
-	if returnObject:
-		return S
-	else:
-		SMapDict = {'predictions': result.projection,
-		            'coefficients': S.Coefficients,
-		            'singularValues': S.SingularValues}
-		return SMapDict
+	embed_result = EmbedDimension(data = sampleData["TentMap"],
+	                              columns = [1], target = 1,
+	                              train = [1, 100], test = [201, 500])
+	plot_embed_dimension(embed_result, "TentMap Embedding Dimension")
 
+	interval_result = PredictInterval(data = sampleData["TentMap"],
+	                                  columns = [1], target = 1,
+	                                  train = [1, 100], test = [201, 500], embedDimensions = 2)
+	plot_predict_interval(interval_result, "TentMap Prediction Interval")
 
-def FitCCM(data = None,
-           columns = None,
-           target = None,
-           trainSizes = None,
-           sample = 0,
-           embedDimensions = 0,
-           predictionHorizon = 0,
-           knn = 0,
-           step = -1,
-           exclusionRadius = 0,
-           seed = None,
-           embedded = False,
-           validLib = [],
-           includeData = False,
-           noTime = False,
-           ignoreNan = True,
-           mpMethod = None,
-           sequential = False,
-           verbose = False,
-           returnObject = False):
-	"""Convergent Cross Mapping.
+	nonlinear_result = PredictNonlinear(data = sampleData["TentMapNoise"],
+	                                    columns = [1], target = 1,
+	                                    train = [1, 100], test = [201, 500], embedDimensions = 2)
+	plot_predict_nonlinear(nonlinear_result, "TentMapNoise Nonlinearity (theta)")
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or list of int or None
-		Target column index (defaults to column 1)
-	"""
+	# Tent map simplex : specify multivariable columns embedded = True
+	projection1 = Simplex(data = sampleData["block_3sp"],
+	                      columns = [1, 4, 7], target = 1,
+	                      train = [1, 99], test = [100, 195],
+	                      embedDimensions = 3, embedded = True)
+	plot_prediction(projection1, "Simplex: block_3sp embedded", embedDimensions = 3)
 
-	# Instantiate CCMClass object
-	C = CCM(data = data,
-			columns = columns,
-			target = target,
-			trainSizes = trainSizes,
-			sample = sample,
-			embedDimensions = embedDimensions,
-			predictionHorizon = predictionHorizon,
-			knn = knn,
-			step = step,
-			exclusionRadius = exclusionRadius,
-			seed = seed,
-			embedded = embedded,
-			validLib = validLib,
-			includeData = includeData,
-			noTime = noTime,
-			ignoreNan = ignoreNan,
-			mpMethod = mpMethod,
-			sequential = sequential,
-			verbose = verbose)
+	# Tent map simplex : Embed column x_t to embedDimensions=3, embedded = False
+	projection2 = Simplex(data = sampleData["block_3sp"],
+	                      columns = [1], target = 1,
+	                      train = [1, 99], test = [105, 190],
+	                      embedDimensions = 3)
+	plot_prediction(projection2, "Simplex: block_3sp", embedDimensions = 3)
 
-	# Embedding of Forward & Reverse mapping
-	C.FwdMap.EmbedData()
-	C.FwdMap.RemoveNan()
-	C.RevMap.EmbedData()
-	C.RevMap.RemoveNan()
+	# Multiview
+	mv_result = Multiview(data = sampleData["block_3sp"],
+	                      columns = [1, 4, 7], target = 1,
+	                      train = [1, 100], test = [101, 198],
+	                      D = 0, embedDimensions = 3, predictionHorizon = 1, multiview = 0,
+	                      trainLib = False)
+	plot_prediction(mv_result['Predictions'], "Multiview: block_3sp", embedDimensions = 3)
 
-	result = C.Run()
+	# S-map circle : specify multivariable columns embedded = True
+	smap_result = SMap(data = sampleData["circle"],
+	                   columns = [1, 2], target = 1,
+	                   train = [1, 100], test = [110, 190], theta = 4, embedDimensions = 2,
+	                   verbose = False, embedded = True)
+	plot_prediction(smap_result['predictions'], "S-Map: circle", embedDimensions = 2)
+	plot_smap_coefficients(smap_result['coefficients'], "S-Map Coefficients", embedDimensions = 2)
 
-	if returnObject:
-		return C
-	else:
-		if includeData:
-			return {'LibMeans': result.libMeans,
-			        'PredictStats1': result.predictStats1,
-			        'PredictStats2': result.predictStats2}
-		else:
-			return result.libMeans
-
-
-def FitMultiview(data = None,
-                 columns = None,
-                 target = None,
-                 train = None,
-                 test = None,
-                 D = 0,
-                 embedDimensions = 1,
-                 predictionHorizon = 1,
-                 knn = 0,
-                 step = -1,
-                 multiview = 0,
-                 exclusionRadius = 0,
-                 trainLib = True,
-                 excludeTarget = False,
-                 ignoreNan = True,
-                 verbose = False,
-                 numProcess = 4,
-                 mpMethod = None,
-                 chunksize = 1,
-                 returnObject = False):
-	"""Multiview prediction
-
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-	"""
-
-	# Instantiate MultiviewClass object
-	M = Multiview(data = data,
-				  columns = columns,
-				  target = target,
-				  train = train,
-				  test = test,
-				  D = D,
-				  embedDimensions = embedDimensions,
-				  predictionHorizon = predictionHorizon,
-				  knn = knn,
-				  step = step,
-				  multiview = multiview,
-				  exclusionRadius = exclusionRadius,
-				  trainLib = trainLib,
-				  excludeTarget = excludeTarget,
-				  ignoreNan = ignoreNan,
-				  verbose = verbose,
-				  numProcess = numProcess,
-				  mpMethod = mpMethod,
-				  chunksize = chunksize)
-
-	result = M.Run()
-
-	if returnObject:
-		return M
-	else:
-		return {'Predictions': result.projection, 'View': result.view}
-
-
-def FindOptimalEmbeddingDimensionality(data = None,
-                                       columns = None,
-                                       target = None,
-                                       maxE = 10,
-                                       train = None,
-                                       test = None,
-                                       predictionHorizon = 1,
-                                       step = -1,
-                                       exclusionRadius = 0,
-                                       embedded = False,
-                                       validLib = [],
-                                       noTime = False,
-                                       ignoreNan = True,
-                                       verbose = False,
-                                       numProcess = 4,
-                                       mpMethod = None,
-                                       chunksize = 1, ):
-	"""Estimate optimal embedding dimension [1:maxE].
-
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (maxE, 2)
-		Column 0: E values, Column 1: correlation values
-	"""
-
-	# Setup Pool
-	Evals = [E for E in range(1, maxE + 1)]
-	args = {'columns': columns,
-	        'target': target,
-	        'train': train,
-	        'test': test,
-	        'predictionHorizon': predictionHorizon,
-	        'step': step,
-	        'exclusionRadius': exclusionRadius,
-	        'embedded': embedded,
-	        'validLib': validLib,
-	        'noTime': noTime,
-	        'ignoreNan': ignoreNan}
-
-	# Create iterable for Pool.starmap, use repeated copies of data, args
-	poolArgs = zip(Evals, repeat(data), repeat(args))
-
-	# Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
-	mpContext = get_context(mpMethod)
-	with mpContext.Pool(processes = numProcess) as pool:
-		correlationList = pool.starmap(PoolFunc.EmbedDimSimplexFunc, poolArgs,
-									   chunksize = chunksize)
-
-	import numpy as np
-	result = np.column_stack([Evals, correlationList])
-
-	return result
-
-
-def FindOptimalPredictionHorizon(data = None,
-                                 columns = None,
-                                 target = None,
-                                 train = None,
-                                 test = None,
-                                 maxTp = 10,
-                                 embedDimensions = 1,
-                                 step = -1,
-                                 exclusionRadius = 0,
-                                 embedded = False,
-                                 validLib = [],
-                                 noTime = False,
-                                 ignoreNan = True,
-                                 verbose = False,
-                                 numProcess = 4,
-                                 mpMethod = None,
-                                 chunksize = 1, ):
-	"""Estimate optimal prediction interval [1:maxTp].
-
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (maxTp, 2)
-		Column 0: predictionHorizon values, Column 1: correlation values
-	"""
-
-	# Setup Pool
-	Evals = [predictionHorizon for predictionHorizon in range(1, maxTp + 1)]
-	args = {'columns': columns,
-	        'target': target,
-	        'train': train,
-	        'test': test,
-	        'embedDims': embedDimensions,
-	        'step': step,
-	        'exclusionRadius': exclusionRadius,
-	        'embedded': embedded,
-	        'validLib': validLib,
-	        'noTime': noTime,
-	        'ignoreNan': ignoreNan}
-
-	# Create iterable for Pool.starmap, use repeated copies of data, args
-	poolArgs = zip(Evals, repeat(data), repeat(args))
-
-	# Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
-	mpContext = get_context(mpMethod)
-	with mpContext.Pool(processes = numProcess) as pool:
-		correlationList = pool.starmap(PoolFunc.PredictIntervalSimplexFunc, poolArgs,
-									   chunksize = chunksize)
-
-	import numpy as np
-	result = np.column_stack([Evals, correlationList])
-
-	return result
-
-
-def FindSMapNeighborhood(data = None,
-                         columns = None,
-                         target = None,
-                         theta = None,
-                         train = None,
-                         test = None,
-                         embedDimensions = 1,
-                         predictionHorizon = 1,
-                         knn = 0,
-                         step = -1,
-                         exclusionRadius = 0,
-                         solver = None,
-                         embedded = False,
-                         validLib = [],
-                         noTime = False,
-                         ignoreNan = True,
-                         verbose = False,
-                         numProcess = 4,
-                         mpMethod = None,
-                         chunksize = 1, ):
-	"""Estimate the best neighboorhood size for SMap, i.e. the
-	exponential decay factor for weighing neighbors by distance
-
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (len(theta), 2)
-		Column 0: theta values, Column 1: correlation values
-	"""
-
-	if theta is None:
-		theta = [0.01, 0.1, 0.3, 0.5, 0.75, 1,
-		         1.5, 2, 3, 4, 5, 6, 7, 8, 9]
-	elif not IsNonStringIterable(theta):
-		theta = [float(t) for t in theta.split()]
-
-	# Setup Pool
-	args = {'columns': columns,
-	        'target': target,
-	        'train': train,
-	        'test': test,
-	        'embedDims': embedDimensions,
-	        'predictionHorizon': predictionHorizon,
-	        'knn': knn,
-	        'step': step,
-	        'exclusionRadius': exclusionRadius,
-	        'solver': solver,
-	        'embedded': embedded,
-	        'validLib': validLib,
-	        'noTime': noTime,
-	        'ignoreNan': ignoreNan}
-
-	# Create iterable for Pool.starmap, use repeated copies of data, args
-	poolArgs = zip(theta, repeat(data), repeat(args))
-
-	# Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
-	mpContext = get_context(mpMethod)
-	with mpContext.Pool(processes = numProcess) as pool:
-		correlationList = pool.starmap(PoolFunc.PredictNLSMapFunc, poolArgs,
-									   chunksize = chunksize)
-
-	import numpy as np
-	result = np.column_stack([theta, correlationList])
-
-	return result
+	# CCM
+	ccm_result = CCM(data = sampleData["sardine_anchovy_sst"],
+	                 columns = [1], target = [4],
+	                 trainSizes = [10, 70, 10], sample = 50,
+	                 embedDimensions = 3, predictionHorizon = 0, verbose = False)
+	plot_ccm(ccm_result, "CCM: sardine anchovy sst", embedDimensions = 3)

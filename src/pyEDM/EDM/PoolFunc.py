@@ -4,7 +4,7 @@
 # package modules
 
 # local modules
-from pyEDM import FunctionalExamples
+from pyEDM import Functions
 from pyEDM.Utils import ComputeError
 
 #------------------------------------------------------

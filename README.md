@@ -20,7 +20,7 @@ Certain MacOS, Linux and Windows platforms are supported with prebuilt binary di
 Examples can be executed in the python command line:
 
 ```python
-import pyEDM.Examples
+import pyEDM.FunctionalExamples
 >> > import pyEDM
 >> > pyEDM.Examples.Examples()
 ```

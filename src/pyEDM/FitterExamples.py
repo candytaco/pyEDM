@@ -2,7 +2,7 @@
 Examples demonstrating the new wrapper classes with sklearn-like API.
 """
 from pyEDM.Fitters.CCMFitter import CCMFitter
-from pyEDM.LoadData import sampleData
+from pyEDM.ExampleData import sampleData
 from pyEDM.Fitters.MultiviewFitter import MultiviewFitter
 from pyEDM.Fitters.SMapFitter import SMapFitter
 from pyEDM.Fitters.SimplexFitter import SimplexFitter
