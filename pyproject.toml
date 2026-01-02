@@ -5,9 +5,7 @@ requires-python = ">=3.10"
 dynamic         = ["version"]
 dependencies    = [ "numpy",
                     "scipy", 
-                    "scikit-learn",
-                    "pandas>=2.0",
-                    "matplotlib>=3.7", ]
+                    "scikit-learn",]
 authors = [
   {name = "Joseph Park", email = "JosephPark@IEEE.org"},
 ]
@@ -35,7 +33,7 @@ source = "file"
 path   = "src/pyEDM/__init__.py"
 
 [tool.pdm.build]
-includes = ["apps", "src"]
+includes = ["src"]
 
 [build-system]
 requires      = ["pdm-backend"]
