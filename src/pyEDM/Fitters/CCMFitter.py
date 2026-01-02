@@ -28,17 +28,18 @@ class CCMFitter(EDMFitter):
 				 ExclusionRadius: int = 0,
 				 Verbose: bool = False):
 		"""
-		Init
-		:param XTrain:				1d timeseries of one variable
+		Init.
+
+		:param XTrain: 				1d timeseries of one variable
 		:param YTrain: 				1d timeseries of another variable
-		:param TrainSizes:			train sizes to explore
-		:param numRepeats:			Number of repeats at each training size
-		:param EmbedDimensions:
-		:param PredictionHorizon:
-		:param KNN:
-		:param Step:
-		:param ExclusionRadius:
-		:param Verbose:
+		:param TrainSizes: 			train sizes to explore
+		:param numRepeats: 			Number of repeats at each training size
+		:param EmbedDimensions: 	Embedding dimension (E)
+		:param PredictionHorizon: 	Prediction time horizon (Tp)
+		:param KNN: 				Number of nearest neighbors
+		:param Step: 				Time delay step size (tau)
+		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
+		:param Verbose: 			Print diagnostic messages
 		"""
 
 		super().__init__(XTrain, YTrain, None, None, TrainTime = None, TestTime = None)
@@ -58,10 +59,7 @@ class CCMFitter(EDMFitter):
 		"""
 		Run CCM prediction.
 
-		Returns
-		-------
-		CCMResult
-			CCM results
+		:return: CCM results
 		"""
 		Data = self.GetEDMData()
 		NoTime = not self.HasTime()

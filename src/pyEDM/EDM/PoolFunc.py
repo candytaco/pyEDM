@@ -11,8 +11,15 @@ from ..Utils import ComputeError
 # Function to evaluate multiview predictions top combos
 #------------------------------------------------------
 def MultiviewSimplexPred( combo, data, args ) :
+	"""
+	Function to evaluate multiview predictions top combos
 
-    projection = Functions.FitSimplex(data       = data,
+	:param combo: Column combination tuple
+	:param data: Embedded data array
+	:param args: Dictionary of Simplex arguments
+	:return: Prediction projection array
+	"""
+	projection = Functions.FitSimplex(data       = data,
                                 columns         = list( combo ),
                                 target          = args['target'],
                                 train             = args['train'],
@@ -24,14 +31,21 @@ def MultiviewSimplexPred( combo, data, args ) :
                                 embedded        = args['embedded'],
                                 noTime          = args['noTime'],
                                 ignoreNan       = args['ignoreNan'])
-    return projection
+	return projection
 
 #----------------------------------------------------
 # Function to evaluate combo rank (correlation)
 #----------------------------------------------------
 def MultiviewSimplexcorrelation( combo, data, args ) :
+	"""
+	Function to evaluate combo rank (correlation)
 
-    projection = Functions.FitSimplex(data       = data,
+	:param combo: Column combination tuple
+	:param data: Embedded data array
+	:param args: Dictionary of Simplex arguments
+	:return: Correlation value
+	"""
+	projection = Functions.FitSimplex(data       = data,
                                 columns         = list( combo ),
                                 target          = args['target'],
                                 train             = args['train'],
@@ -44,15 +58,22 @@ def MultiviewSimplexcorrelation( combo, data, args ) :
                                 noTime          = args['noTime'],
                                 ignoreNan       = args['ignoreNan'])
 
-    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    return ComputeError(projection[:, 1], projection[:, 2], None)
+	# projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+	return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #----------------------------------------------------
 # Function to evaluate Simplex in EmbedDimension Pool
 #----------------------------------------------------
 def EmbedDimSimplexFunc( embedDimensions, data, args ) :
+	"""
+	Function to evaluate Simplex in EmbedDimension Pool
 
-    projection = Functions.FitSimplex(data       = data,
+	:param embedDimensions: Embedding dimension to test
+	:param data: Data array
+	:param args: Dictionary of Simplex arguments
+	:return: Correlation value
+	"""
+	projection = Functions.FitSimplex(data       = data,
                                 columns         = args['columns'],
                                 target          = args['target'],
                                 train             = args['train'],
@@ -66,15 +87,22 @@ def EmbedDimSimplexFunc( embedDimensions, data, args ) :
                                 noTime          = args['noTime'],
                                 ignoreNan       = args['ignoreNan'])
 
-    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    return ComputeError(projection[:, 1], projection[:, 2], None)
+	# projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+	return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #-----------------------------------------------------
 # Function to evaluate Simplex in PredictInterval Pool
 #----------------------------------------------------
 def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
+	"""
+	Function to evaluate Simplex in PredictInterval Pool
 
-    projection = Functions.FitSimplex(data       = data,
+	:param predictionHorizon: Prediction horizon to test
+	:param data: Data array
+	:param args: Dictionary of Simplex arguments
+	:return: Correlation value
+	"""
+	projection = Functions.FitSimplex(data       = data,
                                 columns         = args['columns'],
                                 target          = args['target'],
                                 train             = args['train'],
@@ -88,15 +116,22 @@ def PredictIntervalSimplexFunc( predictionHorizon, data, args ) :
                                 noTime          = args['noTime'],
                                 ignoreNan       = args['ignoreNan'])
 
-    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    return ComputeError(projection[:, 1], projection[:, 2], None)
+	# projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+	return ComputeError(projection[:, 1], projection[:, 2], None)
 
 #-----------------------------------------------------
 # Function to evaluate SMap in PredictNonlinear Pool
 #----------------------------------------------------
 def PredictNLSMapFunc( theta, data, args ) :
+	"""
+	Function to evaluate SMap in PredictNonlinear Pool
 
-    S = Functions.FitSMap(data       = data,
+	:param theta: Localization parameter to test
+	:param data: Data array
+	:param args: Dictionary of SMap arguments
+	:return: Correlation value
+	"""
+	S = Functions.FitSMap(data       = data,
                     columns         = args['columns'],
                     target          = args['target'],
                     train             = args['train'],
@@ -113,6 +148,6 @@ def PredictNLSMapFunc( theta, data, args ) :
                     noTime          = args['noTime'],
                     ignoreNan       = args['ignoreNan'])
 
-    projection = S['predictions']
-    # projection is numpy array: Column 1 is Observations, Column 2 is Predictions
-    return ComputeError(projection[:, 1], projection[:, 2], None)
+	projection = S['predictions']
+	# projection is numpy array: Column 1 is Observations, Column 2 is Predictions
+	return ComputeError(projection[:, 1], projection[:, 2], None)

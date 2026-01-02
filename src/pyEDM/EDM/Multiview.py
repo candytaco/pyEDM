@@ -17,47 +17,48 @@ from .Results import MultiviewResult
 
 #------------------------------------------------------------------
 class Multiview:
-    """Multiview class : Base class. Contains a Simplex instance
+    """
+	Multiview class : Base class. Contains a Simplex instance
 
-       D represents the number of variables to combine for each
-       assessment, if not specified, it is the number of columns.
+	D represents the number of variables to combine for each
+	assessment, if not specified, it is the number of columns.
 
-       E is the embedding dimension of each variable.
-       If E = 1, no time delay embedding is done, but the variables
-       in the embedding are named X(t-0), Y(t-0)...
+	E is the embedding dimension of each variable.
+	If E = 1, no time delay embedding is done, but the variables
+	in the embedding are named X(t-0), Y(t-0)...
 
-       Simplex.Validate() sets knn equal to E+1 if knn not specified,
-       so we need to explicitly set knn to D + 1.
+	Simplex.Validate() sets knn equal to E+1 if knn not specified,
+	so we need to explicitly set knn to D + 1.
 
-       Parameter 'multiview' is the number of top-ranked D-dimensional
-       predictions for the final prediction. Corresponds to parameter k
-       in Ye & Sugihara with default k = sqrt(m) where m is the number
-       of combinations C(n,D) available from the n = D * E columns
-       taken D at-a-time.
+	Parameter 'multiview' is the number of top-ranked D-dimensional
+	predictions for the final prediction. Corresponds to parameter k
+	in Ye & Sugihara with default k = sqrt(m) where m is the number
+	of combinations C(n,D) available from the n = D * E columns
+	taken D at-a-time.
 
-       Ye H., and G. Sugihara, 2016. Information leverage in
-       interconnected ecosystems: Overcoming the curse of dimensionality
-       Science 353:922-925.
+	Ye H., and G. Sugihara, 2016. Information leverage in
+	interconnected ecosystems: Overcoming the curse of dimensionality
+	Science 353:922-925.
 
-       Parameter 'trainLib' controls the evaluation strategy for ranking
-       column combinations:
+	Parameter 'trainLib' controls the evaluation strategy for ranking
+	column combinations:
 
-       trainLib = True (default):
-         Uses in-sample evaluation for ranking. During the Rank() phase,
-         predictions are made using test = train (in-sample). This is
-         computationally faster but may produce artificially high skill
-         scores, as highly accurate in-sample predictions can be made from
-         arbitrary non-constant, non-oscillatory vectors. After ranking,
-         the final Project() phase uses the specified train and test.
+	trainLib = True (default):
+		Uses in-sample evaluation for ranking. During the Rank() phase,
+		predictions are made using test = train (in-sample). This is
+		computationally faster but may produce artificially high skill
+		scores, as highly accurate in-sample predictions can be made from
+		arbitrary non-constant, non-oscillatory vectors. After ranking,
+		the final Project() phase uses the specified train and test.
 
-       trainLib = False:
-         Uses proper out-of-sample evaluation for ranking. The Rank() phase
-         uses the specified train and test parameters to evaluate combinations.
-         This is more rigorous but computationally more expensive. Requires
-         explicit train and test parameters.
+	trainLib = False:
+		Uses proper out-of-sample evaluation for ranking. The Rank() phase
+		uses the specified train and test parameters to evaluate combinations.
+		This is more rigorous but computationally more expensive. Requires
+		explicit train and test parameters.
 
-       NOTE: When trainLib = True and no train/test are specified, the data
-             is automatically split 50/50 for the final projection phase.
+	NOTE: When trainLib = True and no train/test are specified, the data
+			is automatically split 50/50 for the final projection phase.
     """
 
     def __init__( self,
@@ -80,57 +81,28 @@ class Multiview:
                   numProcess=4,
                   mpMethod=None,
                   chunksize=1):
-        """Initialize Multiview using plain arguments.
+        """
+        Initialize Multiview using plain arguments.
 
-        Parameters
-        ----------
-        data : numpy.ndarray
-            2D numpy array where column 0 is time (unless noTime=True)
-        columns : list of int, optional
-            Column indices to use (defaults to all except time)
-        target : int or None
-            Target column index (defaults to column 1)
-        train : tuple of (int, int), optional
-            Training set indices [start, end]
-        test : tuple of (int, int), optional
-            Test set indices [start, end]
-        D : int, default=0
-            State-space dimension (number of variables to combine for each
-            assessment). If 0, defaults to number of columns.
-        embedDimensions : int, default=0
-            Embedding dimension (E). If 0, will be set by Validate()
-        predictionHorizon : int, default=1
-            Prediction time horizon (Tp)
-        knn : int, default=0
-            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
-        step : int, default=-1
-            Time delay step size (tau). Negative values indicate lag
-        multiview : int, default=0
-            Number of top-ranked D-dimensional predictions for final ensemble
-            (parameter k in Ye & Sugihara). If 0, defaults to sqrt(m) where m
-            is the number of combinations C(n,D).
-        exclusionRadius : int, default=0
-            Temporal exclusion radius for neighbors
-        trainLib : bool, default=True
-            Evaluation strategy for ranking column combinations:
-            - True: Use in-sample evaluation (test=train during Rank phase).
-                    Faster but may overfit to arbitrary vectors.
-            - False: Use proper out-of-sample evaluation with specified train/test.
-                    More rigorous but computationally expensive.
-                    Requires explicit train and test parameters.
-        excludeTarget : bool, default=False
-            Whether to exclude target column from embedding combinations
-        ignoreNan : bool, default=True
-            Remove NaN values from embedding
-        verbose : bool, default=False
-            Print diagnostic messages
-        numProcess : int, default=4
-            Number of processes for multiprocessing
-        mpMethod : ExecutionMode, optional
-            Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER)
-            If None, uses platform default
-        chunksize : int, default=1
-            Chunk size for pool.starmap operations
+        :param data: 2D numpy array where column 0 is time (unless noTime=True)
+        :param columns: Column indices to use (defaults to all except time)
+        :param target: Target column index (defaults to column 1)
+        :param train: Training set indices [start, end]
+        :param test: Test set indices [start, end]
+        :param D: State-space dimension (number of variables to combine for each assessment). If 0, defaults to number of columns.
+        :param embedDimensions: Embedding dimension (E). If 0, will be set by Validate()
+        :param predictionHorizon: Prediction time horizon (Tp)
+        :param knn: Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        :param step: Time delay step size (tau). Negative values indicate lag
+        :param multiview: Number of top-ranked D-dimensional predictions for final ensemble (parameter k in Ye & Sugihara). If 0, defaults to sqrt(m) where m is the number of combinations C(n,D).
+        :param exclusionRadius: Temporal exclusion radius for neighbors
+        :param trainLib: Evaluation strategy for ranking column combinations: True uses in-sample evaluation (test=train during Rank phase). False uses proper out-of-sample evaluation with specified train/test.
+        :param excludeTarget: Whether to exclude target column from embedding combinations
+        :param ignoreNan: Remove NaN values from embedding
+        :param verbose: Print diagnostic messages
+        :param numProcess: Number of processes for multiprocessing
+        :param mpMethod: Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER). If None, uses platform default
+        :param chunksize: Chunk size for pool.starmap operations
         """
 
         # Assign parameters directly
@@ -176,13 +148,10 @@ class Multiview:
     # Methods
     #-------------------------------------------------------------------
     def Run( self ) :
-        """Execute Multiview prediction and return MultiviewResult.
+        """
+        Execute Multiview prediction and return MultiviewResult.
 
-        Returns
-        -------
-        MultiviewResult
-            Multiview results with ensemble-averaged projection, view rankings,
-            top-ranked projections, and statistics
+        :return: Multiview results with ensemble-averaged projection, view rankings, top-ranked projections, and statistics
         """
         self.Rank()
         self.Project()
@@ -236,7 +205,9 @@ class Multiview:
 
     #-------------------------------------------------------------------
     def Rank( self ) :
-        """Multiprocess to rank top multiview vectors"""
+        """
+        Multiprocess to rank top multiview vectors
+        """
 
         if self.verbose:
             print( f'{self.name}: Rank()' )
@@ -275,7 +246,9 @@ class Multiview:
     # 
     #-------------------------------------------------------------------
     def Project( self ) :
-        """Projection with top multiview vectors"""
+        """
+        Projection with top multiview vectors
+        """
 
         if self.verbose:
             print( f'{self.name}: Project()' )
@@ -305,7 +278,8 @@ class Multiview:
     #--------------------------------------------------------------------
     def Setup( self ):
     #--------------------------------------------------------------------
-        """Set D, train, test, combos. Embed Data.
+        """
+        Set D, train, test, combos. Embed Data.
         """
         if self.verbose:
             print( f'{self.name}: Setup()' )
@@ -385,6 +359,11 @@ class Multiview:
     #--------------------------------------------------------------------
     def Validate( self ):
     #--------------------------------------------------------------------
+        """
+        Validate Multiview inputs and parameters
+
+        :raises RuntimeError: if inputs are invalid
+        """
         if self.verbose:
             print( f'{self.name}: Validate()' )
 

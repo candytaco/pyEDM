@@ -19,8 +19,10 @@ from .Embed import Embed
 # --------------------------------------------------------------------
 class EDM:
 	# --------------------------------------------------------------------
-	"""EDM class : data container
-	   Simplex, SMap, CCM inherited from EDM"""
+	"""
+	EDM class : data container
+	Simplex, SMap, CCM inherited from EDM
+	"""
 
 	def __init__(self, data, isEmbedded = False, name = 'EDM'):
 		self.predictionHorizon: int = None
@@ -54,38 +56,39 @@ class EDM:
 
 	def FindNeighbors(self):
 		# --------------------------------------------------------------------
-		"""Use Scipy KDTree to find neighbors
+		"""
+		Use Scipy KDTree to find neighbors
 
-		   Note: If dimensionality is k, the number of points n in
-		   the data should be n >> 2^k, otherwise KDTree efficiency is low.
-		   k:2^k pairs { 4 : 16, 5 : 32, 7 : 128, 8 : 256, 10 : 1024 }
+		Note: If dimensionality is k, the number of points n in
+		the data should be n >> 2^k, otherwise KDTree efficiency is low.
+		k:2^k pairs { 4 : 16, 5 : 32, 7 : 128, 8 : 256, 10 : 1024 }
 
-		   KDTree returns ndarray of knn_neighbors as indices with respect
-		   to the data array passed to KDTree, not with respect to the lib_i
-		   of embedding[ lib_i ] passed to KDTree. Since lib_i are generally
-		   not [0..N] the knn_neighbors need to be adjusted to lib_i reference
-		   for use in projections. If the the library is unitary this is
-		   a simple shift by lib_i[0]. If the library has disjoint segments
-		   or unordered indices, a mapping is needed from KDTree to lib_i.
+		KDTree returns ndarray of knn_neighbors as indices with respect
+		to the data array passed to KDTree, not with respect to the lib_i
+		of embedding[ lib_i ] passed to KDTree. Since lib_i are generally
+		not [0..N] the knn_neighbors need to be adjusted to lib_i reference
+		for use in projections. If the the library is unitary this is
+		a simple shift by lib_i[0]. If the library has disjoint segments
+		or unordered indices, a mapping is needed from KDTree to lib_i.
 
-		   If there are degenerate train & test indices the first nn will
-		   be the prediction vector itself with distance 0. These are removed
-		   to implement "leave-one-out" prediction validation. In this case
-		   self.libOverlap is set True and the value of knn is increased
-		   by 1 to return an additional nn. The first nn is relplaced by
-		   shifting the j = 1:knn+1 knn columns into the j = 0:knn columns.
+		If there are degenerate train & test indices the first nn will
+		be the prediction vector itself with distance 0. These are removed
+		to implement "leave-one-out" prediction validation. In this case
+		self.libOverlap is set True and the value of knn is increased
+		by 1 to return an additional nn. The first nn is relplaced by
+		shifting the j = 1:knn+1 knn columns into the j = 0:knn columns.
 
-		   If exlcusionRadius > 0, and, there are degenerate train & test
-		   indices, or, if there are not degnerate train & test but the
-		   distance in rows between the train & test gap is less than
-		   exlcusionRadius, knn_neighbors have to be selected for each
-		   test row to exclude library neighbors within exlcusionRadius.
-		   This is done by increasing knn to KDTree.query by a factor of
-		   self.xRadKnnFactor, then selecting valid nn.
+		If exlcusionRadius > 0, and, there are degenerate train & test
+		indices, or, if there are not degnerate train & test but the
+		distance in rows between the train & test gap is less than
+		exlcusionRadius, knn_neighbors have to be selected for each
+		test row to exclude library neighbors within exlcusionRadius.
+		This is done by increasing knn to KDTree.query by a factor of
+		self.xRadKnnFactor, then selecting valid nn.
 
-		   Writes to EDM object:
-			 knn_distances : sorted knn distances
-			 knn_neighbors : library neighbor rows of knn_distances
+		Writes to EDM object:
+			knn_distances : sorted knn distances
+			knn_neighbors : library neighbor rows of knn_distances
 		"""
 		if self.verbose:
 			print(f'{self.name}: FindNeighbors()')
@@ -320,13 +323,14 @@ class EDM:
 	# -------------------------------------------------------------------
 	def FormatProjection(self):
 		# -------------------------------------------------------------------
-		"""Create Projection, Coefficients, SingularValues DataFrames
-		   AddTime() attempts to extend forecast time if needed
+		"""
+		Create Projection, Coefficients, SingularValues DataFrames
+		AddTime() attempts to extend forecast time if needed
 
-		   NOTE: self.pred_i had all nan removed for KDTree by RemoveNan().
-				 self.predList only had leading/trailing embedding nan removed.
-				 Here we want to include any nan observation rows so we
-				 process predList & pred_i_all, not self.pred_i.
+		NOTE: self.pred_i had all nan removed for KDTree by RemoveNan().
+		self.predList only had leading/trailing embedding nan removed.
+		Here we want to include any nan observation rows so we
+		process predList & pred_i_all, not self.pred_i.
 		"""
 		if self.verbose:
 			print(f'{self.name}: FormatProjection()')
@@ -525,8 +529,9 @@ class EDM:
 	# -------------------------------------------------------------------
 	def ConvertTime(self):
 		# -------------------------------------------------------------------
-		"""Replace self.time with ndarray numerically operable values
-		   ISO 8601 formats are supported in the time & datetime modules
+		"""
+		Replace self.time with ndarray numerically operable values
+		ISO 8601 formats are supported in the time & datetime modules
 		"""
 		if self.verbose:
 			print(f'{self.name}: ConvertTime()')
@@ -575,8 +580,9 @@ class EDM:
 	# -------------------------------------------------------------------
 	def AddTime(self, Tp_magnitude, outSize, obs_i, obsOut_i):
 		# -------------------------------------------------------------------
-		"""Prepend or append time values to self.time if needed
-		   Return timeOut vector with additional predictionHorizon points
+		"""
+		Prepend or append time values to self.time if needed
+		Return timeOut vector with additional predictionHorizon points
 		"""
 		if self.verbose:
 			print(f'{self.name}: AddTime()')
@@ -626,7 +632,9 @@ class EDM:
 		return timeOut
 
 	def EmbedData(self):
-		"""Embed data : If not embedded call API.Embed()"""
+		"""
+		Embed data : If not embedded call API.Embed()
+		"""
 
 		if not self.isEmbedded:
 			self.Embedding = Embed(data = self.Data, embeddingDimensions = self.embedDimensions,
@@ -636,8 +644,9 @@ class EDM:
 
 	# TODO: change this to properly inherit and override
 	def RemoveNan(self):
-		"""KDTree in Neighbors does not accept nan
-		   If ignoreNan remove Embedding rows with nan from lib_i, pred_i
+		"""
+		KDTree in Neighbors does not accept nan
+		If ignoreNan remove Embedding rows with nan from lib_i, pred_i
 		"""
 
 		if self.ignoreNan:
@@ -672,9 +681,10 @@ class EDM:
 
 	# TODO: properly override these in inheritance
 	def CreateIndices(self):
-		"""Populate array index vectors lib_i, pred_i
-		   Indices specified in list of pairs [ 1,10, 31,40... ]
-		   where each pair is start:stop span of data rows.
+		"""
+		Populate array index vectors lib_i, pred_i
+		Indices specified in list of pairs [ 1,10, 31,40... ]
+		where each pair is start:stop span of data rows.
 		"""
 
 		# Convert self.train from flat list to list of (start, stop) pairs
@@ -850,7 +860,8 @@ class EDM:
 	# --------------------------------------------------------------------
 	def PredictionValid(self):
 		# --------------------------------------------------------------------
-		"""Validate there are pred_i to make a prediction
+		"""
+		Validate there are pred_i to make a prediction
 		"""
 
 		if len(self.testIndices) == 0:
@@ -859,6 +870,12 @@ class EDM:
 	# --------------------------------------------------------------------
 	def Validate(self):
 		# --------------------------------------------------------------------
+		"""
+		Validate inputs and parameters for EDM analysis
+
+		:param self: EDM object
+		:raises RuntimeError: if data is invalid
+		"""
 		if self.verbose:
 			print(f'{self.name}: Validate()')
 

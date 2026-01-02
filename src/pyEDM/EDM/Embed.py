@@ -6,9 +6,11 @@ def Embed(data,
           embeddingDimensions = 0,
           stepSize = -1,
           includeTime = False, ):
-	"""Takens time-delay embedding on columns via pandas DataFrame.shift()
-	   if includeTime True : insert dataFrame column 0 in first column
-	   nan will be present in |step| * (E-1) rows."""
+	"""
+	Takens time-delay embedding on columns via pandas DataFrame.shift()
+	if includeTime True : insert dataFrame column 0 in first column
+	nan will be present in |step| * (E-1) rows.
+	"""
 
 	if embeddingDimensions < 1:
 		raise RuntimeError('Embed(): E must be positive.')

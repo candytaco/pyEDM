@@ -17,16 +17,14 @@ class DataAdapter:
 				 trainTime: Optional[numpy.ndarray] = None, testTime: Optional[numpy.ndarray] = None):
 		"""
 		Data adapter init
-		:param TrainStart:
-		:param TestStart:
 		:param XTrain: 		training features
 		:param XTest: 		testing features
 		:param YTrain: 		training value to predict, should be just a single column
 		:param YTest: 		testing value to predict, should be just a single column
 		:param TrainStart:	index at which to start the train data; used to provide history for the first train sample
 		:param TrainEnd:	number of additional data samples at end of train data to ignore
-		:param TestEnd:		number of additional data samples at end of test data to ignore
 		:param TestStart:	index at which to start the test data; used to provide history for the first test sample
+		:param TestEnd:		number of additional data samples at end of test data to ignore
 		:param trainTime: 	time labels for train data
 		:param testTime: 	time labels for test data
 		"""
@@ -67,15 +65,31 @@ class DataAdapter:
 
 	@property
 	def HasTime(self) -> bool:
+		"""
+		Check if data has time column.
+
+		:return: True if data has time column
+		"""
 		return self.hasTime
 
 	@property
 	def TrainIndices(self) -> Tuple[int, int]:
+		"""
+		Get train indices for EDM.
+
+		:return: Train indices [start, end]
+		"""
 		# returning with 1 subtracted because EDM functions are stop-inclusive
 		return (self.trainOffset, self.X_train.shape[0] - 1 + self.trainOffset - self.trainEnd)
 
 	@property
 	def TestIndices(self) -> Tuple[int, int]:
+		"""
+		Get test indices for EDM.
+
+		:return: Test indices [start, end]
+		:raises ValueError: if no test data
+		"""
 		if self.Y_test is not None:
 			return (self.X_train.shape[0] + self.testOffset, self.fullData.shape[0] - 1 - self.testEnd)
 		else:
@@ -85,14 +99,16 @@ class DataAdapter:
 	def XIndices(self) -> Tuple[int, int]:
 		"""
 		Indices for X variables. The end is Inclusive!
-		:return:
+
+		:return: X indices [start, end]
 		"""
 		return (0 + int(self.hasTime), self.X_train.shape[1] + int(self.hasTime) - 1)
 
 	@property
 	def YIndex(self) -> int:
 		"""
-		Index for Y variable, assumes we only do one
-		:return:
+		Index for Y variable, assumes we only do one.
+
+		:return: Y index
 		"""
 		return self.fullData.shape[1] - 1

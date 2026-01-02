@@ -1,9 +1,7 @@
-"""Result classes for pyEDM predictions.
+"""
+Result classes for pyEDM predictions.
 
-This module provides dataclasses for structured prediction results from
-different EDM methods. Using result objects instead of conditional return
-types provides consistency, self-documentation, and convenient access to
-results and metadata.
+This module provides dataclasses for structured prediction results from different EDM methods. Using result objects instead of conditional return types provides consistency, self-documentation, and convenient access to results and metadata.
 """
 
 from dataclasses import dataclass
@@ -15,16 +13,12 @@ from ..Utils import ComputeError
 
 @dataclass(frozen=True)
 class SimplexResult:
-    """Results from Simplex prediction.
+    """
+    Results from Simplex prediction.
 
-    Attributes
-    ----------
-    projection : numpy.ndarray
-        Array with columns [Time, Observations, Predictions]
-    embedDimensions : int
-        Embedding dimension used
-    predictionHorizon : int
-        Prediction horizon used
+    :param projection: Array with columns [Time, Observations, Predictions]
+    :param embedDimensions: Embedding dimension used
+    :param predictionHorizon: Prediction horizon used
     """
     projection: np.ndarray
     embedDimensions: int
@@ -32,48 +26,46 @@ class SimplexResult:
 
     @property
     def time(self) -> np.ndarray:
-        """Time values from projection."""
+        """
+        Time values from projection.
+        """
         return self.projection[:, 0]
 
     @property
     def observations(self) -> np.ndarray:
-        """Observed values from projection."""
+        """
+        Observed values from projection.
+        """
         return self.projection[:, 1]
 
     @property
     def predictions(self) -> np.ndarray:
-        """Predicted values from projection."""
+        """
+        Predicted values from projection.
+        """
         return self.projection[:, 2]
 
     def compute_error(self, metric = None) -> Dict[str, float]:
-        """Compute prediction error statistics.
+        """
+        Compute prediction error statistics.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        :param metric: Error metric to compute
+        :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
 class SMapResult:
-    """Results from S-Map prediction.
+    """
+    Results from S-Map prediction.
 
-    Attributes
-    ----------
-    projection : numpy.ndarray
-        Array with columns [Time, Observations, Predictions]
-    coefficients : numpy.ndarray
-        S-Map coefficients for each prediction (N_pred, E+1)
-    singularValues : numpy.ndarray
-        Singular values from SVD for each prediction (N_pred, E+1)
-    embedDimensions : int
-        Embedding dimension used
-    predictionHorizon : int
-        Prediction horizon used
-    theta : float
-        Localization parameter used
+    :param projection: Array with columns [Time, Observations, Predictions]
+    :param coefficients: S-Map coefficients for each prediction (N_pred, E+1)
+    :param singularValues: Singular values from SVD for each prediction (N_pred, E+1)
+    :param embedDimensions: Embedding dimension used
+    :param predictionHorizon: Prediction horizon used
+    :param theta: Localization parameter used
     """
     projection: np.ndarray
     coefficients: np.ndarray
@@ -84,22 +76,30 @@ class SMapResult:
 
     @property
     def time(self) -> np.ndarray:
-        """Time values from projection."""
+        """
+        Time values from projection.
+        """
         return self.projection[:, 0]
 
     @property
     def observations(self) -> np.ndarray:
-        """Observed values from projection."""
+        """
+        Observed values from projection.
+        """
         return self.projection[:, 1]
 
     @property
     def predictions(self) -> np.ndarray:
-        """Predicted values from projection."""
+        """
+        Predicted values from projection.
+        """
         return self.projection[:, 2]
 
     @property
     def prediction_result(self) -> SimplexResult:
-        """Get prediction as SimplexResult for compatibility."""
+        """
+        Get prediction as SimplexResult for compatibility.
+        """
         return SimplexResult(
             projection=self.projection,
             embedDimensions=self.embedDimensions,
@@ -107,38 +107,28 @@ class SMapResult:
         )
 
     def compute_error(self, metric = None) -> Dict[str, float]:
-        """Compute prediction error statistics.
+        """
+        Compute prediction error statistics.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        :param metric: Error metric to compute
+        :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
 class CCMResult:
-    """Results from Convergent Cross Mapping.
+    """
+    Results from Convergent Cross Mapping.
 
-    Attributes
-    ----------
-    libMeans : numpy.ndarray
-        Mean correlation at each library size.
-        Shape (n_lib_sizes, 2 or 3):
-        - Column 0: Library size
-        - Column 1: Mean correlation for first direction
-        - Column 2: Mean correlation for second direction (if applicable)
-    embedDimensions : int
-        Embedding dimension used
-    predictionHorizon : int
-        Prediction horizon used
-    predictStats1 : numpy.ndarray, optional
-        Detailed prediction statistics for first direction
-        (only if includeData=True)
-    predictStats2 : numpy.ndarray, optional
-        Detailed prediction statistics for second direction
-        (only if includeData=True)
+    :param libMeans: Mean correlation at each library size. Shape (n_lib_sizes, 2 or 3): 
+    	Column 0: Library size, 
+        Column 1: Mean correlation for first direction, 
+        Column 2: Mean correlation for second direction (if applicable)
+    :param embedDimensions: Embedding dimension used
+    :param predictionHorizon: Prediction horizon used
+    :param predictStats1: Detailed prediction statistics for first direction (only if includeData=True)
+    :param predictStats2: Detailed prediction statistics for second direction (only if includeData=True)
     """
     libMeans: np.ndarray
     embedDimensions: int
@@ -148,38 +138,31 @@ class CCMResult:
 
     @property
     def library_sizes(self) -> np.ndarray:
-        """Library sizes evaluated."""
+        """
+        Library sizes evaluated.
+        """
         return self.libMeans[:, 0]
 
     @property
     def correlations(self) -> np.ndarray:
-        """Correlation values (excludes library size column)."""
+        """
+        Correlation values (excludes library size column).
+        """
         return self.libMeans[:, 1:]
 
 
 @dataclass(frozen=True)
 class MultiviewResult:
-    """Results from Multiview prediction.
+    """
+    Results from Multiview prediction.
 
-    Attributes
-    ----------
-    projection : numpy.ndarray
-        Ensemble-averaged prediction array [Time, Observations, Predictions]
-    view : list
-        Rankings of column combinations. Each element is
-        [combo_string, correlation, MAE, CAE, RMSE]
-    topRankProjections : dict
-        Dictionary mapping column combinations (tuples) to their
-        prediction arrays [Time, Observations, Predictions, Variance]
-    topRankStats : dict
-        Dictionary mapping column combinations (tuples) to their
-        error statistics {'correlation', 'MAE', 'CAE', 'RMSE'}
-    D : int
-        State-space dimension used
-    embedDimensions : int
-        Embedding dimension for each variable
-    predictionHorizon : int
-        Prediction horizon used
+    :param projection: Ensemble-averaged prediction array [Time, Observations, Predictions]
+    :param view: Rankings of column combinations. Each element is [combo_string, correlation, MAE, CAE, RMSE]
+    :param topRankProjections: Dictionary mapping column combinations (tuples) to their prediction arrays [Time, Observations, Predictions, Variance]
+    :param topRankStats: Dictionary mapping column combinations (tuples) to their error statistics {'correlation', 'MAE', 'CAE', 'RMSE'}
+    :param D: State-space dimension used
+    :param embedDimensions: Embedding dimension for each variable
+    :param predictionHorizon: Prediction horizon used
     """
     projection: np.ndarray
     view: List
@@ -191,46 +174,48 @@ class MultiviewResult:
 
     @property
     def time(self) -> np.ndarray:
-        """Time values from projection."""
+        """
+        Time values from projection.
+        """
         return self.projection[:, 0]
 
     @property
     def observations(self) -> np.ndarray:
-        """Observed values from projection."""
+        """
+        Observed values from projection.
+        """
         return self.projection[:, 1]
 
     @property
     def predictions(self) -> np.ndarray:
-        """Ensemble-averaged predictions."""
+        """
+        Ensemble-averaged predictions.
+        """
         return self.projection[:, 2]
 
     @property
     def top_combinations(self) -> List:
-        """Get list of top-ranked column combinations."""
+        """
+        Get list of top-ranked column combinations.
+        """
         return list(self.topRankProjections.keys())
 
     def compute_error(self, metric = None) -> Dict[str, float]:
-        """Compute prediction error statistics for ensemble prediction.
+        """
+        Compute prediction error statistics for ensemble prediction.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        :param metric: Error metric to compute
+        :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)
 
     def get_combination_stats(self, combo: tuple) -> Dict[str, float]:
-        """Get error statistics for a specific column combination.
+        """
+        Get error statistics for a specific column combination.
 
-        Parameters
-        ----------
-        combo : tuple
-            Column combination (e.g., (0, 2, 4))
-
-        Returns
-        -------
-        dict
-            Error statistics for this combination
+        :param combo: Column combination (e.g., (0, 2, 4))
+        :return: Error statistics for this combination
+        :raises ValueError: if combination not in top-ranked results
         """
         if combo not in self.topRankStats:
             raise ValueError(f"Combination {combo} not in top-ranked results")
@@ -239,18 +224,13 @@ class MultiviewResult:
 
 @dataclass(frozen=True)
 class MDEResult:
-    """Results from Multivariate Delay Embedding.
+    """
+    Results from Multivariate Delay Embedding.
 
-    Attributes
-    ----------
-    final_forecast : numpy.ndarray
-        Final forecast array [Time, Observations, Predictions]
-    selected_features : list of int
-        Column indices of selected features
-    accuracy : list of float
-        Correlation/MAE at each feature addition step
-    ccm_values : list of float
-        CCM convergence values for selected features
+    :param final_forecast: Final forecast array [Time, Observations, Predictions]
+    :param selected_features: Column indices of selected features
+    :param accuracy: Correlation/MAE at each feature addition step
+    :param ccm_values: CCM convergence values for selected features
     """
     final_forecast: np.ndarray
     selected_features: List[int]
@@ -259,46 +239,45 @@ class MDEResult:
 
     @property
     def time(self) -> np.ndarray:
-        """Time values from forecast."""
+        """
+        Time values from forecast.
+        """
         return self.final_forecast[:, 0]
 
     @property
     def observations(self) -> np.ndarray:
-        """Observed values from forecast."""
+        """
+        Observed values from forecast.
+        """
         return self.final_forecast[:, 1]
 
     @property
     def predictions(self) -> np.ndarray:
-        """Predicted values from forecast."""
+        """
+        Predicted values from forecast.
+        """
         return self.final_forecast[:, 2]
 
     def compute_error(self, metric = None) -> Dict[str, float]:
-        """Compute prediction error statistics.
+        """
+        Compute prediction error statistics.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        :param metric: Error metric to compute
+        :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)
 
 
 @dataclass(frozen=True)
 class MDECVResult:
-    """Results from MDE Cross-Validation.
+    """
+    Results from MDE Cross-Validation.
 
-    Attributes
-    ----------
-    final_forecast : numpy.ndarray
-        Final forecast array from test set prediction
-    selected_features : list of int
-        Final selected feature indices
-    fold_results : list of MDEResult
-        Results from each cross-validation fold
-    accuracy : list of float
-        Test set accuracy for each fold
-    best_fold : int
-        Index of best performing fold
+    :param final_forecast: Final forecast array from test set prediction
+    :param selected_features: Final selected feature indices
+    :param fold_results: Results from each cross-validation fold
+    :param accuracy: Test set accuracy for each fold
+    :param best_fold: Index of best performing fold
     """
     final_forecast: np.ndarray
     selected_features: List[int]
@@ -308,25 +287,30 @@ class MDECVResult:
 
     @property
     def time(self) -> np.ndarray:
-        """Time values from forecast."""
+        """
+        Time values from forecast.
+        """
         return self.final_forecast[:, 0]
 
     @property
     def observations(self) -> np.ndarray:
-        """Observed values from forecast."""
+        """
+        Observed values from forecast.
+        """
         return self.final_forecast[:, 1]
 
     @property
     def predictions(self) -> np.ndarray:
-        """Predicted values from forecast."""
+        """
+        Predicted values from forecast.
+        """
         return self.final_forecast[:, 2]
 
     def compute_error(self, metric = None) -> Dict[str, float]:
-        """Compute prediction error statistics.
+        """
+        Compute prediction error statistics.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
+        :param metric: Error metric to compute
+        :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)

@@ -9,7 +9,12 @@ from .Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm,
 
 
 def print_call(func):
-	"""Decorator that prints function calls with their arguments."""
+	"""
+	Decorator that prints function calls with their arguments.
+
+	:param func: Function to decorate
+	:return: Wrapped function
+	"""
 
 	@functools.wraps(func)
 	def wrapper(*args, **kwargs):
@@ -48,7 +53,9 @@ def print_call(func):
 
 
 def FunctionalExamples():
-	"""Canonical EDM API examples using new Result objects and Visualization"""
+	"""
+	Canonical EDM API examples using new Result objects and Visualization.
+	"""
 
 	EmbedDimension = print_call(EDM.FindOptimalEmbeddingDimensionality)
 	PredictInterval = print_call(EDM.FindOptimalPredictionHorizon)

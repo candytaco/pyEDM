@@ -1,6 +1,3 @@
-"""
-Base wrapper class for EDM methods that provides sklearn-like API.
-"""
 from typing import Optional, Tuple
 
 import numpy
@@ -8,101 +5,83 @@ import numpy
 from .DataAdapter import DataAdapter
 
 class EDMFitter:
-    """
-    Base wrapper class for EDM methods that provides sklearn-like API.
+	"""
+	Base wrapper class for EDM methods that provides sklearn-like API.
 
-    This class handles the conversion from separate X/Y train/test arrays
-    to the EDM single-array format using DataAdapter.
-    """
+	This class handles the conversion from separate X/Y train/test arrays to the EDM single-array format using DataAdapter.
+	"""
 
-    def __init__(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
-                 TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
-                 TrainTime: Optional[numpy.ndarray] = None, TestTime: Optional[numpy.ndarray] = None):
-        """
-        Initialize EDM wrapper with sklearn-style separate arrays.
+	def __init__(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+				 TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
+				 TrainTime: Optional[numpy.ndarray] = None, TestTime: Optional[numpy.ndarray] = None):
+		"""
+		Initialize EDM wrapper with sklearn-style separate arrays.
 
-        Parameters
-        ----------
-        XTrain : numpy.ndarray
-            Training feature data
-        YTrain : numpy.ndarray
-            Training target data
-        XTest : numpy.ndarray
-            Test feature data
-        YTest : numpy.ndarray
-            Test target data
-        TrainTime : numpy.ndarray, optional
-            Time labels for train data
-        TestTime : numpy.ndarray, optional
-            Time labels for test data
-            :param TestStart:
-        """
+		:param XTrain: 		Training feature data
+		:param YTrain: 		Training target data
+		:param XTest: 		Test feature data
+		:param YTest: 		Test target data
+		:param TrainStart: 	Start index for train data
+		:param TrainEnd: 	number of additional samples included beyond end of train data
+		:param TestStart: 	Start index for test data
+		:param TestEnd: 	number of additional samples included beyond end of test data
+		:param TrainTime: 	Time labels for train data
+		:param TestTime: 	Time labels for test data
+		"""
 
-        self.DataAdapter = DataAdapter(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
-                                       trainTime = TrainTime, testTime = TestTime)
+		self.DataAdapter = DataAdapter(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+									   trainTime = TrainTime, testTime = TestTime)
 
-    def GetEDMData(self) -> numpy.ndarray:
-        """
-        Get the combined EDM data array.
+	def GetEDMData(self) -> numpy.ndarray:
+		"""
+		Get the combined EDM data array.
 
-        Returns
-        -------
-        numpy.ndarray
-            Combined data array in EDM format
-        """
-        return self.DataAdapter.fullData
+		:return: Combined data array in EDM format
+		"""
 
-    def GetTrainIndices(self) -> Tuple[int, int]:
-        """
-        Get the train indices for EDM.
+		return self.DataAdapter.fullData
 
-        Returns
-        -------
-        tuple of (int, int)
-            Train indices [start, end]
-        """
-        return self.DataAdapter.TrainIndices
+	def GetTrainIndices(self) -> Tuple[int, int]:
+		"""
+		Get the train indices for EDM.
 
-    def GetTestIndices(self) -> Tuple[int, int]:
-        """
-        Get the test indices for EDM.
+		:return: Train indices [start, end]
+		"""
 
-        Returns
-        -------
-        tuple of (int, int)
-            Test indices [start, end]
-        """
-        return self.DataAdapter.TestIndices
+		return self.DataAdapter.TrainIndices
 
-    def GetXIndices(self) -> Tuple[int, int]:
-        """
-        Get the X feature indices.
+	def GetTestIndices(self) -> Tuple[int, int]:
+		"""
+		Get the test indices for EDM.
 
-        Returns
-        -------
-        tuple of (int, int)
-            X indices [start, end]
-        """
-        return self.DataAdapter.XIndices
+		:return: Test indices [start, end]
+		"""
 
-    def GetYIndex(self) -> int:
-        """
-        Get the Y target index.
+		return self.DataAdapter.TestIndices
 
-        Returns
-        -------
-        int
-            Y index
-        """
-        return self.DataAdapter.YIndex
+	def GetXIndices(self) -> Tuple[int, int]:
+		"""
+		Get the X feature indices.
 
-    def HasTime(self) -> bool:
-        """
-        Check if data has time column.
+		:return: X indices [start, end]
+		"""
 
-        Returns
-        -------
-        bool
-            True if data has time column
-        """
-        return self.DataAdapter.HasTime
+		return self.DataAdapter.XIndices
+
+	def GetYIndex(self) -> int:
+		"""
+		Get the Y target index.
+
+		:return: Y index
+		"""
+
+		return self.DataAdapter.YIndex
+
+	def HasTime(self) -> bool:
+		"""
+		Check if data has time column.
+
+		:return: True if data has time column
+		"""
+
+		return self.DataAdapter.HasTime

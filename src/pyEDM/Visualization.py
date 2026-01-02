@@ -1,7 +1,6 @@
 """Visualization functions for pyEDM results.
 
-This module provides plotting functions for EDM prediction results.
-Functions work with both legacy numpy arrays and new Result objects.
+This module provides plotting functions for EDM prediction results. Functions work with both legacy numpy arrays and new Result objects.
 """
 
 import matplotlib.pyplot as plt
@@ -9,34 +8,19 @@ from matplotlib.pyplot import show, axhline
 from typing import Union
 import numpy as np
 
-
 def plot_prediction(result: Union['SimplexResult', 'SMapResult', 'MultiviewResult', np.ndarray],
 				   title: str = "",
 				   embedDimensions: int = None,
 				   predictionHorizon: int = None,
 				   block: bool = True):
-	"""Plot observations vs predictions.
+	"""
+	Plot observations vs predictions.
 
-	Parameters
-	----------
-	result : SimplexResult, SMapResult, MultiviewResult, or numpy.ndarray
-		Result object or legacy numpy array with columns [Time, Observations, Predictions]
-	title : str, optional
-		Additional title text
-	embedDimensions : int, optional
-		Embedding dimension (only needed if passing numpy array)
-	predictionHorizon : int, optional
-		Prediction horizon (only needed if passing numpy array)
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = Simplex(params, split).Run()
-	>>> plot_prediction(result)
-
-	>>> # Or with numpy array (legacy)
-	>>> plot_prediction(projection_array, embedDimensions=3, predictionHorizon=1)
+	:param result: Result object or legacy numpy array with columns [Time, Observations, Predictions]
+	:param title: Additional title text
+	:param embedDimensions: Embedding dimension (only needed if passing numpy array)
+	:param predictionHorizon: Prediction horizon (only needed if passing numpy array)
+	:param block: Whether to block execution when showing plot
 	"""
 	from .Utils import ComputeError
 
@@ -72,31 +56,19 @@ def plot_prediction(result: Union['SimplexResult', 'SMapResult', 'MultiviewResul
 	plt.legend()
 	plt.show(block=block)
 
-
 def plot_smap_coefficients(result: Union['SMapResult', np.ndarray],
 						  title: str = "",
 						  embedDimensions: int = None,
 						  predictionHorizon: int = None,
 						  block: bool = True):
-	"""Plot S-Map coefficients over time.
+	"""
+	Plot S-Map coefficients over time.
 
-	Parameters
-	----------
-	result : SMapResult or numpy.ndarray
-		SMap result object or legacy numpy array with columns [Time, Coeff_0, Coeff_1, ...]
-	title : str, optional
-		Additional title text
-	embedDimensions : int, optional
-		Embedding dimension (only needed if passing numpy array)
-	predictionHorizon : int, optional
-		Prediction horizon (only needed if passing numpy array)
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = SMap(params, split, smap_params).Run()
-	>>> plot_smap_coefficients(result)
+	:param result: SMap result object or legacy numpy array with columns [Time, Coeff_0, Coeff_1, ...]
+	:param title: Additional title text
+	:param embedDimensions: Embedding dimension (only needed if passing numpy array)
+	:param predictionHorizon: Prediction horizon (only needed if passing numpy array)
+	:param block: Whether to block execution when showing plot
 	"""
 	# Handle both SMapResult and numpy arrays
 	if hasattr(result, 'coefficients'):
@@ -129,28 +101,17 @@ def plot_smap_coefficients(result: Union['SMapResult', np.ndarray],
 	plt.tight_layout()
 	plt.show(block=block)
 
-
 def plot_ccm(result: Union['CCMResult', np.ndarray],
 			title: str = "",
 			embedDimensions: int = None,
 			block: bool = True):
-	"""Plot CCM convergence.
+	"""
+	Plot CCM convergence.
 
-	Parameters
-	----------
-	result : CCMResult or numpy.ndarray
-		CCM result object or legacy numpy array with columns [LibSize, Correlation_1, Correlation_2]
-	title : str, optional
-		Additional title text
-	embedDimensions : int, optional
-		Embedding dimension (only needed if passing numpy array)
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = CCM(params, ccm_params).Run()
-	>>> plot_ccm(result)
+	:param result: CCM result object or legacy numpy array with columns [LibSize, Correlation_1, Correlation_2]
+	:param title: Additional title text
+	:param embedDimensions: Embedding dimension (only needed if passing numpy array)
+	:param block: Whether to block execution when showing plot
 	"""
 	# Handle both CCMResult and numpy arrays
 	if hasattr(result, 'libMeans'):
@@ -183,25 +144,15 @@ def plot_ccm(result: Union['CCMResult', np.ndarray],
 	axhline(y=0, linewidth=1)
 	show(block=block)
 
-
 def plot_multiview(result: Union['MultiviewResult', np.ndarray],
 				  title: str = "",
 				  block: bool = True):
-	"""Plot Multiview ensemble prediction.
+	"""
+	Plot Multiview ensemble prediction.
 
-	Parameters
-	----------
-	result : MultiviewResult or numpy.ndarray
-		Multiview result object or legacy numpy array
-	title : str, optional
-		Additional title text
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = Multiview(params, split, mv_params).Run()
-	>>> plot_multiview(result)
+	:param result: Multiview result object or legacy numpy array
+	:param title: Additional title text
+	:param block: Whether to block execution when showing plot
 	"""
 	# Use plot_prediction for the ensemble result
 	if hasattr(result, 'projection'):
@@ -209,46 +160,34 @@ def plot_multiview(result: Union['MultiviewResult', np.ndarray],
 	else:
 		plot_prediction(result, title=title, block=block)
 
-
 # Legacy function names for backward compatibility
 def PlotObsPred(data, dataName="", embedDimensions=0, predictionHorizon=0, block=True):
-	"""Legacy function for plotting observations vs predictions.
+	"""
+	Legacy function for plotting observations vs predictions.
 
-	.. deprecated::
-		Use plot_prediction() instead.
+	.. deprecated:: Use plot_prediction() instead.
 	"""
 	plot_prediction(data, title=dataName, embedDimensions=embedDimensions,
 				   predictionHorizon=predictionHorizon, block=block)
 
-
 def PlotCoeff(data, dataName="", embedDimensions=0, predictionHorizon=0, block=True):
-	"""Legacy function for plotting S-Map coefficients.
+	"""
+	Legacy function for plotting S-Map coefficients.
 
-	.. deprecated::
-		Use plot_smap_coefficients() instead.
+	.. deprecated:: Use plot_smap_coefficients() instead.
 	"""
 	plot_smap_coefficients(data, title=dataName, embedDimensions=embedDimensions,
 						  predictionHorizon=predictionHorizon, block=block)
 
-
 def plot_embed_dimension(result: np.ndarray,
 						title: str = "",
 						block: bool = True):
-	"""Plot embedding dimension vs prediction skill.
+	"""
+	Plot embedding dimension vs prediction skill.
 
-	Parameters
-	----------
-	result : numpy.ndarray, shape (maxE, 2)
-		Array with columns [E, correlation]
-	title : str, optional
-		Plot title
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = EmbedDimension(data, columns=[1], target=1)
-	>>> plot_embed_dimension(result, "Tent Map Embedding")
+	:param result: Array with columns [E, correlation]
+	:param title: Plot title
+	:param block: Whether to block execution when showing plot
 	"""
 	plot_title = title or "Embedding Dimension"
 
@@ -260,25 +199,15 @@ def plot_embed_dimension(result: np.ndarray,
 	plt.grid(True, alpha=0.3)
 	plt.show(block=block)
 
-
 def plot_predict_interval(result: np.ndarray,
 						 title: str = "",
 						 block: bool = True):
-	"""Plot prediction interval vs prediction skill.
+	"""
+	Plot prediction interval vs prediction skill.
 
-	Parameters
-	----------
-	result : numpy.ndarray, shape (maxTp, 2)
-		Array with columns [predictionHorizon, correlation]
-	title : str, optional
-		Plot title
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = PredictInterval(data, columns=[1], target=1, embedDimensions=2)
-	>>> plot_predict_interval(result, "Tent Map Prediction Interval")
+	:param result: Array with columns [predictionHorizon, correlation]
+	:param title: Plot title
+	:param block: Whether to block execution when showing plot
 	"""
 	plot_title = title or "Prediction Interval"
 
@@ -290,25 +219,15 @@ def plot_predict_interval(result: np.ndarray,
 	plt.grid(True, alpha=0.3)
 	plt.show(block=block)
 
-
 def plot_predict_nonlinear(result: np.ndarray,
 						  title: str = "",
 						  block: bool = True):
-	"""Plot theta vs prediction skill for S-Map.
+	"""
+	Plot theta vs prediction skill for S-Map.
 
-	Parameters
-	----------
-	result : numpy.ndarray, shape (len(theta), 2)
-		Array with columns [theta, correlation]
-	title : str, optional
-		Plot title
-	block : bool, default=True
-		Whether to block execution when showing plot
-
-	Examples
-	--------
-	>>> result = PredictNonlinear(data, columns=[1], target=1, embedDimensions=2)
-	>>> plot_predict_nonlinear(result, "Tent Map Nonlinearity")
+	:param result: Array with columns [theta, correlation]
+	:param title: Plot title
+	:param block: Whether to block execution when showing plot
 	"""
 	plot_title = title or "S-Map Localization (theta)"
 

@@ -11,9 +11,11 @@ from .Results import SimplexResult
 
 #-----------------------------------------------------------
 class Simplex(EDM):
-    """Simplex class : child of EDM
-       CCM & Multiview inhereted from Simplex
-       To Do : Neighbor ties"""
+    """
+    Simplex class : child of EDM
+    CCM & Multiview are composed of Simplex instances
+    TODO: Neighbor ties
+    """
 
     def __init__(self,
                  data,
@@ -33,44 +35,26 @@ class Simplex(EDM):
                  verbose=False,
                  generateSteps=0,
                  generateConcat=False):
-        """Initialize Simplex as child of EDM.
+        """
+        Initialize Simplex as child of EDM.
 
-        Parameters
-        ----------
-        data : numpy.ndarray
-            2D numpy array where column 0 is time (unless noTime=True)
-        columns : list of int, optional
-            Column indices to use for embedding (defaults to all except time)
-        target : int, optional
-            Target column index (defaults to column 1)
-        train : tuple of (int, int), optional
-            Training set indices [start, end]
-        test : tuple of (int, int), optional
-            Test set indices [start, end]
-        embedDimensions : int, default=0
-            Embedding dimension (E). If 0, will be set by Validate()
-        predictionHorizon : int, default=1
-            Prediction time horizon (Tp)
-        knn : int, default=0
-            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
-        step : int, default=-1
-            Time delay step size (tau). Negative values indicate lag
-        exclusionRadius : int, default=0
-            Temporal exclusion radius for neighbors
-        embedded : bool, default=False
-            Whether data is already embedded
-        validLib : list, optional
-            Boolean mask for valid library points
-        noTime : bool, default=False
-            Whether first column is time or data
-        ignoreNan : bool, default=True
-            Remove NaN values from embedding
-        verbose : bool, default=False
-            Print diagnostic messages
-        generateSteps : int, default=0
-            Number of iterative generation steps. If 0, uses standard prediction.
-        generateConcat : bool, default=False
-            Whether to concatenate generated predictions
+        :param data: 2D numpy array where column 0 is time (unless noTime=True)
+        :param columns: Column indices to use for embedding (defaults to all except time)
+        :param target: Target column index (defaults to column 1)
+        :param train: Training set indices [start, end]
+        :param test: Test set indices [start, end]
+        :param embedDimensions: Embedding dimension (E). If 0, will be set by Validate()
+        :param predictionHorizon: Prediction time horizon (Tp)
+        :param knn: Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        :param step: Time delay step size (tau). Negative values indicate lag
+        :param exclusionRadius: Temporal exclusion radius for neighbors
+        :param embedded: Whether data is already embedded
+        :param validLib: Boolean mask for valid library points
+        :param noTime: Whether first column is time or data
+        :param ignoreNan: Remove NaN values from embedding
+        :param verbose: Print diagnostic messages
+        :param generateSteps: Number of iterative generation steps. If 0, uses standard prediction.
+        :param generateConcat: Whether to concatenate generated predictions
         """
 
         # Instantiate EDM class: inheret EDM members to self
@@ -120,12 +104,10 @@ class Simplex(EDM):
     #-------------------------------------------------------------------
     def Run( self ):
     #-------------------------------------------------------------------
-        """Execute standard prediction and return SimplexResult.
+        """
+        Execute standard prediction and return SimplexResult.
 
-        Returns
-        -------
-        SimplexResult
-            Prediction results with projection array and metadata
+        :return: Prediction results with projection array and metadata
         """
         self.EmbedData()
         self.RemoveNan()
@@ -142,8 +124,10 @@ class Simplex(EDM):
     #-------------------------------------------------------------------
     def Project( self ) :
     #-------------------------------------------------------------------
-        """Simplex Projection
-           Sugihara & May (1990) doi.org/10.1038/344734a0"""
+        """
+        Simplex Projection
+        Sugihara & May (1990) doi.org/10.1038/344734a0
+        """
         if self.verbose:
             print( f'{self.name}: Project()' )
 
@@ -182,12 +166,13 @@ class Simplex(EDM):
     #-------------------------------------------------------------------
     def Generate( self ) :
     #-------------------------------------------------------------------
-        """Simplex Generation
-           Given train: override test for single prediction at end of train
-           Replace self.Projection with G.Projection
+        """
+        Simplex Generation
+        Given train: override test for single prediction at end of train
+        Replace self.Projection with G.Projection
 
-           Note: Generation with datetime time values fails: incompatible
-                 numpy.datetime64, timedelta64 and python datetime, timedelta
+        Note: Generation with datetime time values fails: incompatible
+        numpy.datetime64, timedelta64 and python datetime, timedelta
         """
         if self.verbose:
             print( f'{self.name}: Generate()' )

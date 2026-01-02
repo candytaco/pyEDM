@@ -13,7 +13,9 @@ from .Results import SMapResult
 
 #-----------------------------------------------------------
 class SMap(EDM):
-    """SMap class : child of EDM"""
+    """
+    SMap class : child of EDM
+    """
 
     def __init__(self,
                  data,
@@ -35,50 +37,28 @@ class SMap(EDM):
                  verbose=False,
                  generateSteps=0,
                  generateConcat=False):
-        """Initialize SMap as child of EDM.
+        """
+        Initialize SMap as child of EDM.
 
-        Parameters
-        ----------
-        data : numpy.ndarray
-            2D numpy array where column 0 is time (unless noTime=True)
-        columns : list of int, optional
-            Column indices to use for embedding (defaults to all except time)
-        target : int, optional
-            Target column index (defaults to column 1)
-        train : tuple of (int, int), optional
-            Training set indices [start, end]
-        test : tuple of (int, int), optional
-            Test set indices [start, end]
-        embedDimensions : int, default=0
-            Embedding dimension (E). If 0, will be set by Validate()
-        predictionHorizon : int, default=1
-            Prediction time horizon (Tp)
-        knn : int, default=0
-            Number of nearest neighbors. If 0, will be set to E+1 by Validate()
-        step : int, default=-1
-            Time delay step size (tau). Negative values indicate lag
-        theta : float, default=0.0
-            S-Map localization parameter. theta=0 is global linear map,
-            larger values increase localization
-        exclusionRadius : int, default=0
-            Temporal exclusion radius for neighbors
-        solver : object, optional
-            Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
-            Can be any sklearn-compatible regressor.
-        embedded : bool, default=False
-            Whether data is already embedded
-        validLib : list, optional
-            Boolean mask for valid library points
-        noTime : bool, default=False
-            Whether first column is time or data
-        ignoreNan : bool, default=True
-            Remove NaN values from embedding
-        verbose : bool, default=False
-            Print diagnostic messages
-        generateSteps : int, default=0
-            Number of iterative generation steps. If 0, uses standard prediction.
-        generateConcat : bool, default=False
-            Whether to concatenate generated predictions
+        :param data: 2D numpy array where column 0 is time (unless noTime=True)
+        :param columns: Column indices to use for embedding (defaults to all except time)
+        :param target: Target column index (defaults to column 1)
+        :param train: Training set indices [start, end]
+        :param test: Test set indices [start, end]
+        :param embedDimensions: Embedding dimension (E). If 0, will be set by Validate()
+        :param predictionHorizon: Prediction time horizon (Tp)
+        :param knn: Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+        :param step: Time delay step size (tau). Negative values indicate lag
+        :param theta: S-Map localization parameter. theta=0 is global linear map, larger values increase localization
+        :param exclusionRadius: Temporal exclusion radius for neighbors
+        :param solver: Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
+        :param embedded: Whether data is already embedded
+        :param validLib: Boolean mask for valid library points
+        :param noTime: Whether first column is time or data
+        :param ignoreNan: Remove NaN values from embedding
+        :param verbose: Print diagnostic messages
+        :param generateSteps: Number of iterative generation steps. If 0, uses standard prediction.
+        :param generateConcat: Whether to concatenate generated predictions
         """
 
         # Instantiate EDM class: inheret all members to self
@@ -138,13 +118,10 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Run( self ) :
     #-------------------------------------------------------------------
-        """Execute S-Map prediction and return SMapResult.
+        """
+        Execute S-Map prediction and return SMapResult.
 
-        Returns
-        -------
-        SMapResult
-            Prediction results with projection array, coefficients,
-            singular values, and metadata
+        :return: Prediction results with projection array, coefficients, singular values, and metadata
         """
         self.EmbedData()
         self.RemoveNan()
@@ -164,17 +141,18 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Project( self ) :
     #-------------------------------------------------------------------
-        """For each prediction row compute projection as the linear
-           combination of regression coefficients (C) of weighted
-           embedding vectors (A) against target vector (B) : AC = B.
+        """
+        For each prediction row compute projection as the linear
+		combination of regression coefficients (C) of weighted
+		embedding vectors (A) against target vector (B) : AC = B.
 
-           Weights reflect the SMap theta localization of the knn
-           for each prediction. Default knn = len( lib_i ). 
+		Weights reflect the SMap theta localization of the knn
+		for each prediction. Default knn = len( lib_i ). 
 
-           Matrix A has (weighted) constant (1) first column
-           to enable a linear intercept/bias term.
+		Matrix A has (weighted) constant (1) first column
+		to enable a linear intercept/bias term.
 
-           Sugihara (1994) doi.org/10.1098/rsta.1994.0106
+		Sugihara (1994) doi.org/10.1098/rsta.1994.0106
         """
 
         if self.verbose:
@@ -274,7 +252,9 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Solver( self, A, wB ) :
     #-------------------------------------------------------------------
-        """Call SMap solver. Default is numpy.lstsq"""
+        """
+        Call SMap solver. Default is numpy.lstsq
+        """
 
         if self.solver.__class__.__name__ in \
            [ 'function', '_ArrayFunctionDispatcher' ] and \
@@ -305,12 +285,13 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     def Generate( self ) :
     #-------------------------------------------------------------------
-        """SMap Generation
-           Given train: override test to be single prediction at end of train
-           Replace self.Projection with G.Projection
+        """
+        SMap Generation
+        Given train: override test to be single prediction at end of train
+        Replace self.Projection with G.Projection
 
-           Note: Generation with datetime time values fails: incompatible
-                 numpy.datetime64, timedelta64 and python datetime, timedelta
+        Note: Generation with datetime time values fails: incompatible
+        numpy.datetime64, timedelta64 and python datetime, timedelta
         """
         if self.verbose:
             print( f'{self.name}: Generate()' )

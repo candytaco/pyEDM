@@ -39,52 +39,28 @@ class MDEFitterCV:
 		"""
 		Initialize MDECV wrapper with sklearn-style separate arrays.
 
-		Parameters
-		----------
-		XTrain : numpy.ndarray
-			Training feature data
-		YTrain : numpy.ndarray
-			Training target data
-		XTest : numpy.ndarray
-			Test feature data
-		YTest : numpy.ndarray
-			Test target data
-		MaxD : int, default=5
-			Maximum number of features to select
-		IncludeTarget : bool, default=True
-			Whether to start with target in feature list
-		Convergent : bool, default=True
-			Whether to use convergence checking
-		Metric : str, default="correlation"
-			Metric to use: "correlation" or "MAE"
-		BatchSize : int, default=1000
-			Number of features to process in each batch
-		Folds : int, default=5
-			Number of cross-validation folds
-		TestSize : float, default=0.2
-			Proportion of data to use for test set
-		FinalFeatureMode : str, default="best_fold"
-			Method for selecting final features
-		Columns : list of int, optional
-			Column indices to use for embedding
-		Target : int, optional
-			Target column index
-		EmbedDimensions : int, default=0
-			Embedding dimension (E)
-		PredictionHorizon : int, default=1
-			Prediction time horizon (Tp)
-		KNN : int, default=0
-			Number of nearest neighbors
-		Step : int, default=-1
-			Time delay step size (tau)
-		ExclusionRadius : int, default=0
-			Temporal exclusion radius for neighbors
-		Verbose : bool, default=False
-			Print diagnostic messages
-		UseSMap : bool, default=False
-			Whether to use SMap instead of Simplex
-		Theta : float, default=0.0
-			S-Map localization parameter
+		:param XTrain: 				Training feature data
+		:param YTrain: 				Training target data
+		:param XTest: 				Test feature data
+		:param YTest: 				Test target data
+		:param MaxD: 				Maximum number of features to select
+		:param IncludeTarget: 		Whether to start with target in feature list
+		:param Convergent: 			Whether to use convergence checking
+		:param Metric: 				Metric to use: "correlation" or "MAE"
+		:param BatchSize: 			Number of features to process in each batch
+		:param Folds: 				Number of cross-validation folds
+		:param TestSize: 			Proportion of data to use for test set
+		:param FinalFeatureMode: 	Method for selecting final features
+		:param Columns: 			Column indices to use for embedding
+		:param Target: 				Target column index
+		:param EmbedDimensions: 	Embedding dimension (E)
+		:param PredictionHorizon: 	Prediction time horizon (Tp)
+		:param KNN: 				Number of nearest neighbors
+		:param Step: 				Time delay step size (tau)
+		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
+		:param Verbose: 			Print diagnostic messages
+		:param UseSMap: 			Whether to use SMap instead of Simplex
+		:param Theta: 				S-Map localization parameter
 		"""
 
 		self.XTrain = XTrain
@@ -116,10 +92,7 @@ class MDEFitterCV:
 		"""
 		Fit MDECV model using cross-validation.
 
-		Returns
-		-------
-		MDECVResult
-			Cross-validation results
+		:return: Cross-validation results
 		"""
 		# Combine train data
 		TrainData = numpy.hstack([self.XTrain, self.YTrain])
@@ -165,10 +138,7 @@ class MDEFitterCV:
 		"""
 		Predict using the fitted MDECV model.
 
-		Returns
-		-------
-		MDECVResult
-			Prediction results
+		:return: Prediction results
 		"""
 		if self.MDECV is None:
 			raise RuntimeError("Model not fitted. Call Fit() first.")

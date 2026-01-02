@@ -1,4 +1,5 @@
-"""Execution strategies for pyEDM methods.
+"""
+Execution strategies for pyEDM methods.
 
 This module provides a clean abstraction for different execution modes,
 hiding multiprocessing complexity from users while allowing advanced
@@ -13,20 +14,14 @@ import os
 
 
 class ExecutionMode(Enum):
-    """Enumeration of execution strategies.
+    """
+    Enumeration of execution strategies.
 
-    Attributes
-    ----------
-    SEQUENTIAL : str
-        Sequential execution (no parallelism)
-    MULTIPROCESS : str
-        Multiprocessing with default context
-    SPAWN : str
-        Multiprocessing with spawn context (starts fresh Python interpreter)
-    FORK : str
-        Multiprocessing with fork context (copies parent process)
-    FORKSERVER : str
-        Multiprocessing with forkserver context (hybrid approach)
+    :param SEQUENTIAL: Sequential execution (no parallelism)
+    :param MULTIPROCESS: Multiprocessing with default context
+    :param SPAWN: Multiprocessing with spawn context (starts fresh Python interpreter)
+    :param FORK: Multiprocessing with fork context (copies parent process)
+    :param FORKSERVER: Multiprocessing with forkserver context (hybrid approach)
     """
     SEQUENTIAL = "sequential"
     MULTIPROCESS = "multiprocess"
@@ -36,97 +31,70 @@ class ExecutionMode(Enum):
 
 
 class ExecutionStrategy(ABC):
-    """Abstract base class for execution strategies."""
+    """
+    Abstract base class for execution strategies.
+    """
 
     @abstractmethod
     def map(self, func: Callable, iterable: Iterable):
-        """Execute function over iterable.
+        """
+        Execute function over iterable.
 
-        Parameters
-        ----------
-        func : callable
-            Function to execute
-        iterable : iterable
-            Iterable of arguments to pass to func
-
-        Returns
-        -------
-        list
-            Results from executing func over iterable
+        :param func: Function to execute
+        :param iterable: Iterable of arguments to pass to func
+        :return: Results from executing func over iterable
         """
         pass
 
 
 class SequentialExecution(ExecutionStrategy):
-    """Sequential execution strategy (no parallelism).
+    """
+    Sequential execution strategy (no parallelism).
 
     Useful for debugging or when multiprocessing overhead exceeds benefits.
     """
 
     def map(self, func, iterable):
-        """Execute function sequentially over iterable.
+        """
+        Execute function sequentially over iterable.
 
-        Parameters
-        ----------
-        func : callable
-            Function to execute
-        iterable : iterable
-            Iterable of argument tuples to pass to func
-
-        Returns
-        -------
-        list
-            Results from executing func over iterable
+        :param func: Function to execute
+        :param iterable: Iterable of argument tuples to pass to func
+        :return: Results from executing func over iterable
         """
         return [func(*args) for args in iterable]
 
 
 class MultiprocessExecution(ExecutionStrategy):
-    """Multiprocessing execution strategy.
+    """
+    Multiprocessing execution strategy.
 
-    Parameters
-    ----------
-    numProcess : int, optional
-        Number of processes to use. If None, uses os.cpu_count()
-    mpMethod : str, optional
-        Multiprocessing context method ('spawn', 'fork', 'forkserver')
-        If None, uses platform default
-    chunksize : int, default=1
-        Chunk size for pool.starmap
+    :param numProcess: Number of processes to use. If None, uses os.cpu_count()
+    :param mpMethod: Multiprocessing context method ('spawn', 'fork', 'forkserver'). If None, uses platform default
+    :param chunksize: Chunk size for pool.starmap
     """
 
     def __init__(self, numProcess: Optional[int] = None,
                  mpMethod: Optional[str] = None,
                  chunksize: int = 1):
-        """Initialize multiprocessing execution strategy.
+        """
+        Initialize multiprocessing execution strategy.
 
-        Parameters
-        ----------
-        numProcess : int, optional
-            Number of processes. Defaults to CPU count
-        mpMethod : str, optional
-            Context method. Defaults to platform default
-        chunksize : int, default=1
-            Chunk size for starmap
+        :param numProcess: Number of processes. Defaults to CPU count
+        :param mpMethod: Context method. Defaults to platform default
+        :param chunksize: Chunk size for starmap
         """
         self.numProcess = numProcess or os.cpu_count()
         self.mpMethod = mpMethod
         self.chunksize = chunksize
 
     def map(self, func, iterable):
-        """Execute function in parallel using multiprocessing.
+        """
+        Execute function in parallel using multiprocessing.
 
-        Parameters
-        ----------
-        func : callable
-            Function to execute
-        iterable : iterable
-            Iterable of argument tuples to pass to func
-
-        Returns
-        -------
-        list
-            Results from executing func over iterable
+        :param func: Function to execute
+        :param iterable: Iterable of argument tuples to pass to func
+        :return: Results from executing func over iterable
         """
         mpContext = get_context(self.mpMethod)
         with mpContext.Pool(processes=self.numProcess) as pool:
@@ -138,34 +106,14 @@ def create_executor(
     numProcess: Optional[int] = None,
     chunksize: int = 1
 ) -> ExecutionStrategy:
-    """Factory function to create execution strategy from enum.
+    """
+    Factory function to create execution strategy from enum.
 
-    Parameters
-    ----------
-    mode : ExecutionMode, default=ExecutionMode.SEQUENTIAL
-        Execution mode to use
-    numProcess : int, optional
-        Number of processes (ignored for SEQUENTIAL mode)
-    chunksize : int, default=1
-        Chunk size for parallel execution (ignored for SEQUENTIAL mode)
-
-    Returns
-    -------
-    ExecutionStrategy
-        Configured execution strategy
-
-    Raises
-    ------
-    ValueError
-        If mode is not a valid ExecutionMode
-
-    Examples
-    --------
-    >>> executor = create_executor(ExecutionMode.MULTIPROCESS, numProcess=4)
-    >>> results = executor.map(my_function, arguments)
-
-    >>> executor = create_executor(ExecutionMode.SEQUENTIAL)
-    >>> results = executor.map(my_function, arguments)
+    :param mode: Execution mode to use
+    :param numProcess: Number of processes (ignored for SEQUENTIAL mode)
+    :param chunksize: Chunk size for parallel execution (ignored for SEQUENTIAL mode)
+    :return: Configured execution strategy
+    :raises ValueError: If mode is not a valid ExecutionMode
     """
     if mode == ExecutionMode.SEQUENTIAL:
         return SequentialExecution()

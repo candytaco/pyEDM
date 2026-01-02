@@ -8,7 +8,6 @@ import numpy
 from pyEDM.EDM.MDE import MDE
 from .EDMFitter import EDMFitter
 
-
 class MDEFitter(EDMFitter):
 	"""
 	Wrapper class for MDE that provides sklearn-like API.
@@ -43,50 +42,27 @@ class MDEFitter(EDMFitter):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
-		Parameters
-		----------
-		XTrain : numpy.ndarray
-			Training feature data
-		YTrain : numpy.ndarray
-			Training target data
-		XTest : numpy.ndarray
-			Test feature data
-		YTest : numpy.ndarray
-			Test target data
-		MaxD : int, default=5
-			Maximum number of features to select
-		IncludeTarget : bool, default=True
-			Whether to start with target in feature list
-		Convergent : bool, default=True
-			Whether to use convergence checking
-		Metric : str, default="correlation"
-			Metric to use: "correlation" or "MAE"
-		BatchSize : int, default=1000
-			Number of features to process in each batch
-		Columns : list of int, optional
-			Column indices to use for embedding
-		Target : int, optional
-			Target column index
-		EmbedDimensions : int, default=0
-			Embedding dimension (E)
-		PredictionHorizon : int, default=1
-			Prediction time horizon (Tp)
-		KNN : int, default=0
-			Number of nearest neighbors
-		Step : int, default=-1
-			Time delay step size (tau)
-		ExclusionRadius : int, default=0
-			Temporal exclusion radius for neighbors
-		TrainTime : numpy.ndarray, optional
-			Time labels for train data
-		TestTime : numpy.ndarray, optional
-			Time labels for test data
-		Verbose : bool, default=False
-			Print diagnostic messages
-		UseSMap : bool, default=False
-			Whether to use SMap instead of Simplex
-		Theta : float, default=0.0
-			S-Map localization parameter
+		:param XTrain: 				Training feature data
+		:param YTrain: 				Training target data
+		:param XTest: 				Test feature data
+		:param YTest: 				Test target data
+		:param MaxD: 				Maximum number of features to select
+		:param IncludeTarget: 		Whether to start with target in feature list
+		:param Convergent: 			Whether to use convergence checking
+		:param Metric: 				Metric to use: "correlation" or "MAE"
+		:param BatchSize: 			Number of features to process in each batch
+		:param Columns: 			Column indices to use for embedding
+		:param Target: 				Target column index
+		:param EmbedDimensions: 	Embedding dimension (E)
+		:param PredictionHorizon: 	Prediction time horizon (Tp)
+		:param KNN: 				Number of nearest neighbors
+		:param Step: 				Time delay step size (tau)
+		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
+		:param TrainTime: 			Time labels for train data
+		:param TestTime: 			Time labels for test data
+		:param Verbose: 			Print diagnostic messages
+		:param UseSMap: 			Whether to use SMap instead of Simplex
+		:param Theta: 				S-Map localization parameter
 		"""
 
 		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime,
@@ -114,10 +90,7 @@ class MDEFitter(EDMFitter):
 		"""
 		Run MDE feature selection.
 
-		Returns
-		-------
-		MDEResult
-			MDE results
+		:return: MDE results
 		"""
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()

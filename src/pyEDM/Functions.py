@@ -1,6 +1,8 @@
-"""Functional programming interface to Empirical Dynamic Modeling (EDM) pyEDM.
-While the underlying classes have been refactored, these functions should return roughly the same data structures
-returned by the original pyEDM functions"""
+"""
+Functional programming interface to Empirical Dynamic Modeling (EDM) pyEDM.
+While the underlying classes have been refactored, these functions should 
+return roughly the same data structures returned by the original pyEDM functions
+"""
 
 from itertools import repeat
 # python modules
@@ -34,15 +36,28 @@ def FitSimplex(data = None,
                verbose = False,
                ignoreNan = True,
                returnObject = False):
-	"""Simplex prediction.
+	"""
+	Simplex prediction.
 
-	:param data: 2D numpy array where column 0 is time
-	:param columns: Column indices to use for embedding (defaults to all except time)
-	:param target: Target column index (defaults to column 1)
-	columns : list of int or None
-		Column indices to use for embedding (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
+	:param data: 			2D numpy array where column 0 is time
+	:param columns: 		Column indices to use for embedding (defaults to all except time)
+	:param target: 			Target column index (defaults to column 1)
+	:param train: 			Train indices [start, end]
+	:param test: 			Test indices [start, end]
+	:param embedDimensions: Embedding dimension
+	:param predictionHorizon: Prediction horizon
+	:param knn: 			Number of nearest neighbors
+	:param step: 			Step size for embedding
+	:param exclusionRadius: Exclusion radius
+	:param embedded: 		Whether data is already embedded
+	:param validLib: 		Valid library indices
+	:param noTime: 			Whether to exclude time column
+	:param generateSteps: 	Number of generation steps
+	:param generateConcat: 	Whether to concatenate generated predictions
+	:param verbose: 		Print diagnostic messages
+	:param ignoreNan: 		Whether to ignore NaN values
+	:param returnObject: 	Whether to return Simplex object instead of projection
+	:return: Prediction projection array or Simplex object
 	"""
 
 	# Instantiate SimplexClass object
@@ -95,15 +110,30 @@ def FitSMap(data = None,
             ignoreNan = True,
             verbose = False,
             returnObject = False):
-	"""S-Map prediction.
+	"""
+	S-Map prediction.
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use for embedding (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
+	:param data: 				2D numpy array where column 0 is time
+	:param columns: 			Column indices to use for embedding (defaults to all except time)
+	:param target: 				Target column index (defaults to column 1)
+	:param train: 				Train indices [start, end]
+	:param test: 				Test indices [start, end]
+	:param embedDimensions: 	Embedding dimension
+	:param predictionHorizon: 	Prediction horizon
+	:param knn: 				Number of nearest neighbors
+	:param step: 				Step size for embedding
+	:param theta: 				Localization parameter
+	:param exclusionRadius: 	Exclusion radius
+	:param solver: 				solver
+	:param embedded: 			Whether data is already embedded
+	:param validLib: 			Valid library indices
+	:param noTime: 				Whether to exclude time column
+	:param generateSteps: 		Number of generation steps
+	:param generateConcat: 		Whether to concatenate generated predictions
+	:param verbose: 			Print diagnostic messages
+	:param ignoreNan: 			Whether to ignore NaN values
+	:param returnObject: 		Whether to return SMap object instead of prediction dict
+	:return: Dictionary with predictions, coefficients, and singular values or SMap object
 	"""
 
 	# Instantiate SMapClass object
@@ -140,7 +170,7 @@ def FitSMap(data = None,
 		            'singularValues': S.SingularValues}
 		return SMapDict
 
-
+# TODO: mpMethod and sequential are redundant given the execution enum includes a sequential method
 def FitCCM(data = None,
            columns = None,
            target = None,
@@ -161,15 +191,30 @@ def FitCCM(data = None,
            sequential = False,
            verbose = False,
            returnObject = False):
-	"""Convergent Cross Mapping.
+	"""
+	Convergent Cross Mapping.
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or list of int or None
-		Target column index (defaults to column 1)
+	:param data: 				2D numpy array where column 0 is time
+	:param columns: 			Column indices to use (defaults to all except time)
+	:param target: 				Target column index (defaults to column 1)
+	:param trainSizes: 			Library sizes to evaluate
+	:param sample: 				Sample size for each library
+	:param embedDimensions: 	Embedding dimension
+	:param predictionHorizon: 	Prediction horizon
+	:param knn: 				Number of nearest neighbors
+	:param step: 				Step size for embedding
+	:param exclusionRadius: 	Exclusion radius
+	:param seed: 				Random seed
+	:param embedded: 			Whether data is already embedded
+	:param validLib: 			Valid library indices
+	:param includeData: 		Whether to include detailed prediction statistics
+	:param noTime: 				Whether to exclude time column
+	:param ignoreNan: 			Whether to ignore NaN values
+	:param mpMethod: 			Multiprocessing method
+	:param sequential: 			Whether to run sequentially
+	:param verbose: 			Print diagnostic messages
+	:param returnObject: 		Whether to return CCM object instead of libMeans
+	:return: Library means array or CCM object
 	"""
 
 	# Instantiate CCMClass object
@@ -232,15 +277,30 @@ def FitMultiview(data = None,
                  mpMethod = None,
                  chunksize = 1,
                  returnObject = False):
-	"""Multiview prediction
+	"""
+	Multiview prediction.
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
+	:param data: 				2D numpy array where column 0 is time
+	:param columns: 			Column indices to use (defaults to all except time)
+	:param target: 				Target column index (defaults to column 1)
+	:param train: 				Train indices [start, end]
+	:param test: 				Test indices [start, end]
+	:param D: 					State-space dimension
+	:param embedDimensions: 	Embedding dimension for each variable
+	:param predictionHorizon: 	Prediction horizon
+	:param knn: 				Number of nearest neighbors
+	:param step: 				Step size for embedding
+	:param multiview: 			Multiview parameter
+	:param exclusionRadius: 	Exclusion radius
+	:param trainLib: 			Whether to use training library
+	:param excludeTarget: 		Whether to exclude target from columns
+	:param ignoreNan: 			Whether to ignore NaN values
+	:param verbose: 			Print diagnostic messages
+	:param numProcess: 			Number of processes for multiprocessing
+	:param mpMethod: 			Multiprocessing method
+	:param chunksize: 			Chunk size for pool.starmap
+	:param returnObject: 		Whether to return Multiview object instead of prediction dict
+	:return: Dictionary with predictions and view rankings or Multiview object
 	"""
 
 	# Instantiate MultiviewClass object
@@ -289,19 +349,27 @@ def FindOptimalEmbeddingDimensionality(data = None,
                                        numProcess = 4,
                                        mpMethod = None,
                                        chunksize = 1, ):
-	"""Estimate optimal embedding dimension [1:maxE].
+	"""
+	Estimate optimal embedding dimension [1:maxE].
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (maxE, 2)
-		Column 0: E values, Column 1: correlation values
+	:param data: 				2D numpy array where column 0 is time
+	:param columns: 			Column indices to use (defaults to all except time)
+	:param target: 				Target column index (defaults to column 1)
+	:param maxE: 				Maximum embedding dimension to test
+	:param train: 				Train indices [start, end]
+	:param test: 				Test indices [start, end]
+	:param predictionHorizon: 	Prediction horizon
+	:param step: 				Step size for embedding
+	:param exclusionRadius: 	Exclusion radius
+	:param embedded: 			Whether data is already embedded
+	:param validLib: 			Valid library indices
+	:param noTime: 				Whether to exclude time column
+	:param ignoreNan: 			Whether to ignore NaN values
+	:param verbose: 			Print diagnostic messages
+	:param numProcess: 			Number of processes for multiprocessing
+	:param mpMethod: 			Multiprocessing method
+	:param chunksize: 			Chunk size for pool.starmap
+	:return: Array with columns [E, correlation]
 	"""
 
 	# Setup Pool
@@ -350,19 +418,27 @@ def FindOptimalPredictionHorizon(data = None,
                                  numProcess = 4,
                                  mpMethod = None,
                                  chunksize = 1, ):
-	"""Estimate optimal prediction interval [1:maxTp].
+	"""
+	Estimate optimal prediction interval [1:maxTp].
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (maxTp, 2)
-		Column 0: predictionHorizon values, Column 1: correlation values
+	:param data: 			2D numpy array where column 0 is time
+	:param columns: 		Column indices to use (defaults to all except time)
+	:param target: 			Target column index (defaults to column 1)
+	:param maxTp: 			Maximum prediction horizon to test
+	:param train: 			Train indices [start, end]
+	:param test: 			Test indices [start, end]
+	:param embedDimensions: Embedding dimension
+	:param step: 			Step size for embedding
+	:param exclusionRadius: Exclusion radius
+	:param embedded: 		Whether data is already embedded
+	:param validLib: 		Valid library indices
+	:param noTime: 			Whether to exclude time column
+	:param ignoreNan: 		Whether to ignore NaN values
+	:param verbose: 		Print diagnostic messages
+	:param numProcess: 		Number of processes for multiprocessing
+	:param mpMethod: 		Multiprocessing method
+	:param chunksize: 		Chunk size for pool.starmap
+	:return: Array with columns [predictionHorizon, correlation]
 	"""
 
 	# Setup Pool
@@ -414,20 +490,31 @@ def FindSMapNeighborhood(data = None,
                          numProcess = 4,
                          mpMethod = None,
                          chunksize = 1, ):
-	"""Estimate the best neighboorhood size for SMap, i.e. the
-	exponential decay factor for weighing neighbors by distance
+	"""
+	Estimate the best neighborhood size for SMap, i.e. the 
+	exponential decay factor for weighing neighbors by distance.
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
-	columns : list of int or None
-		Column indices to use (defaults to all except time)
-	target : int or None
-		Target column index (defaults to column 1)
-
-	Returns:
-	numpy.ndarray, shape (len(theta), 2)
-		Column 0: theta values, Column 1: correlation values
+	:param data: 				2D numpy array where column 0 is time
+	:param columns: 			Column indices to use (defaults to all except time)
+	:param target: 				Target column index (defaults to column 1)
+	:param theta: 				Theta values to test
+	:param train: 				Train indices [start, end]
+	:param test: 				Test indices [start, end]
+	:param embedDimensions: 	Embedding dimension
+	:param predictionHorizon: 	Prediction horizon
+	:param knn: 				Number of nearest neighbors
+	:param step: 				Step size for embedding
+	:param exclusionRadius: 	Exclusion radius
+	:param solver: 				SMap solver
+	:param embedded: 			Whether data is already embedded
+	:param validLib: 			Valid library indices
+	:param noTime: 				Whether to exclude time column
+	:param ignoreNan: 			Whether to ignore NaN values
+	:param verbose: 			Print diagnostic messages
+	:param numProcess: 			Number of processes for multiprocessing
+	:param mpMethod: 			Multiprocessing method
+	:param chunksize: 			Chunk size for pool.starmap
+	:return: Array with columns [theta, correlation]
 	"""
 
 	if theta is None:

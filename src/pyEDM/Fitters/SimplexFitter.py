@@ -35,38 +35,23 @@ class SimplexFitter(EDMFitter):
 		"""
 		Initialize Simplex wrapper with sklearn-style separate arrays.
 
-		Parameters
-		----------
-		XTrain : numpy.ndarray
-			Training feature data
-		YTrain : numpy.ndarray
-			Training target data
-		XTest : numpy.ndarray
-			Test feature data
-		YTest : numpy.ndarray
-			Test target data
-		Columns : list of int, optional
-			Column indices to use for embedding
-		Target : int, optional
-			Target column index
-		EmbedDimensions : int, default=0
-			Embedding dimension (E)
-		PredictionHorizon : int, default=1
-			Prediction time horizon (Tp)
-		KNN : int, default=0
-			Number of nearest neighbors
-		Step : int, default=-1
-			Time delay step size (tau)
-		ExclusionRadius : int, default=0
-			Temporal exclusion radius for neighbors
-		Embedded : bool, default=False
-			Whether data is already embedded
-		TrainTime : numpy.ndarray, optional
-			Time labels for train data
-		TestTime : numpy.ndarray, optional
-			Time labels for test data
-		Verbose : bool, default=False
-			Print diagnostic messages
+		:param XTrain: 				Training feature data
+		:param YTrain: 				Training target data
+		:param XTest: 				Test feature data
+		:param YTest: 				Test target data
+		:param TrainStart: 			Start index for train data
+		:param TrainEnd: 			End index for train data
+		:param TestStart: 			Start index for test data
+		:param TestEnd: 			End index for test data
+		:param EmbedDimensions: 	Embedding dimension (E)
+		:param PredictionHorizon: 	Prediction time horizon (Tp)
+		:param KNN: 				Number of nearest neighbors
+		:param Step: 				Time delay step size (tau)
+		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
+		:param Embedded: 			Whether data is already embedded
+		:param TrainTime: 			Time labels for train data
+		:param TestTime: 			Time labels for test data
+		:param Verbose: 			Print diagnostic messages
 		"""
 
 		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
@@ -86,10 +71,7 @@ class SimplexFitter(EDMFitter):
 		"""
 		Run Simplex prediction.
 
-		Returns
-		-------
-		SimplexResult
-			Prediction results
+		:return: Prediction results
 		"""
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()
