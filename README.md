@@ -22,7 +22,7 @@ Examples can be executed in the python command line:
 ```python
 import pyEDM.FunctionalExamples
 >> > import pyEDM
->> > pyEDM.Examples.Examples()
+>> > pyEDM.FunctionalExamples.Examples()
 ```
 
 ---

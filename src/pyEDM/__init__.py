@@ -1,9 +1,14 @@
 """Python tools for EDM"""
 from .Functions import FindOptimalEmbeddingDimensionality, FindOptimalPredictionHorizon, FindSMapNeighborhood
-# import EDM functions
-from .Functions import FitSimplex, FitSMap, FitCCM, FitMultiview
+
+# provide functional API
+from . import Functions
+# provide object-based API with train/test splits
+from . import Fitters
+
 from .Utils import PlotObsPred, PlotCoeff, ComputeError
-from .FunctionalExamples import Examples
+from .FunctionalExamples import FunctionalExamples
+from .FitterExamples import FitterExamples
 from .Utils import SurrogateData
 from .ExampleData import sampleData
 

@@ -1,12 +1,12 @@
 """
 Examples demonstrating the new wrapper classes with sklearn-like API.
 """
-from pyEDM.Fitters.CCMFitter import CCMFitter
-from pyEDM.ExampleData import sampleData
-from pyEDM.Fitters.MultiviewFitter import MultiviewFitter
-from pyEDM.Fitters.SMapFitter import SMapFitter
-from pyEDM.Fitters.SimplexFitter import SimplexFitter
-from pyEDM.Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm)
+from .Fitters.CCMFitter import CCMFitter
+from .ExampleData import sampleData
+from .Fitters.MultiviewFitter import MultiviewFitter
+from .Fitters.SMapFitter import SMapFitter
+from .Fitters.SimplexFitter import SimplexFitter
+from .Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm)
 
 
 def FitterExamples():

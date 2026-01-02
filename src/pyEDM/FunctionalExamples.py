@@ -2,8 +2,8 @@ import functools
 import inspect
 import numpy as np
 from .ExampleData import sampleData
-from pyEDM import Functions as EDM
-from pyEDM.Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm,
+from . import Functions as EDM
+from .Visualization import (plot_prediction, plot_smap_coefficients, plot_ccm,
                                  plot_embed_dimension, plot_predict_interval,
                                  plot_predict_nonlinear)
 
@@ -47,7 +47,7 @@ def print_call(func):
 	return wrapper
 
 
-def Examples():
+def FunctionalExamples():
 	"""Canonical EDM API examples using new Result objects and Visualization"""
 
 	EmbedDimension = print_call(EDM.FindOptimalEmbeddingDimensionality)

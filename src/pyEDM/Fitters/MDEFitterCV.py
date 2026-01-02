@@ -8,7 +8,7 @@ import numpy
 from pyEDM.EDM.MDECV import MDECV
 
 
-class MDECVWrapper:
+class MDEFitterCV:
 	"""
 	Wrapper class for MDECV that provides sklearn-like API.
 	"""

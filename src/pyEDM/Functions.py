@@ -7,13 +7,13 @@ from itertools import repeat
 from multiprocessing import get_context
 
 
-import pyEDM.EDM.PoolFunc as PoolFunc
 # local modules
+from .EDM import PoolFunc
 from .Utils import IsNonStringIterable
-from pyEDM.EDM.CCM import CCM
-from pyEDM.EDM.Multiview import Multiview
-from pyEDM.EDM.SMap import SMap
-from pyEDM.EDM.Simplex import Simplex
+from .EDM.CCM import CCM
+from .EDM.Multiview import Multiview
+from .EDM.SMap import SMap
+from .EDM.Simplex import Simplex
 
 
 def FitSimplex(data = None,
@@ -36,9 +36,9 @@ def FitSimplex(data = None,
                returnObject = False):
 	"""Simplex prediction.
 
-	Parameters:
-	data : numpy.ndarray, shape (n_samples, n_features)
-		2D numpy array where column 0 is time
+	:param data: 2D numpy array where column 0 is time
+	:param columns: Column indices to use for embedding (defaults to all except time)
+	:param target: Target column index (defaults to column 1)
 	columns : list of int or None
 		Column indices to use for embedding (defaults to all except time)
 	target : int or None
