@@ -318,9 +318,9 @@ class MDE:
 			Metric value (correlation or MAE)
 		"""
 		if self.metric == "correlation":
-			return result.compute_error()["correlation"]
+			return result.compute_error()
 		else:
-			return result.compute_error()["MAE"]
+			return result.compute_error("MAE")
 
 	def _get_remaining_variables(self) -> List[int]:
 		"""Get list of remaining columns to consider.
