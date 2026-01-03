@@ -45,7 +45,7 @@ class SimplexResult:
         """
         return self.projection[:, 2]
 
-    def compute_error(self, metric = None) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> float:
         """
         Compute prediction error statistics.
 
