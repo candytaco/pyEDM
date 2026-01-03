@@ -29,7 +29,7 @@ class EDMFitter:
 		:param TestTime: 	Time labels for test data
 		"""
 
-		self.DataAdapter = DataAdapter(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+		self.DataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
 									   trainTime = TrainTime, testTime = TestTime)
 
 	def GetEDMData(self) -> numpy.ndarray:
