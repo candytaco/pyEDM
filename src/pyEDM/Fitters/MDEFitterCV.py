@@ -1,13 +1,16 @@
 """
 MDECV wrapper for sklearn-like API.
 """
+from typing import Optional
 
 import numpy
 
+from .DataAdapter import DataAdapter
+from .EDMFitter import EDMFitter
 from ..EDM.MDECV import MDECV
 
 
-class MDEFitterCV:
+class MDEFitterCV(EDMFitter):
 	"""
 	Wrapper class for MDECV that provides sklearn-like API.
 	"""
@@ -32,7 +35,15 @@ class MDEFitterCV:
 				 ExclusionRadius: int = 0,
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
-				 Theta: float = 0.0):
+				 Theta: float = 0.0,
+
+				 TrainStart: int = 0,
+				 TrainEnd: int = 0,
+				 TestStart: int = 0,
+				 TestEnd: int = 0,
+				 TrainTime: Optional[numpy.ndarray] = None,
+				 TestTime: Optional[numpy.ndarray] = None,
+				 ):
 		"""
 		Initialize MDECV wrapper with sklearn-style separate arrays.
 
@@ -58,10 +69,9 @@ class MDEFitterCV:
 		:param Theta: 				S-Map localization parameter
 		"""
 
-		self.XTrain = XTrain
-		self.YTrain = YTrain
-		self.XTest = XTest
-		self.YTest = YTest
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime,
+						 TestTime = TestTime)
+
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget
 		self.Convergent = Convergent
@@ -80,6 +90,8 @@ class MDEFitterCV:
 		self.Theta = Theta
 
 		self.MDECV = None
+		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
+															None, None, TrainTime, None)
 
 	def Fit(self):
 		"""
@@ -88,9 +100,9 @@ class MDEFitterCV:
 		:return: Cross-validation results
 		"""
 		# Combine train data
-		TrainData = numpy.hstack([self.XTrain, self.YTrain])
+		TrainData = self.trainDataAdapter.fullData
 
-		Columns = list(range(0, self.XTrain.shape[0] - 1))
+		Columns = list(range(0, TrainData.shape[0] - 1))
 		Target = TrainData.shape[1] - 1
 
 		self.MDECV = MDECV(
