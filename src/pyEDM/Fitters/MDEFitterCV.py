@@ -91,7 +91,7 @@ class MDEFitterCV(EDMFitter):
 
 		self.MDECV = None
 		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
-															None, None, TrainTime, None)
+															0, 0, TrainTime, None)
 
 	def Fit(self):
 		"""
@@ -140,5 +140,5 @@ class MDEFitterCV(EDMFitter):
 			raise RuntimeError("Model not fitted. Call Fit() first.")
 
 		# Combine all data for prediction
-		TestData = numpy.hstack([self.XTest, self.YTest])
+		TestData = self.DataAdapter.TestData
 		return self.MDECV.predict(TestData)
