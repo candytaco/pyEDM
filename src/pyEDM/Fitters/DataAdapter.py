@@ -6,11 +6,141 @@ Provides bridge from modern SKLearn style to EDM single-array style.
 Note: the EDM-style API, when given indices along the time dimension, are stop-inclusive, which is
 Counter to the normal stop-exclusive indexing style in python
 """
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, override
 
 import numpy
 
 class DataAdapter:
+	"""
+	Base abstract data adapter class
+	"""
+
+	@staticmethod
+	def MakeDataAdapter(XTrain: [numpy.ndarray, List[numpy.ndarray]],
+						YTrain: [numpy.ndarray, List[numpy.ndarray]],
+						XTest: Optional[numpy.ndarray] = None,
+						YTest: Optional[numpy.ndarray] = None,
+						TrainStart = 0, TrainEnd = 0,
+						TestStart = 0, TestEnd = 0,
+						trainTime: Optional[numpy.ndarray] = None,
+						testTime: Optional[numpy.ndarray] = None) -> 'DataAdapter':
+		"""
+		Make a data adapter depending on whether we get a single or multiple train runs
+		:param XTrain: 		training features
+		:param XTest: 		testing features
+		:param YTrain: 		training value to predict, should be just a single column
+		:param YTest: 		testing value to predict, should be just a single column
+		:param TrainStart:	index at which to start the train data; used to provide history for the first train sample
+		:param TrainEnd:	number of additional data samples at end of train data to ignore
+		:param TestStart:	index at which to start the test data; used to provide history for the first test sample
+		:param TestEnd:		number of additional data samples at end of test data to ignore
+		:param trainTime: 	time labels for train data
+		:param testTime: 	time labels for test data
+		:return:
+		"""
+		if (type(XTrain) == numpy.ndarray):
+			return DataAdapterSingleRun(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+										trainTime, testTime)
+		elif (type(XTrain) == list):
+			return DataAdapterMultipleRuns(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
+										trainTime, testTime)
+		raise ValueError
+
+	def __init__(self,
+				 XTrain: [numpy.ndarray, List[numpy.ndarray]],
+				 YTrain: [numpy.ndarray, List[numpy.ndarray]],
+				 XTest: Optional[numpy.ndarray] = None,
+				 YTest: Optional[numpy.ndarray] = None,
+				 TrainStart = 0, TrainEnd = 0,
+				 TestStart = 0, TestEnd = 0,
+				 trainTime: Optional[numpy.ndarray] = None, testTime: Optional[numpy.ndarray] = None):
+		"""
+		Data adapter init
+		:param XTrain: 		training features
+		:param XTest: 		testing features
+		:param YTrain: 		training value to predict, should be just a single column
+		:param YTest: 		testing value to predict, should be just a single column
+		:param TrainStart:	index at which to start the train data; used to provide history for the first train sample
+		:param TrainEnd:	number of additional data samples at end of train data to ignore
+		:param TestStart:	index at which to start the test data; used to provide history for the first test sample
+		:param TestEnd:		number of additional data samples at end of test data to ignore
+		:param trainTime: 	time labels for train data
+		:param testTime: 	time labels for test data
+		"""
+		self.XTrain = XTrain
+		self.XTest = XTest
+		self.YTrain = YTrain
+		self.YTest = YTest
+		self.TrainStart = TrainStart
+		self.TrainEnd = TrainEnd
+		self.TestStart = TestStart
+		self.TestEnd = TestEnd
+		self.trainTime = trainTime
+		self.testTime = testTime
+		self.hasTime = False
+
+		self.trainOffset = None
+		self.testOffset = None
+
+		self.fullData = None
+
+		self.StackData()
+
+	def StackData(self):
+		"""
+		Function called to format the data into EDM style format
+		:return:
+		"""
+		raise NotImplementedError
+
+	@property
+	def HasTime(self) -> bool:
+		"""
+		Check if data has time column.
+
+		:return: True if data has time column
+		"""
+		return self.hasTime
+
+	@property
+	def TrainIndices(self) -> Tuple[int, int]:
+		"""
+		Get train indices for EDM.
+
+		:return: Train indices [start, end]
+		"""
+		raise NotImplementedError
+
+	@property
+	def TestIndices(self) -> Tuple[int, int]:
+		"""
+		Get test indices for EDM.
+
+		:return: Test indices [start, end]
+		:raises ValueError: if no test data
+		"""
+		raise NotImplementedError
+
+	@property
+	def XIndices(self) -> Tuple[int, int]:
+		"""
+		Indices for X variables. The end is Inclusive!
+
+		:return: X indices [start, end]
+		"""
+		raise NotImplementedError
+
+	@property
+	def YIndex(self) -> int:
+		"""
+		Index for Y variable, assumes we only do one.
+
+		:return: Y index
+		"""
+		raise NotImplementedError
+
+
+class DataAdapterSingleRun(DataAdapter):
 
 	def __init__(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: Optional[numpy.ndarray] = None,
 				 YTest: Optional[numpy.ndarray] = None, TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
@@ -29,31 +159,28 @@ class DataAdapter:
 		:param testTime: 	time labels for test data
 		"""
 
-		self.X_train = XTrain
-		self.X_test = XTest
-		self.Y_train = YTrain.squeeze()[:, None]
-		self.trainTime = trainTime
-		self.testTime = testTime
-		self.hasTime = False
-		if YTest is not None:
-			self.Y_test = YTest.squeeze()[:, None]
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, trainTime, testTime)
 
-		train = numpy.hstack([XTrain, YTrain])
-		self.trainOffset = TrainStart
-		self.trainEnd = TrainEnd
-		self.testOffset = TestStart + TrainStart + TrainEnd
-		self.testEnd = TestEnd
+	@override
+	def StackData(self):
+		self.YTrain = self.YTrain.squeeze()[:, None]
+		if self.YTest is not None:
+			self.YTest = self.YTest.squeeze()[:, None]
 
-		if YTest is not None:
-			test = numpy.hstack([XTest, YTest])
+		train = numpy.hstack([self.XTrain, self.YTrain])
+		self.trainOffset = self.TrainStart
+		self.testOffset = self.TestStart + self.TrainStart + self.TrainEnd
+
+		if self.YTest is not None:
+			test = numpy.hstack([self.XTest, self.YTest])
 			data = numpy.vstack([train, test])
 		else:
 			data = train
 
 		# add time if not none
-		if trainTime is not None:
+		if self.trainTime is not None:
 			self.trainTime = self.trainTime.squeeze()
-			if testTime is not None:
+			if self.testTime is not None:
 				self.testTime = self.testTime.squeeze()
 				time = numpy.concatenate([self.trainTime, self.testTime])
 			else:
@@ -64,51 +191,103 @@ class DataAdapter:
 		self.fullData = data
 
 	@property
-	def HasTime(self) -> bool:
-		"""
-		Check if data has time column.
-
-		:return: True if data has time column
-		"""
-		return self.hasTime
-
-	@property
+	@override
 	def TrainIndices(self) -> Tuple[int, int]:
-		"""
-		Get train indices for EDM.
-
-		:return: Train indices [start, end]
-		"""
 		# returning with 1 subtracted because EDM functions are stop-inclusive
-		return (self.trainOffset, self.X_train.shape[0] - 1 + self.trainOffset - self.trainEnd)
+		return (self.trainOffset, self.XTrain.shape[0] - 1 + self.trainOffset - self.TrainEnd)
 
 	@property
+	@override
 	def TestIndices(self) -> Tuple[int, int]:
-		"""
-		Get test indices for EDM.
-
-		:return: Test indices [start, end]
-		:raises ValueError: if no test data
-		"""
-		if self.Y_test is not None:
-			return (self.X_train.shape[0] + self.testOffset, self.fullData.shape[0] - 1 - self.testEnd)
+		if self.YTest is not None:
+			return (self.XTrain.shape[0] + self.testOffset, self.fullData.shape[0] - 1 - self.TestEnd)
 		else:
 			raise ValueError('No test data')
 
 	@property
+	@override
 	def XIndices(self) -> Tuple[int, int]:
-		"""
-		Indices for X variables. The end is Inclusive!
-
-		:return: X indices [start, end]
-		"""
-		return (0 + int(self.hasTime), self.X_train.shape[1] + int(self.hasTime) - 1)
+		return (0 + int(self.hasTime), self.XTrain.shape[1] + int(self.hasTime) - 1)
 
 	@property
 	def YIndex(self) -> int:
-		"""
-		Index for Y variable, assumes we only do one.
+		return self.fullData.shape[1] - 1
 
-		:return: Y index
-		"""
+
+class DataAdapterMultipleRuns(DataAdapter):
+	"""
+	A class that can take multiple train runs and adapt them to MDE code. Will specify separate
+	'lib' indices for each run such that there's no bleedover between the stacked runs.
+
+	Still takes only a single test run
+	"""
+	def __init__(self, XTrain: List[numpy.ndarray], YTrain: List[numpy.ndarray], XTest: Optional[numpy.ndarray] = None,
+				 YTest: Optional[numpy.ndarray] = None, TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
+				 trainTime: Optional[List[numpy.ndarray]] = None, testTime: Optional[numpy.ndarray] = None):
+		self.numRuns = len(XTrain)
+		self.trainIndices = []
+		self.testIndices = None
+		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, trainTime, testTime)
+
+	@override
+	def StackData(self):
+
+		if type(self.TrainStart) == int:	# one trainStart for all runs
+			self.TrainStart = [self.TrainStart] * self.numRuns
+		if type(self.TrainEnd) == int:
+			self.TrainEnd = [self.TrainEnd] * self.numRuns
+
+		trainRuns = []
+		for X, Y in zip(self.XTrain, self.YTrain):
+			trainRuns.append(numpy.hstack([X, Y.squeeze()[:, None]]))
+
+		# calculate indices for each run in the stacked data
+		n = 0
+		for i, run in enumerate(trainRuns):
+			start = n + self.TrainStart[i]
+			end = n + run.shape[0] - self.TrainEnd[i] - 1 # -1 beacuse EDM expected end-inclusive indices
+			self.trainIndices.append((start, end))
+			n += run.shape[0]
+
+		data = numpy.vstack(trainRuns)
+
+		# add test data if we have it
+		if self.YTest is not None:
+			test = numpy.hstack([self.XTest, self.YTest])
+			data = numpy.vstack([data, test])
+
+		start = n + self.TestStart
+		end = n + self.XTest.shape[0] - self.TestEnd - 1
+		self.testIndices = (start, end)
+
+		# add time if needed
+		if self.trainTime is not None:
+			time = numpy.concatenate([run.squeeze() for run in self.trainTime])
+			if self.testTime is not None:
+				time = numpy.concatenate([time, self.testTime.squeeze()])
+			data = numpy.hstack([time[:, None], time])
+			self.hasTime = True
+
+		self.fullData = data
+
+	@property
+	@override
+	def TrainIndices(self) -> List[Tuple[int, int]]:
+		return self.trainIndices
+
+	@property
+	@override
+	def TestIndices(self) -> Tuple[int, int]:
+		if self.YTest is not None:
+			return self.testIndices
+		else:
+			raise ValueError('No test data')
+
+	@property
+	@override
+	def XIndices(self) -> Tuple[int, int]:
+		return (0 + int(self.hasTime), self.XTrain[0].shape[1] + int(self.hasTime) - 1)
+
+	@property
+	def YIndex(self) -> int:
 		return self.fullData.shape[1] - 1
