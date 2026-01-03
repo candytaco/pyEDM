@@ -6,7 +6,7 @@ Provides bridge from modern SKLearn style to EDM single-array style.
 Note: the EDM-style API, when given indices along the time dimension, are stop-inclusive, which is
 Counter to the normal stop-exclusive indexing style in python
 """
-from typing import Optional, Tuple, List, override
+from typing import Optional, Tuple, List
 
 import numpy
 
@@ -84,7 +84,28 @@ class DataAdapter:
 
 		self.fullData = None
 
+		self.trainTestSplitIndex = None
+
 		self.StackData()
+
+	@property
+	def TrainData(self) -> numpy.ndarray:
+		"""
+		Get matrix for only the stacked train data
+		:return:
+		"""
+		return self.fullData[:self.trainTestSplitIndex, :]
+
+	@property
+	def TestData(self) -> numpy.ndarray:
+		"""
+		Get matrix only for the stacked test data
+		:return:
+		"""
+		if self.XTest is not None:
+			return self.fullData[self.trainTestSplitIndex, :]
+		else:
+			raise ValueError
 
 	def StackData(self):
 		"""
@@ -161,7 +182,6 @@ class DataAdapterSingleRun(DataAdapter):
 
 		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, trainTime, testTime)
 
-	@override
 	def StackData(self):
 		self.YTrain = self.YTrain.squeeze()[:, None]
 		if self.YTest is not None:
@@ -170,6 +190,8 @@ class DataAdapterSingleRun(DataAdapter):
 		train = numpy.hstack([self.XTrain, self.YTrain])
 		self.trainOffset = self.TrainStart
 		self.testOffset = self.TestStart + self.TrainStart + self.TrainEnd
+
+		self.trainTestSplitIndex = train.shape[0]
 
 		if self.YTest is not None:
 			test = numpy.hstack([self.XTest, self.YTest])
@@ -191,13 +213,11 @@ class DataAdapterSingleRun(DataAdapter):
 		self.fullData = data
 
 	@property
-	@override
 	def TrainIndices(self) -> Tuple[int, int]:
 		# returning with 1 subtracted because EDM functions are stop-inclusive
 		return (self.trainOffset, self.XTrain.shape[0] - 1 + self.trainOffset - self.TrainEnd)
 
 	@property
-	@override
 	def TestIndices(self) -> Tuple[int, int]:
 		if self.YTest is not None:
 			return (self.XTrain.shape[0] + self.testOffset, self.fullData.shape[0] - 1 - self.TestEnd)
@@ -205,7 +225,6 @@ class DataAdapterSingleRun(DataAdapter):
 			raise ValueError('No test data')
 
 	@property
-	@override
 	def XIndices(self) -> Tuple[int, int]:
 		return (0 + int(self.hasTime), self.XTrain.shape[1] + int(self.hasTime) - 1)
 
@@ -229,7 +248,6 @@ class DataAdapterMultipleRuns(DataAdapter):
 		self.testIndices = None
 		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, trainTime, testTime)
 
-	@override
 	def StackData(self):
 
 		if type(self.TrainStart) == int:	# one trainStart for all runs
@@ -250,6 +268,7 @@ class DataAdapterMultipleRuns(DataAdapter):
 			n += run.shape[0]
 
 		data = numpy.vstack(trainRuns)
+		self.trainIndices = data.shape[0]
 
 		# add test data if we have it
 		if self.YTest is not None:
@@ -271,12 +290,10 @@ class DataAdapterMultipleRuns(DataAdapter):
 		self.fullData = data
 
 	@property
-	@override
 	def TrainIndices(self) -> List[Tuple[int, int]]:
 		return self.trainIndices
 
 	@property
-	@override
 	def TestIndices(self) -> Tuple[int, int]:
 		if self.YTest is not None:
 			return self.testIndices
@@ -284,7 +301,6 @@ class DataAdapterMultipleRuns(DataAdapter):
 			raise ValueError('No test data')
 
 	@property
-	@override
 	def XIndices(self) -> Tuple[int, int]:
 		return (0 + int(self.hasTime), self.XTrain[0].shape[1] + int(self.hasTime) - 1)
 
