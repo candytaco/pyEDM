@@ -15,6 +15,7 @@ from cmath import exp
 from math import floor, pi, sqrt, cos
 from random import sample, uniform, normalvariate
 
+import numpy
 import numpy as np
 # package modules
 from numpy import absolute, any, arange, corrcoef, fft, isfinite
@@ -52,15 +53,15 @@ def ComputeError(actual, predicted, metric, digits = 6):
 		return { 'correlation' : nan, 'MAE' : nan, 'RMSE' : nan }
 
 	if metric is None:
-		return round(corrcoef(actual, predicted)[0,1], digits)
+		return numpy.nan_to_num(corrcoef(actual, predicted)[0,1])
 
 	err  = actual - predicted
 	if metric == 'MAE':
-		return round( max( err ), digits )
+		return max( err )
 	if metric == 'CAE':
-		return round( absolute( err ).sum(), digits )
+		return absolute( err ).sum()
 	if metric == 'RMSE':
-		return round( sqrt( mean( err**2 ) ), digits )
+		return sqrt( mean( err**2 ))
 
 	raise ValueError('Unknown metric {}'.format(metric))
 
