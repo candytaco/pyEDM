@@ -36,7 +36,7 @@ class MDEFitterCV(EDMFitter):
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
-
+				 nThreads: int = -1,
 				 TrainStart: int = 0,
 				 TrainEnd: int = 0,
 				 TestStart: int = 0,
@@ -88,6 +88,7 @@ class MDEFitterCV(EDMFitter):
 		self.Verbose = Verbose
 		self.UseSMap = UseSMap
 		self.Theta = Theta
+		self.nThreads = nThreads
 
 		self.MDECV = None
 		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
@@ -116,7 +117,7 @@ class MDEFitterCV(EDMFitter):
 			folds = self.Folds,
 			test_size = self.TestSize,
 			final_feature_mode = self.FinalFeatureMode,
-			columns = Columns,
+			columns = initialVariables,
 			embedDimensions = self.EmbedDimensions,
 			predictionHorizon = self.PredictionHorizon,
 			knn = self.KNN,
@@ -124,7 +125,8 @@ class MDEFitterCV(EDMFitter):
 			exclusionRadius = self.ExclusionRadius,
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
-			theta = self.Theta
+			theta = self.Theta,
+			nThreads = self.nThreads
 		)
 
 		self.MDECV.fit()

@@ -38,7 +38,8 @@ class MDEFitter(EDMFitter):
 				 TestTime: Optional[numpy.ndarray] = None,
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
-				 Theta: float = 0.0):
+				 Theta: float = 0.0,
+				 nThreads: int = -1):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
@@ -83,6 +84,7 @@ class MDEFitter(EDMFitter):
 		self.Verbose = Verbose
 		self.UseSMap = UseSMap
 		self.Theta = Theta
+		self.nThreads = nThreads
 
 		self.MDE = None
 
@@ -130,7 +132,8 @@ class MDEFitter(EDMFitter):
 			noTime = NoTime,
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
-			theta = self.Theta
+			theta = self.Theta,
+			nThreads = self.nThreads
 		)
 
 		return self.MDE.Run()
