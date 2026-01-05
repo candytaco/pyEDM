@@ -125,7 +125,8 @@ class MDEFitterCV(EDMFitter):
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
 			theta = self.Theta,
-			nThreads = self.nThreads
+			nThreads = self.nThreads,
+			noTime = not self.DataAdapter.HasTime
 		)
 
 		self.MDECV.fit()

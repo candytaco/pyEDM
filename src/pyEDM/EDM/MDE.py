@@ -160,9 +160,9 @@ class MDE:
 	def _select_features(self) -> None:
 		"""Perform iterative feature selection with parallel processing."""
 
-		# NOTE: difference from original: even if we use the Y to predict itself
-		# we don't include it in the list of variables that we select because of the conceptual differences
 		self.selectedVariables = []
+		if self.include_target:
+			self.selectedVariables.append(self.target)
 
 		# Initial prediction with either user-specified columns, or the target variable if
 		# user did not specify anything
@@ -332,13 +332,15 @@ class MDE:
 		list of int
 			List of column indices not yet selected
 		"""
-		all_columns = list(range(self.data.shape[1]))
+		all_columns = list(range(self.data.shape[1] - 1)) # ignore the Y var, which is the last column
 		excluded = []
+		if not self.noTime: # time is first column if true and we exclude that
+			excluded.append(0)
 		if not self.include_target:
 			excluded.append(self.target)
 		excluded += self.selectedVariables
 
-		return [c for c in all_columns if c not in excluded and c != 0]
+		return [c for c in all_columns if c not in excluded]# and c != 0]
 
 	def _check_convergence(self, column: int) -> Tuple[bool, float]:
 		"""Check convergence for a candidate feature.
