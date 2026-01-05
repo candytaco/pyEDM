@@ -94,7 +94,7 @@ class MDEFitterCV(EDMFitter):
 		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
 															0, 0, TrainTime, None)
 
-	def Fit(self):
+	def Fit(self, initialVariables = None):
 		"""
 		Fit MDECV model using cross-validation.
 
@@ -103,7 +103,6 @@ class MDEFitterCV(EDMFitter):
 		# Combine train data
 		TrainData = self.trainDataAdapter.fullData
 
-		Columns = list(range(0, TrainData.shape[0] - 1))
 		Target = TrainData.shape[1] - 1
 
 		self.MDECV = MDECV(
