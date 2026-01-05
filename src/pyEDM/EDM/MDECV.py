@@ -48,7 +48,8 @@ class MDECV:
 				 verbose=False,
 				 useSMap: bool = False,
 				 theta: float = 0.0,
-				 solver=None):
+				 solver=None,
+				 nThreads = -1):
 		"""Initialize MDECV with data and parameters.
 
 		Parameters
@@ -137,6 +138,7 @@ class MDECV:
 		self.useSMap = useSMap
 		self.theta = theta
 		self.solver = solver
+		self.nThreads = nThreads
 
 		# Cross-validation results
 		self.fold_results = []
@@ -170,7 +172,7 @@ class MDECV:
 		self.test_accuracy = [r.compute_error() for r in self.fold_results]
 		self.bestFold = numpy.argmax(self.test_accuracy)
 		self.best_fold_accuracy = self.test_accuracy[self.bestFold]
-		self.best_fold_features = self.fold_results[self.bestFold].selectedVariables
+		self.best_fold_features = self.fold_results[self.bestFold].selected_features
 
 	def fitSingleFold(self, train_data : numpy.ndarray, val_data: numpy.ndarray) -> MDEResult:
 		"""Process a single cross-validation fold.
@@ -214,7 +216,8 @@ class MDECV:
 			verbose = self.verbose,
 			useSMap = self.useSMap,
 			theta = self.theta,
-			solver = self.solver
+			solver = self.solver,
+			nThreads = self.nThreads
 		)
 
 		return mde.Run()

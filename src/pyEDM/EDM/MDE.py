@@ -48,7 +48,8 @@ class MDE:
 				 verbose=False,
 				 useSMap: bool = False,
 				 theta: float = 0.0,
-				 solver=None):
+				 solver=None,
+				 nThreads = -1):
 		"""Initialize MDE with data and parameters.
 
 		Parameters
@@ -125,6 +126,7 @@ class MDE:
 		self.useSMap = useSMap
 		self.theta = theta
 		self.solver = solver
+		self.nThreads = nThreads
 
 		# Initialize feature selection state
 		self.selectedVariables = []
@@ -158,14 +160,13 @@ class MDE:
 	def _select_features(self) -> None:
 		"""Perform iterative feature selection with parallel processing."""
 
-		# do we include Y in the predictors that we select?
-		if self.include_target:
-			self.selectedVariables = [self.target]
-		else:
-			self.selectedVariables = []
+		# NOTE: difference from original: even if we use the Y to predict itself
+		# we don't include it in the list of variables that we select because of the conceptual differences
+		self.selectedVariables = []
 
-		# Initial prediction
-		initial_result = self._run_edm(self.columns)
+		# Initial prediction with either user-specified columns, or the target variable if
+		# user did not specify anything
+		initial_result = self._run_edm(self.columns if self.columns is not None else [self.target])
 		score = self._compute_performance(initial_result)
 		self.accuracy.append(score)
 
@@ -182,11 +183,12 @@ class MDE:
 			]
 
 			# Evaluate correlation/MAE for each possible addition in parallel
-			batch_results = Parallel(n_jobs = -1)(
+			batch_results = Parallel(n_jobs = self.nThreads)(
 				delayed(self._evaluate_batch)(batch) for batch in batches
 			)
 
 			# Flatten results and sort
+			# NOTE: there's nothing about aborting if performance doesn't increase
 			metric_results = [item for sublist in batch_results for item in sublist]
 			metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
 
@@ -240,7 +242,7 @@ class MDE:
 
 		# TODO: this is quite suboptimal because:
 		#  1. the performance is calculated on each item rather than array broadcast
-		#  2. the EDM performance function calculates multiple metricx even though we only use one
+		#  2. each Simplex/SMap object redoes the entire validation, embedding, and index building
 		for var in batch:
 			thesePredictors = [var] + self.selectedVariables
 			result = self._run_edm(thesePredictors)
