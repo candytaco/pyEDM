@@ -15,15 +15,7 @@ class MultiviewFitter(EDMFitter):
 	"""
 
 	def __init__(self,
-				 XTrain: numpy.ndarray,
-				 YTrain: numpy.ndarray,
-				 XTest: numpy.ndarray,
-				 YTest: numpy.ndarray,
-				 D: int = 0,
-				 TrainStart: int = 0,
-				 TrainEnd: int = 0,
-				 TestStart: int = 0,
-				 TestEnd: int = 0,
+				 dimensions: int = 0,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -32,8 +24,6 @@ class MultiviewFitter(EDMFitter):
 				 ExclusionRadius: int = 0,
 				 TrainLib: bool = True,
 				 ExcludeTarget: bool = False,
-				 TrainTime: Optional[numpy.ndarray] = None,
-				 TestTime: Optional[numpy.ndarray] = None,
 				 Verbose: bool = False):
 		"""
 		Initialize Multiview wrapper with sklearn-style separate arrays.
@@ -42,7 +32,7 @@ class MultiviewFitter(EDMFitter):
 		:param YTrain: 			Training target data
 		:param XTest: 			Test feature data
 		:param YTest: 			Test target data
-		:param D: 				State-space dimension
+		:param dimensions: 		State-space dimension
 		:param TrainStart: 		Start index for train data
 		:param TrainEnd: 		Number of samples at end of train data to ignore
 		:param TestStart: 		Start index for test data
@@ -60,10 +50,9 @@ class MultiviewFitter(EDMFitter):
 		:param Verbose: 		Print diagnostic messages
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
-						 TrainTime = TrainTime, TestTime = TestTime)
+		super().__init__()
 
-		self.D = D
+		self.dimensions = dimensions
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
@@ -76,12 +65,11 @@ class MultiviewFitter(EDMFitter):
 
 		self.Multiview = None
 
-	def Run(self):
-		"""
-		Run Multiview prediction.
+	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0, TrainTime: Optional[numpy.ndarray] = None,
+			TestTime: Optional[numpy.ndarray] = None):
+		super().Fit(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime, TestTime)
 
-		:return: Multiview results
-		"""
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()
 		TestIndices = self.GetTestIndices()
@@ -97,7 +85,7 @@ class MultiviewFitter(EDMFitter):
 			target = Target,
 			train = TrainIndices,
 			test = TestIndices,
-			D = self.D,
+			D = self.dimensions,
 			embedDimensions = self.EmbedDimensions,
 			predictionHorizon = self.PredictionHorizon,
 			knn = self.KNN,

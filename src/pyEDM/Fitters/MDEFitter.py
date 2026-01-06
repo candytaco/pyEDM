@@ -14,14 +14,6 @@ class MDEFitter(EDMFitter):
 	"""
 
 	def __init__(self,
-				 XTrain: numpy.ndarray,
-				 YTrain: numpy.ndarray,
-				 XTest: numpy.ndarray,
-				 YTest: numpy.ndarray,
-				 TrainStart: int = 0,
-				 TrainEnd: int = 0,
-				 TestStart: int = 0,
-				 TestEnd: int = 0,
 				 MaxD: int = 5,
 				 IncludeTarget: bool = True,
 				 Convergent: bool = True,
@@ -34,8 +26,6 @@ class MDEFitter(EDMFitter):
 				 KNN: int = 0,
 				 Step: int = -1,
 				 ExclusionRadius: int = 0,
-				 TrainTime: Optional[numpy.ndarray] = None,
-				 TestTime: Optional[numpy.ndarray] = None,
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
@@ -66,8 +56,7 @@ class MDEFitter(EDMFitter):
 		:param Theta: 				S-Map localization parameter
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime,
-						 TestTime = TestTime)
+		super().__init__()
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget
@@ -88,12 +77,11 @@ class MDEFitter(EDMFitter):
 
 		self.MDE = None
 
-	def Run(self):
-		"""
-		Run MDE feature selection.
+	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0, TrainTime: Optional[numpy.ndarray] = None,
+			TestTime: Optional[numpy.ndarray] = None):
+		super().Fit(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime, TestTime)
 
-		:return: MDE results
-		"""
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()
 		TestIndices = self.GetTestIndices()
@@ -136,4 +124,5 @@ class MDEFitter(EDMFitter):
 			nThreads = self.nThreads
 		)
 
-		return self.MDE.Run()
+		self.Result = self.MDE.Run()
+		return self.Result

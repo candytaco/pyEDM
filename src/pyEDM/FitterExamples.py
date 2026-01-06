@@ -27,10 +27,6 @@ def FitterExamples():
 
 	# Create and run SimplexWrapper
 	simplexWrapper = SimplexFitter(
-		XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,
 		EmbedDimensions = 3,
 		PredictionHorizon = 1,
 		KNN = 0,
@@ -39,7 +35,10 @@ def FitterExamples():
 		Embedded = True
 	)
 
-	result = simplexWrapper.Run()
+	result = simplexWrapper.Fit(XTrain = XTrain,
+								YTrain = YTrain,
+								XTest = XTest,
+								YTest = YTest,)
 	plot_prediction(result.projection, "Simplex: block_3sp embedded", embedDimensions = 3)
 
 	# Example 2: SimplexWrapper with block_3sp data (embedded = False)
@@ -52,11 +51,6 @@ def FitterExamples():
 	YTest = data[100:191, [1]]  # Target column 1, rows 105-190
 
 	simplexWrapper2 = SimplexFitter(
-		XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,
-		TestStart = 5,	# the first 5 samples are to provide a history for the first real test sample
 		EmbedDimensions = 3,
 		PredictionHorizon = 1,
 		KNN = 0,
@@ -65,7 +59,12 @@ def FitterExamples():
 		Embedded = False,
 	)
 
-	result = simplexWrapper2.Run()
+	result = simplexWrapper2.Fit(XTrain = XTrain,
+								YTrain = YTrain,
+								XTest = XTest,
+								YTest = YTest,
+								TestStart = 5,	# the first 5 samples are to provide a history for the first real test sample
+								)
 	plot_prediction(result.projection, "Simplex: block_3sp", embedDimensions = 3)
 
 	# Example 3: MultiviewWrapper with block_3sp data
@@ -78,11 +77,7 @@ def FitterExamples():
 	YTest = data[101:199, [1]]  # Target column 1, rows 101-198
 
 	multiviewWrapper = MultiviewFitter(
-		XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,
-		D = 0,
+		dimensions = 0,
 		EmbedDimensions = 3,
 		PredictionHorizon = 1,
 		KNN = 0,
@@ -94,7 +89,10 @@ def FitterExamples():
 		Verbose = False
 	)
 
-	result = multiviewWrapper.Run()
+	result = multiviewWrapper.Fit(XTrain = XTrain,
+		YTrain = YTrain,
+		XTest = XTest,
+		YTest = YTest,)
 	plot_prediction(result.projection, "Multiview: block_3sp", embedDimensions = 3)
 
 	# Example 4: SMapWrapper with circle data
@@ -110,10 +108,6 @@ def FitterExamples():
 	# data beyond the end of the test data
 
 	smapWrapper = SMapFitter(
-		XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,
 		TestStart = 9,	# only use the 9:-10 entries of the test data because there's some sort of look-forward happening
 		TestEnd = 10,
 		EmbedDimensions = 2,
@@ -125,7 +119,10 @@ def FitterExamples():
 		Embedded = True,
 	)
 
-	result = smapWrapper.Run()
+	result = smapWrapper.Fit(XTrain = XTrain,
+		YTrain = YTrain,
+		XTest = XTest,
+		YTest = YTest,)
 	plot_prediction(result.projection, "SMap: circle", embedDimensions = 2)
 	plot_smap_coefficients(result.coefficients, "SMap Coefficients", embedDimensions = 2)
 
@@ -137,8 +134,6 @@ def FitterExamples():
 	YTrain = data[:, [4]]  # Target is same
 
 	ccmWrapper = CCMFitter(
-		XTrain = XTrain,
-		YTrain = YTrain,
 		TrainSizes = [10, 70, 10],
 		numRepeats = 50,
 		EmbedDimensions = 3,
@@ -146,5 +141,7 @@ def FitterExamples():
 		Verbose = False
 	)
 
-	result = ccmWrapper.Run()
+	result = ccmWrapper.Fit(
+		XTrain = XTrain,
+		YTrain = YTrain,)
 	plot_ccm(result, "CCM: sardine anchovy sst", embedDimensions = 3)

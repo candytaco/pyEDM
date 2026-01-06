@@ -17,8 +17,6 @@ class CCMFitter(EDMFitter):
 	"""
 
 	def __init__(self,
-				 XTrain: numpy.ndarray,
-				 YTrain: numpy.ndarray,
 				 TrainSizes: Optional[List[int]] = None,
 				 numRepeats: int = 0,
 				 EmbedDimensions: int = 0,
@@ -42,7 +40,7 @@ class CCMFitter(EDMFitter):
 		:param Verbose: 			Print diagnostic messages
 		"""
 
-		super().__init__(XTrain, YTrain, None, None, TrainTime = None, TestTime = None)
+		super().__init__()
 
 		self.TrainSizes = TrainSizes
 		self.Sample = numRepeats
@@ -55,12 +53,11 @@ class CCMFitter(EDMFitter):
 
 		self.CCM = None
 
-	def Run(self):
-		"""
-		Run CCM prediction.
+	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray = None, YTest: numpy.ndarray = None,
+			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0, TrainTime: Optional[numpy.ndarray] = None,
+			TestTime: Optional[numpy.ndarray] = None):
+		super().Fit(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime, TestTime)
 
-		:return: CCM results
-		"""
 		Data = self.GetEDMData()
 		NoTime = not self.HasTime()
 
@@ -87,4 +84,5 @@ class CCMFitter(EDMFitter):
 		self.CCM.RevMap.EmbedData()
 		self.CCM.RevMap.RemoveNan()
 
-		return self.CCM.Run()
+		self.Result = self.CCM.Run()
+		return self.Result

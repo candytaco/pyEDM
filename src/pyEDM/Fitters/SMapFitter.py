@@ -14,10 +14,6 @@ class SMapFitter(EDMFitter):
 	"""
 
 	def __init__(self,
-				 XTrain: numpy.ndarray,
-				 YTrain: numpy.ndarray,
-				 XTest: numpy.ndarray,
-				 YTest: numpy.ndarray,
 				 TrainStart: int = 0,
 				 TrainEnd: int = 0,
 				 TestStart: int = 0,
@@ -29,8 +25,6 @@ class SMapFitter(EDMFitter):
 				 Theta: float = 0.0,
 				 ExclusionRadius: int = 0,
 				 Embedded: bool = False,
-				 TrainTime: Optional[numpy.ndarray] = None,
-				 TestTime: Optional[numpy.ndarray] = None,
 				 Verbose: bool = False):
 		"""
 		Initialize SMap wrapper with sklearn-style separate arrays.
@@ -55,8 +49,7 @@ class SMapFitter(EDMFitter):
 		:param Verbose: 			Print diagnostic messages
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd,
-						 TrainTime = TrainTime, TestTime = TestTime)
+		super().__init__()
 
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
@@ -69,12 +62,11 @@ class SMapFitter(EDMFitter):
 
 		self.SMap = None
 
-	def Run(self):
-		"""
-		Run SMap prediction.
+	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0, TrainTime: Optional[numpy.ndarray] = None,
+			TestTime: Optional[numpy.ndarray] = None):
+		super().Fit(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime, TestTime)
 
-		:return: Prediction results
-		"""
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()
 		TestIndices = self.GetTestIndices()
@@ -102,4 +94,5 @@ class SMapFitter(EDMFitter):
 			embedded = self.Embedded
 		)
 
-		return self.SMap.Run()
+		self.Result = self.SMap.Run()
+		return self.Result

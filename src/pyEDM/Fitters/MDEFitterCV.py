@@ -1,7 +1,7 @@
 """
 MDECV wrapper for sklearn-like API.
 """
-from typing import Optional
+from typing import Optional, List
 
 import numpy
 
@@ -16,10 +16,6 @@ class MDEFitterCV(EDMFitter):
 	"""
 
 	def __init__(self,
-				 XTrain: numpy.ndarray,
-				 YTrain: numpy.ndarray,
-				 XTest: numpy.ndarray,
-				 YTest: numpy.ndarray,
 				 MaxD: int = 5,
 				 IncludeTarget: bool = True,
 				 Convergent: bool = True,
@@ -37,12 +33,6 @@ class MDEFitterCV(EDMFitter):
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
 				 nThreads: int = -1,
-				 TrainStart: int = 0,
-				 TrainEnd: int = 0,
-				 TestStart: int = 0,
-				 TestEnd: int = 0,
-				 TrainTime: Optional[numpy.ndarray] = None,
-				 TestTime: Optional[numpy.ndarray] = None,
 				 stdThreshold = 1e-2
 				 ):
 		"""
@@ -70,8 +60,7 @@ class MDEFitterCV(EDMFitter):
 		:param Theta: 				S-Map localization parameter
 		"""
 
-		super().__init__(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime = TrainTime,
-						 TestTime = TestTime)
+		super().__init__()
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget
@@ -94,16 +83,30 @@ class MDEFitterCV(EDMFitter):
 		self.stdThreshold = stdThreshold
 
 		self.MDECV = None
+		self.trainDataAdapter = None
+
+	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
+			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0, TrainTime: Optional[numpy.ndarray] = None,
+			TestTime: Optional[numpy.ndarray] = None, initialVariables: Optional[List[int]] = None):
+		"""
+		Fit
+		:param XTrain:
+		:param YTrain:
+		:param XTest:
+		:param YTest:
+		:param TrainStart:
+		:param TrainEnd:
+		:param TestStart:
+		:param TestEnd:
+		:param TrainTime:
+		:param TestTime:
+		:param initialVariables: 	initial columns to use
+		:return:
+		"""
+		super().Fit(XTrain, YTrain, XTest, YTest, TrainStart, TrainEnd, TestStart, TestEnd, TrainTime, TestTime)
 		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
 															0, 0, TrainTime, None)
 
-	def Fit(self, initialVariables = None):
-		"""
-		Fit MDECV model using cross-validation.
-
-		:return: Cross-validation results
-		"""
-		# Combine train data
 		TrainData = self.trainDataAdapter.fullData
 
 		Target = TrainData.shape[1] - 1
