@@ -284,6 +284,7 @@ class MDE:
 				ignoreNan = self.ignoreNan,
 				verbose = self.verbose
 			)
+			smap.knnThreads = 1
 			result = smap.Run()
 			return result
 		else:
@@ -304,6 +305,7 @@ class MDE:
 				ignoreNan = self.ignoreNan,
 				verbose = self.verbose
 			)
+			simplex.knnThreads = 1
 			return simplex.Run()
 
 	def _compute_performance(self, result: SimplexResult) -> float:

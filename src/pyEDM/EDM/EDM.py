@@ -25,6 +25,7 @@ class EDM:
 	"""
 
 	def __init__(self, data, isEmbedded = False, name = 'EDM'):
+		self.knnThreads = -1
 		self.predictionHorizon: int = None
 		self.embedStep: int = None
 		self.isEmbedded: bool = isEmbedded
@@ -173,10 +174,9 @@ class EDM:
 		# -----------------------------------------------
 		# Query prediction set
 		# -----------------------------------------------
-		numThreads = -1  # Use all CPU threads in kdTree.query
 		self.knn_distances, self.knn_neighbors = self.kdTree.query(
 			self.Embedding[self.testIndices, :],
-			k = knn_, eps = 0, p = 2, workers = numThreads)
+			k = knn_, eps = 0, p = 2, workers = self.knnThreads)
 
 		# -----------------------------------------------
 		# Shift knn_neighbors to lib_i reference

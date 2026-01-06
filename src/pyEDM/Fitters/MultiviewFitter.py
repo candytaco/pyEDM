@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy
 
-from pyEDM.EDM.Multiview import Multiview
+from ..EDM.Multiview import Multiview
 from .EDMFitter import EDMFitter
 
 
