@@ -28,15 +28,7 @@ class MultiviewFitter(EDMFitter):
 		"""
 		Initialize Multiview wrapper with sklearn-style separate arrays.
 
-		:param XTrain: 			Training feature data
-		:param YTrain: 			Training target data
-		:param XTest: 			Test feature data
-		:param YTest: 			Test target data
 		:param dimensions: 		State-space dimension
-		:param TrainStart: 		Start index for train data
-		:param TrainEnd: 		Number of samples at end of train data to ignore
-		:param TestStart: 		Start index for test data
-		:param TestEnd: 		Number of samples at end of test data to ignore
 		:param EmbedDimensions: Embedding dimension (E)
 		:param PredictionHorizon:	Prediction time horizon (Tp)
 		:param KNN: 			Number of nearest neighbors
@@ -45,8 +37,6 @@ class MultiviewFitter(EDMFitter):
 		:param ExclusionRadius: Temporal exclusion radius for neighbors
 		:param TrainLib: 		Evaluation strategy for ranking
 		:param ExcludeTarget: 	Whether to exclude target column
-		:param TrainTime: 		Time labels for train data
-		:param TestTime: 		Time labels for test data
 		:param Verbose: 		Print diagnostic messages
 		"""
 

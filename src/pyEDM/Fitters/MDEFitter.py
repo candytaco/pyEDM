@@ -33,10 +33,6 @@ class MDEFitter(EDMFitter):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
-		:param XTrain: 				Training feature data
-		:param YTrain: 				Training target data
-		:param XTest: 				Test feature data
-		:param YTest: 				Test target data
 		:param MaxD: 				Maximum number of features to select
 		:param IncludeTarget: 		Whether to start with target in feature list
 		:param Convergent: 			Whether to use convergence checking
@@ -49,8 +45,6 @@ class MDEFitter(EDMFitter):
 		:param KNN: 				Number of nearest neighbors
 		:param Step: 				Time delay step size (tau)
 		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
-		:param TrainTime: 			Time labels for train data
-		:param TestTime: 			Time labels for test data
 		:param Verbose: 			Print diagnostic messages
 		:param UseSMap: 			Whether to use SMap instead of Simplex
 		:param Theta: 				S-Map localization parameter

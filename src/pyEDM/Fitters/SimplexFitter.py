@@ -25,22 +25,12 @@ class SimplexFitter(EDMFitter):
 		"""
 		Initialize Simplex wrapper with sklearn-style separate arrays.
 
-		:param XTrain: 				Training feature data
-		:param YTrain: 				Training target data
-		:param XTest: 				Test feature data
-		:param YTest: 				Test target data
-		:param TrainStart: 			Start index for train data
-		:param TrainEnd: 			End index for train data
-		:param TestStart: 			Start index for test data
-		:param TestEnd: 			End index for test data
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
 		:param KNN: 				Number of nearest neighbors
 		:param Step: 				Time delay step size (tau)
 		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
 		:param Embedded: 			Whether data is already embedded
-		:param TrainTime: 			Time labels for train data
-		:param TestTime: 			Time labels for test data
 		:param Verbose: 			Print diagnostic messages
 		"""
 

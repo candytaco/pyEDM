@@ -28,8 +28,6 @@ class CCMFitter(EDMFitter):
 		"""
 		Init.
 
-		:param XTrain: 				1d timeseries of one variable
-		:param YTrain: 				1d timeseries of another variable
 		:param TrainSizes: 			train sizes to explore
 		:param numRepeats: 			Number of repeats at each training size
 		:param EmbedDimensions: 	Embedding dimension (E)
@@ -62,7 +60,7 @@ class CCMFitter(EDMFitter):
 		NoTime = not self.HasTime()
 
 		# Columns and target are hard-coded because
-		# we al;ways only have a single pair of things
+		# we always only have a single pair of things
 
 		self.CCM = CCM(
 			data = Data,

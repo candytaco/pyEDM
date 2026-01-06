@@ -38,10 +38,6 @@ class MDEFitterCV(EDMFitter):
 		"""
 		Initialize MDECV wrapper with sklearn-style separate arrays.
 
-		:param XTrain: 				Training feature data
-		:param YTrain: 				Training target data
-		:param XTest: 				Test feature data
-		:param YTest: 				Test target data
 		:param MaxD: 				Maximum number of features to select
 		:param IncludeTarget: 		Whether to start with target in feature list
 		:param Convergent: 			Whether to use convergence checking
@@ -58,6 +54,7 @@ class MDEFitterCV(EDMFitter):
 		:param Verbose: 			Print diagnostic messages
 		:param UseSMap: 			Whether to use SMap instead of Simplex
 		:param Theta: 				S-Map localization parameter
+		:param stdThreshold:		Stdev threshold below which to ignore variables
 		"""
 
 		super().__init__()
