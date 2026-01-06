@@ -132,10 +132,13 @@ class MDE:
 			self.nThreads = cpu_count()
 		self.stdThreshold = stdThreshold
 
+		self.rankings_ = None # performances of adding each variable at each iteration
+
 		# Initialize feature selection state
 		self.selectedVariables = []
 		self.accuracy = []
 		self.ccm_values = []
+		self.results_ = None
 
 	def Run(self) -> MDEResult:
 		"""Execute MDE feature selection and return results.
@@ -154,12 +157,14 @@ class MDE:
 		# Final training and testing
 		finalPrediction = self._final_prediction()
 
-		return MDEResult(
+		self.results_ = MDEResult(
 			final_forecast = finalPrediction,
 			selected_features = self.selectedVariables,
 			accuracy = self.accuracy,
-			ccm_values = self.ccm_values
+			ccm_values = self.ccm_values,
+			rankings = self.rankings_
 		)
+		return self.results_
 
 	def _select_features(self) -> None:
 		"""Perform iterative feature selection with parallel processing."""
@@ -193,17 +198,25 @@ class MDE:
 
 		# TODO: This can be much more optimal
 		# - the current thing uses kdtree, which gets suboptimal rapidly with increasing numbers of
-		#   selected variables
+		#   selected variables, the time is like O(n) to O(n log n) or something with n dims, not to mention
+		#	the overhead of building the trees each time
 		# - an optimal way is to
 		#		- use squared Euclidean distances and argsort
 		#		- and cache the distances based on the already selected variables
 		#		- and for each new search, add the distances from each candidate to the cached distance
+		#		- this is O(1) because we calculate the same same number of numbers per iteration
+		#		- in fact this should get slightly faster with each iteration because we check fewer variables
 		# - of course, this basically means re-writing a lot of the EDM code, but it would give
 		#	big big big speedups and allow for better iteration on data
 
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
-		while (len(self.selectedVariables) < self.maxD) and (len(remaining_variables) > 0):
+
+		# rankings is a numpy array because it's apparently more multithreading friendly
+		# than just storing the lists that come out?
+		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
+
+		for i in range(self.maxD):
 			# Break up remaining columns into parallel-friendly batches
 			batches = [
 				remaining_variables[i:(i + self.batch_size)]
@@ -219,6 +232,9 @@ class MDE:
 			# NOTE: there's nothing about aborting if performance doesn't increase
 			metric_results = [item for sublist in batch_results for item in sublist]
 			metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
+
+			r = numpy.array(metric_results)
+			self.rankings_[i, r[:, 0].astype(int)] = r[:, 1]
 
 			best_var = None
 			best_score = None

@@ -55,6 +55,11 @@ class EDM:
 		self.targetVecNan = False  # True if targetVec has nan : SMap only
 		self.time = None  # ndarray entire record numerically operable
 
+	# TODO: add option to use matrix math and cdist.
+	# the kdtree dimensionality is (Embedding Dimensions * Variables Used)
+	# so it blows up very quickly with MDE. It'll be much quicker to use
+	# vectorized matrix math and straight up calculate distances and argsort
+	# You can see it even just running the MDE code: each additional variable selected takes longer
 	def FindNeighbors(self):
 		# --------------------------------------------------------------------
 		"""

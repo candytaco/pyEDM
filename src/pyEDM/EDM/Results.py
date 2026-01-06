@@ -5,7 +5,7 @@ This module provides dataclasses for structured prediction results from differen
 """
 
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import numpy as np
 
 from ..Utils import ComputeError
@@ -231,11 +231,13 @@ class MDEResult:
     :param selected_features: Column indices of selected features
     :param accuracy: Correlation/MAE at each feature addition step
     :param ccm_values: CCM convergence values for selected features
+    :param rankings: ranking of adding each feature at each iteration
     """
     final_forecast: np.ndarray
     selected_features: List[int]
     accuracy: List[float]
     ccm_values: List[float]
+    rankings: List[Tuple[int, float]]
 
     @property
     def time(self) -> np.ndarray:
