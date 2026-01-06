@@ -10,7 +10,7 @@ from typing import List, Tuple
 
 import numpy
 from tqdm import tqdm as ProgressBar
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, cpu_count
 
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
@@ -49,7 +49,8 @@ class MDE:
 				 useSMap: bool = False,
 				 theta: float = 0.0,
 				 solver=None,
-				 nThreads = -1):
+				 nThreads = -1,
+				 stdThreshold: float = 1e-3):
 		"""Initialize MDE with data and parameters.
 
 		Parameters
@@ -127,6 +128,9 @@ class MDE:
 		self.theta = theta
 		self.solver = solver
 		self.nThreads = nThreads
+		if self.nThreads < 1:
+			self.nThreads = cpu_count()
+		self.stdThreshold = stdThreshold
 
 		# Initialize feature selection state
 		self.selectedVariables = []
@@ -169,14 +173,33 @@ class MDE:
 		initial_result = self._run_edm(self.columns if self.columns is not None else [self.target])
 		score = self._compute_performance(initial_result)
 		self.accuracy.append(score)
+		
+		all_columns = list(range(self.data.shape[1] - 1)) # ignore the Y var, which is the last column
+		# ignore all variables with stdev less than threshold
+		excluded = numpy.argwhere(numpy.std(self.data, axis = 0) < self.stdThreshold).squeeze().tolist()
+		if not self.noTime: # time is first column if true and we exclude that
+			excluded.append(0)
+		if not self.include_target:
+			excluded.append(self.target)
+		excluded += self.selectedVariables
 
-		# Build the list of possible variables to check
-		remaining_variables = self._get_remaining_variables()
+		remaining_variables = [c for c in all_columns if c not in excluded]
 
 		# make batch size smaller if we have lots of threads
 		jobsPerThread = int(len(remaining_variables) / self.nThreads)
 		if jobsPerThread < self.batch_size:
 			self.batch_size = jobsPerThread
+
+
+		# TODO: This can be much more optimal
+		# - the current thing uses kdtree, which gets suboptimal rapidly with increasing numbers of
+		#   selected variables
+		# - an optimal way is to
+		#		- use squared Euclidean distances and argsort
+		#		- and cache the distances based on the already selected variables
+		#		- and for each new search, add the distances from each candidate to the cached distance
+		# - of course, this basically means re-writing a lot of the EDM code, but it would give
+		#	big big big speedups and allow for better iteration on data
 
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
@@ -330,24 +353,6 @@ class MDE:
 			return result.compute_error()
 		else:
 			return result.compute_error("MAE")
-
-	def _get_remaining_variables(self) -> List[int]:
-		"""Get list of remaining columns to consider.
-
-		Returns
-		-------
-		list of int
-			List of column indices not yet selected
-		"""
-		all_columns = list(range(self.data.shape[1] - 1)) # ignore the Y var, which is the last column
-		excluded = []
-		if not self.noTime: # time is first column if true and we exclude that
-			excluded.append(0)
-		if not self.include_target:
-			excluded.append(self.target)
-		excluded += self.selectedVariables
-
-		return [c for c in all_columns if c not in excluded]# and c != 0]
 
 	def _check_convergence(self, column: int) -> Tuple[bool, float]:
 		"""Check convergence for a candidate feature.

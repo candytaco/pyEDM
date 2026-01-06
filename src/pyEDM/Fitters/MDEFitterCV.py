@@ -43,6 +43,7 @@ class MDEFitterCV(EDMFitter):
 				 TestEnd: int = 0,
 				 TrainTime: Optional[numpy.ndarray] = None,
 				 TestTime: Optional[numpy.ndarray] = None,
+				 stdThreshold = 1e-2
 				 ):
 		"""
 		Initialize MDECV wrapper with sklearn-style separate arrays.
@@ -90,6 +91,8 @@ class MDEFitterCV(EDMFitter):
 		self.Theta = Theta
 		self.nThreads = nThreads
 
+		self.stdThreshold = stdThreshold
+
 		self.MDECV = None
 		self.trainDataAdapter = DataAdapter.MakeDataAdapter(XTrain, YTrain, None, None, TrainStart, TrainEnd,
 															0, 0, TrainTime, None)
@@ -126,7 +129,8 @@ class MDEFitterCV(EDMFitter):
 			useSMap = self.UseSMap,
 			theta = self.Theta,
 			nThreads = self.nThreads,
-			noTime = not self.DataAdapter.HasTime
+			noTime = not self.DataAdapter.HasTime,
+			stdThreshold = self.stdThreshold
 		)
 
 		self.MDECV.fit()

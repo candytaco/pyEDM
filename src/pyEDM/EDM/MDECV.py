@@ -49,7 +49,8 @@ class MDECV:
 				 useSMap: bool = False,
 				 theta: float = 0.0,
 				 solver=None,
-				 nThreads = -1):
+				 nThreads = -1,
+				 stdThreshold = 1e-2):
 		"""Initialize MDECV with data and parameters.
 
 		Parameters
@@ -140,8 +141,10 @@ class MDECV:
 		self.solver = solver
 		self.nThreads = nThreads
 
+		self.stdThreshold = stdThreshold
+
 		# Cross-validation results
-		self.fold_results = []
+		self.fold_results: List[MDEResult] = []
 		self.test_accuracy = []
 		self.bestFold = None
 		self.best_fold_features = None
@@ -217,7 +220,8 @@ class MDECV:
 			useSMap = self.useSMap,
 			theta = self.theta,
 			solver = self.solver,
-			nThreads = self.nThreads
+			nThreads = self.nThreads,
+			stdThreshold = self.stdThreshold
 		)
 
 		return mde.Run()
@@ -288,7 +292,7 @@ class MDECV:
 		"""
 		all_features = []
 		for result in self.fold_results:
-			all_features.extend(result.selectedVariables)
+			all_features.extend(result.selected_features)
 
 		# Count frequency of each feature
 		feature_counts = {}
