@@ -173,6 +173,11 @@ class MDE:
 		# Build the list of possible variables to check
 		remaining_variables = self._get_remaining_variables()
 
+		# make batch size smaller if we have lots of threads
+		jobsPerThread = int(len(remaining_variables) / self.nThreads)
+		if jobsPerThread < self.batch_size:
+			self.batch_size = jobsPerThread
+
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
 		while (len(self.selectedVariables) < self.maxD) and (len(remaining_variables) > 0):
