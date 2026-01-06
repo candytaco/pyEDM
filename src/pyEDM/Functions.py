@@ -222,7 +222,7 @@ def FitCCM(data: numpy.ndarray,
 	# Instantiate CCMClass object
 	C = CCM(data = data,
 			columns = columns,
-			target = target,
+			target = [target],
 			trainSizes = trainSizes,
 			sample = sample,
 			embedDimensions = embedDimensions,

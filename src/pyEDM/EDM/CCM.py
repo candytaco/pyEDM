@@ -2,6 +2,7 @@
 from multiprocessing import get_context
 
 # package modules
+import numpy
 from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros, column_stack
 from numpy.random import default_rng
 
@@ -177,11 +178,9 @@ class CCM:
 
 		# Create libMeans array: shape (n_lib_sizes, 3)
 		# Column 0: LibSize, Column 1: Fwd correlation, Column 2: Rev correlation
-		lib_sizes = array(list(FwdCM['libcorrelation'].keys()))
-		fwd_correlations = array(list(FwdCM['libcorrelation'].values()))
-		rev_correlations = array(list(RevCM['libcorrelation'].values()))
-
-		self.libMeans = column_stack([lib_sizes, fwd_correlations, rev_correlations])
+		self.libMeans = numpy.zeros([len(self.trainSizes), 3])
+		for i, size in enumerate(self.trainSizes):
+			self.libMeans[i, :] = [size, FwdCM['libcorrelation'][size], RevCM['libcorrelation'][size]]
 
 		if self.includeData:
 			FwdCMStats = FwdCM['predictStats']  # key libSize : list of CE dicts
