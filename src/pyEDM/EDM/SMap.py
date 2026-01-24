@@ -1,6 +1,7 @@
 # python modules
 
 # package modules
+import numpy
 from numpy import apply_along_axis, insert, isnan, isfinite, exp
 from numpy import column_stack
 from numpy import full, linspace, mean, nan, power, sum, array
@@ -375,7 +376,7 @@ class SMap(EDM):
                 print( 'G.Projection' )
                 print( G.Projection ); print()
 
-            newPrediction = G.Projection[:, 2]  # Column 2 is Predictions
+            newPrediction = G.Projection[-1, 2]  # Column 2 is Predictions
             newTime       = G.Projection[-1, 0]  # Column 0 is time
 
             # 2) Save prediction in generated --------------------------
@@ -424,7 +425,7 @@ class SMap(EDM):
             # Result: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             timeName = 0  # Column 0 is time
             data_obs = column_stack([self.Data[:, timeName], self.Data[:, column]])
-            self.Projection = column_stack([data_obs, generated[:, 2:4]])
+            self.Projection = numpy.vstack([data_obs, generated[0, [0, 2]]])
 
         else :
             self.Projection = generated

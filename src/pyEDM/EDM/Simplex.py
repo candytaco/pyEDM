@@ -1,4 +1,4 @@
-
+import numpy
 # python modules
 
 # package modules
@@ -147,7 +147,6 @@ class Simplex(EDM):
         knn_neighbors_Tp = self.knn_neighbors + self.predictionHorizon     # N x k
         libTargetValues = self.targetVec[knn_neighbors_Tp].squeeze()
 
-
         # Projection is average of weighted knn library target values
         self.projection = sum(weights * libTargetValues, axis=1) / weightRowSum
 
@@ -287,8 +286,8 @@ class Simplex(EDM):
             # Generated: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             # Result: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             timeName = 0  # Column 0 is time
-            data_obs = column_stack([self.Data[:, timeName], self.Data[:, column]])
-            self.Projection = column_stack([data_obs, generated[:, 2:4]])
+            data_obs = column_stack([self.Data[:, timeName], self.Data[:, target]])
+            self.Projection = numpy.vstack([data_obs, generated[0, [0, 2]]])
 
         else :
             self.Projection = generated

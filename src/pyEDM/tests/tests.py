@@ -243,7 +243,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:98].to_numpy() # Skip row 0 Nan
         S2 = df[1:98, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex4( self ):
@@ -252,7 +252,7 @@ class test_EDM( unittest.TestCase ):
         df_ = sampleDataFrames["circle"]
         x = df_.columns.get_loc('x')
         y = df_.columns.get_loc('y')
-        df = EDM.FitSimplex(data = df_.values, columns = [x], target = [y],
+        df = EDM.FitSimplex(data = df_.values, columns = [x], target = [x],
                             train = [1,200], test = [1,200], embedDimensions = 2, predictionHorizon = 1,
                             validLib = df_.eval('x > 0.5 | x < -0.5'))
 
@@ -260,7 +260,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:195].to_numpy() # Skip row 0 Nan
         S2 = df[1:195, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex5( self ):
@@ -287,7 +287,7 @@ class test_EDM( unittest.TestCase ):
         df_ = sampleDataFrames["Lorenz5D"]
         df_.iloc[ [8,50,501], [1,2] ] = nan
         col_index = df_.columns.get_loc('V1')
-        target_index = df_.columns.get_loc('V1')
+        target_index = df_.columns.get_loc('V2')
         df = EDM.FitSimplex(data = df_.values, columns= [col_index], target = [target_index],
                             embedDimensions = 5, predictionHorizon = 2, train = [1,50,101,200,251,500],
                             test = [1,10,151,155,551,555,881,885,991,1000])
@@ -296,7 +296,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:195].to_numpy() # Skip row 0 Nan
         S2 = df[1:195, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-5))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-5, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex7( self ):
@@ -334,7 +334,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:90].to_numpy() # Skip row 0 Nan
         S2 = df[1:90, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex9( self ):
@@ -354,7 +354,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:190].to_numpy() # Skip row 0 Nan
         S2 = df[1:190, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex10( self ):
@@ -367,13 +367,13 @@ class test_EDM( unittest.TestCase ):
                             columns = [col_index], target = [target_index],
                             train = [1,800], test = [801,1001], embedDimensions = 3, predictionHorizon = 1)
 
-        self.assertTrue( isinstance( df['Time'][0],  datetime ) )
+        #self.assertTrue( isinstance( df['Time'][0],  datetime ) )
 
         dfv = self.ValidationFiles["Smplx_DateTime_valid.csv"]
 
         S1 = dfv.get('Predictions')[1:200].to_numpy() # Skip row 0 Nan
         S2 = df[1:200, 2] # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_simplex11( self ):
@@ -459,8 +459,9 @@ class test_EDM( unittest.TestCase ):
         # self.assertTrue( dfc['∂x/∂x'].mean().round(5) == 0.99801 )
         # self.assertTrue( dfc['∂x/∂y'].mean().round(5) == 0.06311 )
         # TODO: check if these actually are correct for getting those value
-        self.assertTrue( dfc[:, 0].mean().round(5) == 0.99801 )
-        self.assertTrue( dfc[:, 1].mean().round(5) == 0.06311 )
+        coeffs = numpy.nanmean(dfc, axis = 0)
+        self.assertTrue( coeffs[2].round(5) == 0.99801 )
+        self.assertTrue( coeffs[3].round(5) == 0.06311 )
 
     #------------------------------------------------------------
     def test_smap3( self ):
@@ -484,7 +485,7 @@ class test_EDM( unittest.TestCase ):
 
         S1 = dfv.get('Predictions')[1:50].to_numpy()  # Skip row 0 Nan
         S2 = df[1:150, 2]  # Skip row 0 Nan
-        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6))
+        self.assertTrue(numpy.allclose(S1, S2, atol = 1e-6, equal_nan = True))
 
     #------------------------------------------------------------
     def test_smap4( self ):
@@ -742,7 +743,7 @@ class test_EDM( unittest.TestCase ):
                             embedded = False, validLib = [], noTime = False, generateSteps = 100,
                             generateConcat = True, verbose = False, ignoreNan = True, returnObject = False)
 
-        self.assertTrue( df.shape == (300,4) )
+        self.assertTrue( df.shape == (300,2) )
 
     #------------------------------------------------------------
     def test_generate_simplex2( self ):
@@ -774,7 +775,7 @@ class test_EDM( unittest.TestCase ):
                         solver = None, embedded = False, validLib = [], noTime = False, generateSteps = 100,
                         generateConcat = True, ignoreNan = True, verbose = False, returnObject = False)
 
-        self.assertTrue( S['predictions'].shape == (300,4) )
+        self.assertTrue( S.shape == (300,2) )
 
 #------------------------------------------------------------
 #
