@@ -21,6 +21,7 @@ class MDEFitter(EDMFitter):
 				 BatchSize: int = 1000,
 				 Columns: Optional[List[int]] = None,
 				 Target: Optional[int] = None,
+				 Embed: bool = False,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -40,6 +41,7 @@ class MDEFitter(EDMFitter):
 		:param BatchSize: 			Number of features to process in each batch
 		:param Columns: 			Column indices to use for embedding
 		:param Target: 				Target column index
+		:param Embde:				whether to embed the data or not
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
 		:param KNN: 				Number of nearest neighbors
@@ -68,6 +70,7 @@ class MDEFitter(EDMFitter):
 		self.UseSMap = UseSMap
 		self.Theta = Theta
 		self.nThreads = nThreads
+		self.Embed = Embed
 
 		self.MDE = None
 
@@ -106,6 +109,7 @@ class MDEFitter(EDMFitter):
 			columns = Columns,
 			train = TrainIndices,
 			test = TestIndices,
+			embedded = not self.Embed,
 			embedDimensions = self.EmbedDimensions,
 			predictionHorizon = self.PredictionHorizon,
 			knn = self.KNN,

@@ -192,7 +192,8 @@ def FitCCM(data: numpy.ndarray,
 		   mpMethod: Any = None,
 		   sequential: bool = False,
 		   verbose: bool = False,
-		   returnObject: bool = False) -> Union[Dict[str, Any], CCM]:
+		   returnObject: bool = False,
+		   kdTree: bool = True) -> Union[Dict[str, Any], CCM]:
 	"""
 	Convergent Cross Mapping.
 
@@ -216,6 +217,7 @@ def FitCCM(data: numpy.ndarray,
 	:param sequential: 			Whether to run sequentially
 	:param verbose: 			Print diagnostic messages
 	:param returnObject: 		Whether to return CCM object instead of libMeans
+	:param kdTree:				Use kdtree for neighbors
 	:return: Library means array or CCM object
 	"""
 
@@ -238,7 +240,8 @@ def FitCCM(data: numpy.ndarray,
 			ignoreNan = ignoreNan,
 			mpMethod = mpMethod,
 			sequential = sequential,
-			verbose = verbose)
+			verbose = verbose,
+			kdTree = kdTree)
 
 	# Embedding of Forward & Reverse mapping
 	C.FwdMap.EmbedData()

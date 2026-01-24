@@ -24,6 +24,7 @@ class MDEFitterCV(EDMFitter):
 				 Folds: int = 5,
 				 TestSize: float = 0.2,
 				 FinalFeatureMode: str = "best_fold",
+				 Embed: bool = False,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
 				 KNN: int = 0,
@@ -46,6 +47,7 @@ class MDEFitterCV(EDMFitter):
 		:param Folds: 				Number of cross-validation folds
 		:param TestSize: 			Proportion of data to use for test set
 		:param FinalFeatureMode: 	Method for selecting final features
+		:param Embed:				Whether to embed the data
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
 		:param KNN: 				Number of nearest neighbors
@@ -76,6 +78,7 @@ class MDEFitterCV(EDMFitter):
 		self.UseSMap = UseSMap
 		self.Theta = Theta
 		self.nThreads = nThreads
+		self.embed = Embed
 
 		self.stdThreshold = stdThreshold
 
@@ -117,6 +120,7 @@ class MDEFitterCV(EDMFitter):
 			metric = self.Metric,
 			batch_size = self.BatchSize,
 			folds = self.Folds,
+			embedded = not self.embed,
 			test_size = self.TestSize,
 			final_feature_mode = self.FinalFeatureMode,
 			columns = initialVariables,
