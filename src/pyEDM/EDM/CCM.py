@@ -247,11 +247,8 @@ class CCM:
 		libcorrelationMap = {}  # Output dict libSize key : mean correlation value
 		libStatMap = {}  # Output dict libSize key : list of ComputeError dicts
 
-		# TODO: this can be matrix vectorized - if we keep the total distance matrix then we can just mask and argsort
-		distances = None
 		if not self.kdtree:
 			S.FindNeighbors()
-			distances = S.neighborFinder.distanceMatrix.copy()
 
 		# Loop for library sizes
 		for libSize in self.trainSizes:
@@ -271,9 +268,9 @@ class CCM:
 					neighbor_distances = S.knn_distances
 					neighbor_indices = S.knn_neighbors
 				else:
-					rng_i = RNG.choice(numpy.arange(distances.shape[0]), size = min(libSize, N_lib_i),
+					rng_i = RNG.choice(numpy.arange(S.neighborFinder.distanceMatrix.shape[0]), size = min(libSize, N_lib_i),
 									   replace = False)
-					d = distances.copy()
+					d = S.neighborFinder.distanceMatrix.copy()
 					mask = numpy.ones(d.shape[0], dtype = bool)
 					mask[rng_i] = False
 					d[mask, :] = numpy.inf # artificially make all the other ones far awa
