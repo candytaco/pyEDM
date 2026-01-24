@@ -193,7 +193,7 @@ def FitCCM(data: numpy.ndarray,
 		   sequential: bool = False,
 		   verbose: bool = False,
 		   returnObject: bool = False,
-		   kdTree: bool = True) -> Union[Dict[str, Any], CCM]:
+		   kdTree: bool = False) -> Union[Dict[str, Any], CCM]:
 	"""
 	Convergent Cross Mapping.
 
