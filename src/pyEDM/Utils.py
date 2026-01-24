@@ -50,7 +50,7 @@ def ComputeError(actual, predicted, metric, digits = 6):
 		msg = f'ComputeError(): Not enough data ({len(predicted)}) to ' +\
 			   ' compute error statistics.'
 		print( msg )
-		return { 'correlation' : nan, 'MAE' : nan, 'RMSE' : nan }
+		return None
 
 	if metric is None:
 		return numpy.nan_to_num(corrcoef(actual, predicted)[0,1])

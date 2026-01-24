@@ -57,6 +57,7 @@ class EDM:
 
 		self.KDTree = False			# use KDTree? if false, use matrix neighbor finder
 		self.neighborFinder = None
+		self.requery = False
 		
 		self._exclusion = None
 		self._knn = None
@@ -130,13 +131,13 @@ class EDM:
 
 		self.CheckValidTrainSamples()
 
-		if (self.neighborFinder is None) or (not requery):
+		if (self.neighborFinder is None) or (not self.requery):
 			if self.KDTree:
 				self.neighborFinder = KDTreeNeighborFinder(self.Embedding[self.trainIndices, :])
 			else:
 				self.neighborFinder = PairwiseDistanceNeighborFinder(self.Embedding[self.trainIndices, :])
 
-		if requery:
+		if requery or self.requery:
 			# this only should occur if a neighborfinder was given to this object
 			# here solely to accomodate for repeated evaluations in CCM
 			# there's probably a smarter way to do it but needs a lot of refactoring

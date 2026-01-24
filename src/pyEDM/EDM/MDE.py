@@ -12,6 +12,7 @@ import numpy
 from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed, cpu_count
 
+from .NeighborFinder import PairwiseDistanceNeighborFinder
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
@@ -133,12 +134,16 @@ class MDE:
 		self.stdThreshold = stdThreshold
 
 		self.rankings_ = None # performances of adding each variable at each iteration
+		self.all_distances = None
+		self.current_best_distance_matrix = None
 
 		# Initialize feature selection state
 		self.selectedVariables = []
 		self.accuracy = []
 		self.ccm_values = []
 		self.results_ = None
+		self.trainData = None
+		self.testData = None
 
 	def Run(self) -> MDEResult:
 		"""Execute MDE feature selection and return results.
@@ -172,9 +177,29 @@ class MDE:
 		self.selectedVariables = []
 		if self.include_target:
 			self.selectedVariables.append(self.target)
+		#
+		# we use this to correctly get indices for calculating the distance tensor
+		dummy = Simplex(
+			data = self.data,
+			columns = numpy.arange(self.data.shape[1]).tolist(),
+			target = self.target,
+			train = self.train,
+			test = self.test,
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = self.predictionHorizon,
+			knn = self.knn,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			noTime = self.noTime,
+			ignoreNan = self.ignoreNan,
+			verbose = self.verbose
+		)
+		dummy.EmbedData()
+		self.trainData = dummy.Embedding[dummy.trainIndices, :]
+		self.testData = dummy.Embedding[dummy.testIndices, :]
 
-		# Initial prediction with either user-specified columns, or the target variable if
-		# user did not specify anything
 		initial_result = self._run_edm(self.columns if self.columns is not None else [self.target])
 		score = self._compute_performance(initial_result)
 		self.accuracy.append(score)
@@ -202,12 +227,17 @@ class MDE:
 		#	the overhead of building the trees each time
 		# - an optimal way is to
 		#		- use squared Euclidean distances and argsort
-		#		- and cache the distances based on the already selected variables
-		#		- and for each new search, add the distances from each candidate to the cached distance
+		#		- precompute distance matrices based on each feature
+		#		- this would be basically a bunch of outer products
+		#			- result = A[:, np.newaxis, :] - B[np.newaxis, :, :]
+		#			- then each var will be the last dimension in result
+		#		- and for each new search, add just add the distances based on indexing
 		#		- this is O(1) because we calculate the same same number of numbers per iteration
 		#		- in fact this should get slightly faster with each iteration because we check fewer variables
 		# - of course, this basically means re-writing a lot of the EDM code, but it would give
 		#	big big big speedups and allow for better iteration on data
+
+
 
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
@@ -215,6 +245,8 @@ class MDE:
 		# rankings is a numpy array because it's apparently more multithreading friendly
 		# than just storing the lists that come out?
 		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
+
+		self.current_best_distance_matrix = None
 
 		for i in range(self.maxD):
 			# Break up remaining columns into parallel-friendly batches
@@ -264,6 +296,16 @@ class MDE:
 				self.selectedVariables.append(best_var)
 				remaining_variables.remove(best_var)
 				self.accuracy.append(best_score)
+
+				# calc distance matrix update
+				train = self.trainData[:, best_var]
+				test = self.testData[:, best_var]
+				distances = numpy.subtract.outer(train, test)
+				distances **= 2
+				if self.current_best_distance_matrix is None:
+					self.current_best_distance_matrix = distances
+				else:
+					self.current_best_distance_matrix += distances
 				progressBar.update(1)
 			else:
 				# No more valid candidates
@@ -307,6 +349,16 @@ class MDE:
 		SimplexResult or SMapResult
 			Prediction results
 		"""
+		# distance matrix
+		# the new one to be added is always the first one in the list
+		var = variables[0]
+		train = self.trainData[:, var]
+		test = self.testData[:, var]
+		distances = numpy.subtract.outer(train, test)
+		distances **= 2
+		if self.current_best_distance_matrix is not None:
+			distances += self.current_best_distance_matrix
+
 		# Run prediction
 		if self.useSMap:
 			smap = SMap(
@@ -349,8 +401,19 @@ class MDE:
 				ignoreNan = self.ignoreNan,
 				verbose = self.verbose
 			)
-			simplex.knnThreads = 1
-			return simplex.Run()
+			simplex.EmbedData()
+			simplex.RemoveNan()
+			neighborFinder = PairwiseDistanceNeighborFinder(None)
+			neighborFinder.distanceMatrix = distances
+			neighborFinder.numNeighbors = simplex.knn_
+			knn_distances, knn_neighbors = neighborFinder.requery()
+			simplex.knn_distances, simplex.knn_neighbors = simplex.MapKNNIndicesToData(knn_neighbors, knn_distances)
+			simplex.Project()
+			simplex.FormatProjection()
+			res = SimplexResult(projection = simplex.Projection,
+								embedDimensions = 0,
+								predictionHorizon = 0)
+			return res
 
 	def _compute_performance(self, result: SimplexResult) -> float:
 		"""Compute optimization metric from prediction result.
