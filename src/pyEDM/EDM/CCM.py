@@ -10,6 +10,7 @@ from ..Utils import ComputeError, IsNonStringIterable
 # local modules
 from .Simplex import Simplex as SimplexClass
 from .Results import CCMResult
+from .NeighborFinder import PairwiseDistanceNeighborFinder
 
 
 # ------------------------------------------------------------
@@ -37,7 +38,8 @@ class CCM:
 				 ignoreNan = True,
 				 mpMethod = None,
 				 sequential = False,
-				 verbose = False):
+				 verbose = False,
+				 kdTree: bool = True):
 		"""
 		Initialize CCM.
 
@@ -60,6 +62,7 @@ class CCM:
 		:param mpMethod: 			Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER). If None, uses platform default
 		:param sequential: 			Use sequential execution instead of multiprocessing
 		:param verbose: 			Print diagnostic messages
+		:param kdTree:				use KDTree for neighbors? Else use pairwise distances
 		"""
 
 		# Assign parameters directly
@@ -96,6 +99,8 @@ class CCM:
 		self.PredictStats1 = None  # DataFrame of CrossMap stats
 		self.PredictStats2 = None  # DataFrame of CrossMap stats
 
+		self.kdtree = kdTree
+
 		# Setup
 		self.Validate()  # CCM Method
 
@@ -115,6 +120,7 @@ class CCM:
 								   noTime = noTime,
 								   ignoreNan = ignoreNan,
 								   verbose = verbose)
+		self.FwdMap.KDTree = kdTree
 
 		# For reverse map, swap columns and target
 		self.RevMap = SimplexClass(data = data,
@@ -132,6 +138,7 @@ class CCM:
 								   noTime = noTime,
 								   ignoreNan = ignoreNan,
 								   verbose = verbose)
+		self.RevMap.KDTree = kdTree
 
 	# -------------------------------------------------------------------
 	# Methods
@@ -162,12 +169,12 @@ class CCM:
 			print(f'{self.name}: Project()')
 
 		if self.sequential:  # Sequential alternative to multiprocessing
-			FwdCM = self.CrossMap('FWD')
-			RevCM = self.CrossMap('REV')
+			FwdCM = self.CrossMap(False)
+			RevCM = self.CrossMap(True)
 			self.CrossMapList = [FwdCM, RevCM]
 		else:
 			# multiprocessing Pool CrossMap both directions simultaneously
-			poolArgs = ['FWD', 'REV']
+			poolArgs = [False, True]
 			mpContext = get_context(self.mpMethod)
 			with mpContext.Pool(processes = 2) as pool:
 				CrossMapList = pool.map(self.CrossMap, poolArgs)
@@ -218,22 +225,17 @@ class CCM:
 	# -------------------------------------------------------------------
 	#
 	# -------------------------------------------------------------------
-	def CrossMap(self, direction):
+	def CrossMap(self, reverse: bool = False):
 		"""
 		Perform cross-mapping in specified direction
 
-		:param direction: Direction of cross-mapping ('FWD' or 'REV')
+		:param reverse: do reverse direction?
 		:return: Dictionary containing cross-mapping results
 		"""
 		if self.verbose:
 			print(f'{self.name}: CrossMap()')
 
-		if direction == 'FWD':
-			S = self.FwdMap
-		elif direction == 'REV':
-			S = self.RevMap
-		else:
-			raise RuntimeError(f'{self.name}: CrossMap() Invalid Map')
+		S = self.RevMap if reverse else self.FwdMap
 
 		# Create random number generator : None sets random state from OS
 		RNG = default_rng(self.seed)
@@ -245,6 +247,12 @@ class CCM:
 		libcorrelationMap = {}  # Output dict libSize key : mean correlation value
 		libStatMap = {}  # Output dict libSize key : list of ComputeError dicts
 
+		# TODO: this can be matrix vectorized - if we keep the total distance matrix then we can just mask and argsort
+		distances = None
+		if not self.kdtree:
+			S.FindNeighbors()
+			distances = S.neighborFinder.distanceMatrix.copy()
+
 		# Loop for library sizes
 		for libSize in self.trainSizes:
 			correlations = zeros(self.sample)
@@ -253,27 +261,38 @@ class CCM:
 
 			# Loop for subsamples
 			for s in range(self.sample):
-				# Generate library row indices for this subsample
-				rng_i = RNG.choice(lib_i, size = min(libSize, N_lib_i),
-								   replace = False)
+				if self.kdtree:
+					# Generate library row indices for this subsample
+					rng_i = RNG.choice(lib_i, size = min(libSize, N_lib_i),
+									   replace = False)
 
-				S.trainIndices = rng_i
-
-				S.FindNeighbors()  # Depends on S.lib_i
+					S.trainIndices = rng_i
+					S.FindNeighbors()  # Depends on S.lib_i
+					neighbor_distances = S.knn_distances
+					neighbor_indices = S.knn_neighbors
+				else:
+					rng_i = RNG.choice(numpy.arange(distances.shape[0]), size = min(libSize, N_lib_i),
+									   replace = False)
+					d = distances.copy()
+					mask = numpy.ones(d.shape[0], dtype = bool)
+					mask[rng_i] = False
+					d[mask, :] = numpy.inf # artificially make all the other ones far awa
+					raw_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn_)
+					neighbor_distances, neighbor_indices = S.MapKNNIndicesToData(raw_indices, raw_distances)
 
 				# Code from Simplex:Project ---------------------------------
 				# First column is minimum distance of all N test rows
-				minDistances = S.knn_distances[:, 0]
+				minDistances = neighbor_distances[:, 0]
 				# In case there is 0 in minDistances: minWeight = 1E-6
 				minDistances = fmax(minDistances, 1E-6)
 
 				# Divide each column of N x k knn_distances by minDistances
-				scaledDistances = divide(S.knn_distances, minDistances[:, None])
+				scaledDistances = divide(neighbor_distances, minDistances[:, None])
 				weights = exp(-scaledDistances)  # Npred x k
 				weightRowSum = sum(weights, axis = 1)  # Npred x 1
 
 				# Matrix of knn_neighbors + predictionHorizon defines library target values
-				knn_neighbors_Tp = S.knn_neighbors + self.predictionHorizon  # Npred x k
+				knn_neighbors_Tp = neighbor_indices + self.predictionHorizon  # Npred x k
 
 				libTargetValues = zeros(knn_neighbors_Tp.shape)  # Npred x k
 				for j in range(knn_neighbors_Tp.shape[1]):
