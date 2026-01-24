@@ -13,6 +13,10 @@ def main():
     """Test sklearn.linear_model solvers"""
 
     circle = EDM.sampleData['circle']
+    data = circle.values
+    col_index1 = circle.columns.get_loc('x')
+    col_index2 = circle.columns.get_loc('y')
+    target_index = circle.columns.get_loc('x')
 
     lmSolvers = {
         'SVD'              : None,
@@ -21,7 +25,7 @@ def main():
         'Ridge'            : Ridge( alpha = 0.05 ),
         'Lasso'            : Lasso( alpha = 0.005 ),
         'Lars'             : Lars(),
-        'LassoLars'        : LassoLars( alpha = 0.005 ),        
+        'LassoLars'        : LassoLars( alpha = 0.005 ),
         'ElasticNet'       : ElasticNet( alpha = 0.001, l1_ratio = 0.001 ),
         'RidgeCV'          : RidgeCV(),
         'LassoCV'          : LassoCV( cv = 5 ),
@@ -32,10 +36,12 @@ def main():
 
     for solverName in lmSolvers.keys() :
         print( solverName )
-        result = EDM.FitSMap(dataFrame = circle, columns = "x y", target = "x",
+        result = EDM.FitSMap(data = data, columns = [col_index1, col_index2], target = target_index,
                              train = [1, 100], test = [101, 198],
-                             embedded = True, E = 2, theta = 3.14,
-                             solver = lmSolvers[ solverName ], showPlot = True)
+                             embedded = True, embedDimensions = 2, predictionHorizon = 1, knn = 0, step = -1,
+                             theta = 3.14, exclusionRadius = 0,
+                             solver = lmSolvers[ solverName ], validLib = [], noTime = False, generateSteps = 0,
+                             generateConcat = False, ignoreNan = True, verbose = False, returnObject = False)
         smapResults[ solverName ] =  result
 
 #------------------------------------------------------------
