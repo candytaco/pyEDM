@@ -349,7 +349,7 @@ class SMap(EDM):
 
             # Local SMapClass for generation
             G = SMap(data = newData,
-                     columns         = column,
+                     columns         = [column],
                      target          = target,
                      train             = train,
                      test            = test,

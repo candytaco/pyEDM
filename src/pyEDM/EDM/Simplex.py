@@ -228,7 +228,7 @@ class Simplex(EDM):
 
             # Local SimplexClass for generation
             G = Simplex(data = newData,
-                        columns         = column,
+                        columns         = [column],
                         target          = target,
                         train             = train,
                         test            = test,
@@ -252,7 +252,7 @@ class Simplex(EDM):
                 print( '1) G.Projection' )
                 print( G.Projection ); print()
 
-            newPrediction = G.Projection[:, 2]  # Column 2 is Predictions
+            newPrediction = G.Projection[-1, 2]  # Column 2 is Predictions
             newTime       = G.Projection[-1, 0]  # Column 0 is time
 
             # 2) Save prediction in generated --------------------------
