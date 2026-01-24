@@ -39,7 +39,7 @@ class CCM:
 				 mpMethod = None,
 				 sequential = False,
 				 verbose = False,
-				 kdTree: bool = True):
+				 kdTree: bool = False):
 		"""
 		Initialize CCM.
 

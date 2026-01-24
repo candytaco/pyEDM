@@ -55,7 +55,7 @@ class EDM:
 		self.targetVecNan = False  # True if targetVec has nan : SMap only
 		self.time = None  # ndarray entire record numerically operable
 
-		self.KDTree = True			# use KDTree? if false, use matrix neighbor finder
+		self.KDTree = False			# use KDTree? if false, use matrix neighbor finder
 		self.neighborFinder = None
 		
 		self._exclusion = None
