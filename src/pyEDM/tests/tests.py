@@ -363,7 +363,12 @@ class test_EDM( unittest.TestCase ):
         df_ = sampleDataFrames["SumFlow_1980-2005"]
         col_index = df_.columns.get_loc('S12.C.D.S333')
         target_index = df_.columns.get_loc('S12.C.D.S333')
-        df = EDM.FitSimplex(data = df_.values,
+
+        # covert time to numerical values
+        time = numpy.array([datetime.strptime(t, '%Y-%m-%d').timestamp() for t in df_['Date']])
+        data = numpy.column_stack([time, df_.values[:, 1]])
+
+        df = EDM.FitSimplex(data = data,
                             columns = [col_index], target = [target_index],
                             train = [1,800], test = [801,1001], embedDimensions = 3, predictionHorizon = 1)
 
@@ -775,7 +780,7 @@ class test_EDM( unittest.TestCase ):
                         solver = None, embedded = False, validLib = [], noTime = False, generateSteps = 100,
                         generateConcat = True, ignoreNan = True, verbose = False, returnObject = False)
 
-        self.assertTrue( S.shape == (300,2) )
+        self.assertTrue( S['predictions'].shape == (300,2) )
 
 #------------------------------------------------------------
 #

@@ -287,7 +287,7 @@ class Simplex(EDM):
             # Result: columns 0 (time), 1 (obs), 2 (test), 3 (var)
             timeName = 0  # Column 0 is time
             data_obs = column_stack([self.Data[:, timeName], self.Data[:, target]])
-            self.Projection = numpy.vstack([data_obs, generated[0, [0, 2]]])
+            self.Projection = numpy.vstack([data_obs, generated[:, [0, 2]]])
 
         else :
             self.Projection = generated
