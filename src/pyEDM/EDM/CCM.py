@@ -291,10 +291,7 @@ class CCM:
 				# Matrix of knn_neighbors + predictionHorizon defines library target values
 				knn_neighbors_Tp = neighbor_indices + self.predictionHorizon  # Npred x k
 
-				libTargetValues = zeros(knn_neighbors_Tp.shape)  # Npred x k
-				for j in range(knn_neighbors_Tp.shape[1]):
-					libTargetValues[:, j][:, None] = \
-						S.targetVec[knn_neighbors_Tp[:, j]]
+				libTargetValues = self.targetVec[knn_neighbors_Tp].squeeze()
 				# Code from Simplex:Project ----------------------------------
 
 				# Projection is average of weighted knn library target values
