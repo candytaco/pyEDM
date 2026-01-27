@@ -9,6 +9,7 @@ or S-Map predictions with parallel processing.
 from typing import List, Tuple
 
 import numpy
+import numba
 from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed, cpu_count
 
@@ -16,6 +17,42 @@ from .NeighborFinder import PairwiseDistanceNeighborFinder
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
+
+@numba.jit(nopython = True, parallel = True)
+def elementwise_pairwise_distance(a, b):
+	"""
+	Pairwise square euclidean distances between elements of a and b
+	along every dimension. Basically an outer subtract.
+	:param a:	[n1 x dims] array 1
+	:param b:	[n2 x dims] array 2
+	:return:	[n1 x n2 x dims] sq euclid distance along every dim
+	"""
+	n1 = a.shape[0]
+	n2 = b.shape[0]
+	dims = a.shape[1]
+	out = numpy.zeros([n1, n2, dims])
+	for v in numba.prange(dims):
+		out[:, :, v] = numpy.subtract.outer(a[:, v], b[:, v])
+	out **= 2
+	return out
+
+@numba.jit(nopython = True, parallel = True)
+def increment_pairwise_distance(distances, increments, out):
+	"""
+	For a set of pairwise distances, increment each slice by the same amount
+	i.e. a 2D array broadcast
+	:param distances: 	[n1 x n2 x dims] set of pairwise distances
+	:param increments: 	[n1 x n2] increments
+	:param out: 		[n1 x n2 x dims] array to write into
+	:return:
+	"""
+	dims = distances.shape[1]
+	for v in numba.prange(dims):
+		out[:, :, v] = distances[:, :, v] + increments
+
+@numba.jit(nopython = True, parallel = True)
+def k_nearest_neighbors(distances, k):
+	return numpy.argsort(distances, axis = 0)[:k, :, :]
 
 
 class MDE:
