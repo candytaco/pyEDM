@@ -234,8 +234,51 @@ class MDE:
 		#		- and for each new search, add just add the distances based on indexing
 		#		- this is O(1) because we calculate the same same number of numbers per iteration
 		#		- in fact this should get slightly faster with each iteration because we check fewer variables
-		# - of course, this basically means re-writing a lot of the EDM code, but it would give
-		#	big big big speedups and allow for better iteration on data
+		# - We can further speed things up by breaking the prediction logic out of the Simplex (and SMap) classes
+		# 	because they are matrix maths. We would probably use numexpr or numba to speed up the matrix additions
+		#	and neighbor findings, and then do the predictions all in one go
+
+		# as an intermediate step we can compute all the neighbors, and then use the joblib threading to spread
+		# them across threads, and manually fix all the simplex/smap objects with the neighbors and only have them
+		# predict and score
+
+		"""
+		Here's a outline for matrix-izing basically all of this.
+		Train X: M samples x F features
+		Train Y: M samples x 1
+		Test X: N samples x F features
+		Test Y: N samples x 1
+		
+		[numba parallel]
+		for each feature k we calculate the pairwise distance between the train and test samples to create
+		distances: M x N x F
+		
+		best distance: M x N distance matrix : this is accumulated over iterations
+		
+		on each iteration we have:
+		[numba parallel]
+		candidate distances M x N x F = distances + best distance (broadcast add over K)
+		find k nearest neighbors in M for each N in each F
+		indices: k x N x F
+		
+		[numba parallel]
+		weight matrix: M x N x F -- a sparse matrix in which only the k entries for each N x F slice are non-zero
+			these weights are determined by the simplex or smap algorithms.
+			these weights the best way to use train M samples to predict the test N samples
+		
+		[possibly numba parallel]
+		vector-tensor multiply Train Y with weight matrix to produce predictions N x F
+		for numpy.matmul the notes say:
+			If either argument is N-D, N > 2, it is treated as a stack of matrices residing in the last two indexes and broadcast accordingly.
+		predictions: N x F : Y_hat if we include each F into the picture
+		
+		broadcast correlate Y with predictions to produce
+		performance: 1 x F 
+		find best feature f		
+		store candidate distance [:, :, best feature] into best distances
+		
+		repeat until satisfied
+		"""
 
 
 
