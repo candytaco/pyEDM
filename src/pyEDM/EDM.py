@@ -526,9 +526,6 @@ class EDM:
         NeighborFinders returns knn referenced to embedding.iloc[self.lib_i,:]
         where returned knn_neighbors are indexed from 0 : len( lib_i ).
         """
-        if self.knn == 1 and not self.libOverlap:
-            raw_distances = raw_distances[:, None]
-            raw_neighbors = raw_neighbors[:, None]
 
             # Step 1: Map KDTree indices to actual data indices
         knn_neighbors = self.map_knn_indices_to_library_indices(raw_neighbors)
@@ -561,20 +558,7 @@ class EDM:
         if not self.disjointLib and \
                 self.lib_i[-1] - self.lib_i[0] + 1 == len(self.lib_i):
             return raw_neighbors + self.lib_i[0]
-
-        # Handle disjoint library or CCM subset
-        knn_lib_map = {i: self.lib_i[i] for i in range(len(self.lib_i))}
-
-        def knnMapFunc(knn):
-            """Maps KDTree indices to library indices"""
-            return array([knn_lib_map[idx] for idx in knn], dtype = int)
-
-        knn_neighbors_ = zeros(raw_neighbors.shape, dtype = int)
-        for j in range(raw_neighbors.shape[1]):
-            knn_neighbors_[:, j] = knnMapFunc(raw_neighbors[:, j])
-
-        return knn_neighbors_
-
+        return np.array(self.lib_i[raw_neighbors]).astype(int)
 
     def _remove_degenerate_neighbors(self, knn_neighbors, knn_distances):
         """
@@ -675,29 +659,29 @@ class EDM:
         n_pred = len(self.pred_i)
         n_lib = len(self.lib_i)
         mask = np.zeros((n_lib, n_pred), dtype = bool)
-        if not self.libOverlap and not self.CheckExclusion:
+        if not self.libOverlap and not self.exclusionRadius_knn:
             return mask
     
         # Initialize mask: False = include neighbor
     
         # Build index lookup for library
-        lib_index_map = {index: i for i, index in enumerate(self.lib_i)}
-    
+        lib_index_map = {data_index: mask_index for mask_index, data_index in enumerate(self.lib_i)}
+
         for i, pred_index in enumerate(self.pred_i):
-            # Handle degenerate neighbors (leave-one-out)
-            if self.libOverlap and pred_index in lib_index_map:
-                lib_pos = lib_index_map[pred_index]
-                mask[lib_pos, i] = True
-    
+            # remove self from neighbor map
+            if pred_index in self.lib_i:
+                mask_pos = lib_index_map[pred_index]
+                mask[mask_pos, i] = True
+
             # Handle exclusion radius
-            if self.CheckExclusion:
+            if self.exclusionRadius_knn:
                 rowLow = max(np.min(self.lib_i), pred_index - self.exclusionRadius)
                 rowHi = min(np.max(self.lib_i), pred_index + self.exclusionRadius)
-    
+
                 # Mark all library indices in exclusion window
-                for lib_i, lib_idx in enumerate(self.lib_i):
+                for j, lib_idx in enumerate(self.lib_i):
                     if rowLow <= lib_idx <= rowHi:
-                        mask[lib_i, i] = True
+                        mask[j, i] = True
     
         return mask
 
@@ -748,7 +732,7 @@ class EDM:
                                                         compact_nodes = True,
                                                         balanced_tree = True)
         elif self.neighbor_algorithm == 'pdist':
-            self.neighbor_finder = PairwiseDistanceNeighborFinder(self.Embedding.iloc[self.lib_i, :].to_numpy())
+            self.neighbor_finder = PairwiseDistanceNeighborFinder(train, exclusion = self._build_exclusion_mask())
         else:
             raise ValueError('Unknown neighbor finding algorithm {}'.format(self.neighbor_algorithm))
 
@@ -756,10 +740,30 @@ class EDM:
         # Query prediction set
         # -----------------------------------------------
         numThreads = -1  # Use all CPU threads in kdTree.query
+
+        # exclusions are baked into pdist, and no need to  expand radii
+        k = self.knn_ if self.neighbor_algorithm == 'kdtree' or len(self.validLib) > 0 else self.knn
         raw_distances, raw_neighbors = self.neighbor_finder.query(test,
-                                                                  k = self.knn_,
+                                                                  k = k,
                                                                   eps = 0,
                                                                   p = 2,
                                                                   workers = numThreads)
 
-        self.knn_distances, self.knn_neighbors = self.map_kdtree_knn_indices_to_data(raw_distances, raw_neighbors)
+        if self.neighbor_algorithm == 'kdtree':
+            # KDTree still needs full map-to-index, exclude, and prune
+            self.knn_distances, self.knn_neighbors = self.map_kdtree_knn_indices_to_data(
+                raw_distances, raw_neighbors
+            )
+        else:
+            if len(self.validLib) > 0:
+                raw_neighbors = raw_neighbors[:, :-1]
+                raw_distances = raw_distances[:, :-1]
+
+            # pdist only need index remapping
+            self.knn_neighbors = self.map_knn_indices_to_library_indices(raw_neighbors)
+            self.knn_distances = raw_distances
+
+        # the code expects a 2D array
+        if self.knn == 1:
+            self.knn_distances = self.knn_distances[:, None]
+            self.knn_neighbors = self.knn_neighbors[:, None]
