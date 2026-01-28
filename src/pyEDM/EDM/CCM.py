@@ -274,8 +274,8 @@ class CCM:
 					mask = numpy.ones(d.shape[0], dtype = bool)
 					mask[rng_i] = False
 					d[mask, :] = numpy.inf # artificially make all the other ones far awa
-					raw_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn_)
-					neighbor_distances, neighbor_indices = S.MapKNNIndicesToData(raw_indices, raw_distances)
+					neighbor_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn)
+					neighbor_indices = S._MapKNNIndicesToLibraryIndices(raw_indices)
 
 				# Code from Simplex:Project ---------------------------------
 				# First column is minimum distance of all N test rows
@@ -291,7 +291,7 @@ class CCM:
 				# Matrix of knn_neighbors + predictionHorizon defines library target values
 				knn_neighbors_Tp = neighbor_indices + self.predictionHorizon  # Npred x k
 
-				libTargetValues = self.targetVec[knn_neighbors_Tp].squeeze()
+				libTargetValues = S.targetVec[knn_neighbors_Tp].squeeze()
 				# Code from Simplex:Project ----------------------------------
 
 				# Projection is average of weighted knn library target values

@@ -165,11 +165,11 @@ class MDECV:
 			]
 
 		# Process each fold
-		progressBar = ProgressBar(total = self.folds, desc = 'MDE CV Fold', leave = False)
+		#progressBar = ProgressBar(total = self.folds, desc = 'MDE CV Fold', leave = False)
 		for fold, (trainIndices, validationIndices) in enumerate(fold_indices, start = 1):
 			fold_result = self.fitSingleFold(self.data[trainIndices], self.data[validationIndices])
 			self.fold_results.append(fold_result)
-			progressBar.update(1)
+			#progressBar.update(1)
 
 		# Identify best fold
 		self.test_accuracy = [r.compute_error() for r in self.fold_results]

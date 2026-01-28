@@ -57,7 +57,7 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 		neighbor_distances = distances[neighbors, indices]
 		return numpy.sqrt(neighbor_distances).transpose().squeeze(), neighbors.transpose().squeeze()
 
-	def __init__(self, data: numpy.ndarray, x: Optional[numpy.ndarray] = None):
+	def __init__(self, data: numpy.ndarray, x: Optional[numpy.ndarray] = None, exclusion: Optional[numpy.ndarray] = None):
 		"""
 
 		:param data: data
@@ -65,8 +65,11 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 		"""
 		super().__init__(data)
 		self.distanceMatrix = None
+		self.mask = exclusion
 		if x is not None:
 			self.distanceMatrix = distance.cdist(data, x, 'sqeuclidean')
+			if self.mask is not None:
+				self.distanceMatrix[self.mask] = numpy.inf
 		self.numNeighbors = None
 
 	def requery(self):
@@ -87,4 +90,6 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 		self.numNeighbors = k
 		if x is not None:
 			self.distanceMatrix = distance.cdist(self.data, x, 'sqeuclidean')
+			if self.mask is not None:
+				self.distanceMatrix[self.mask] = numpy.inf
 		return PairwiseDistanceNeighborFinder.find_neighbors(self.distanceMatrix, self.numNeighbors)
