@@ -1,6 +1,6 @@
 import numba
 import numpy
-from numba import float64, int32
+from numba import float64, int32, int64
 
 
 @numba.jit((float64[:, :], float64[:, :], float64[:, :, :]), nopython = True, parallel = True) # numpy broadcast does not work with numba?
@@ -22,19 +22,19 @@ def elementwise_pairwise_distance(a, b, out):
 				out[v, i, j] = d * d
 
 
-@numba.jit(nopython = True, parallel = True)
+@numba.jit((float64[:, :, :], float64[:, :], float64[:, :, :]), nopython = True, parallel = True)
 def increment_pairwise_distance(distances, increments, out):
 	"""
 	For a set of pairwise distances, increment each slice by the same amount
 	i.e. a 2D array broadcast
-	:param distances: 	[n1 x n2 x dims] set of pairwise distances
+	:param distances: 	[dims, n1 x n2] set of pairwise distances
 	:param increments: 	[n1 x n2] increments
-	:param out: 		[n1 x n2 x dims] array to write into
+	:param out: 		[dims, n1 x n2] array to write into
 	:return:
 	"""
-	dims = distances.shape[2]
+	dims = distances.shape[0]
 	for v in numba.prange(dims):
-		out[:, :, v] = distances[:, :, v] + increments
+		out[v, :, :] = distances[v, :, :] + increments
 
 
 @numba.jit(nopython = True, parallel = True)
@@ -69,6 +69,21 @@ def fill_sparse_weight_matrix(distances, neighbors, weights, shift):
 		min_dist = numpy.fmax(min_dist, 1e-6)
 		weights[mask, v] = numpy.exp(-1 * distances[mask, v] / min_dist[:, None])
 
+@numba.jit((int64[:, :, :], float64[:, :, :], float64[:], float64[:, :]), nopython = True, parallel = True)
+def calculate_predictions(neighbors, distances, trainY, predictions):
+	V = predictions.shape[1]
+
+	for v in numba.prange(V):
+		knn_indices = neighbors[:, v]
+		knn_dists = distances[:, v]
+
+		# Simplex weights: exponential weighting
+		weights = numpy.exp(-knn_dists / knn_dists)
+		weights /= numpy.sum(weights, axis = 0)
+
+		# Weighted predictions for all test points
+		predictions[:, v] = numpy.sum(weights * trainY[knn_indices], axis = 0)
+
 
 @numba.jit((float64[:], float64[:, :], float64[:]), nopython = True, parallel = True)
 def columnwise_correlation(vector, array, out):
@@ -88,34 +103,13 @@ def columnwise_correlation(vector, array, out):
 	return out
 
 
-@numba.jit((float64[:, :, :], float64[:, :], float64[:], int32, int32[:], int32, float64[:, :]),
-		   nopython=True, parallel=True, nogil=True)
+# @numba.jit((float64[:, :, :], float64[:, :], float64[:], int32, int32[:], int32, float64[:, :]),
+# 		   nopython=True, parallel=True, nogil=True)
 def evaluate_all_candidates_numba(all_distances, current_best,
 								  train_y, k, remaining_vars, offset,
 								  predictions):
 	"""Evaluate all candidate variables using pure numpy operations with GIL released.
-
-	Parameters
-	----------
-	all_distances : ndarray (F, M, N)
-		Precomputed pairwise distances for all features
-	current_best : ndarray (M, N)
-		Current best distance matrix from selected features
-	train_y : ndarray (M,)
-		Training target values
-	test_y : ndarray (N,)
-		Test target values
-	k : int
-		Number of nearest neighbors
-	remaining_vars : ndarray (V,)
-		Indices of remaining candidate variables
-
-	Returns
-	-------
-	scores : ndarray (V,)
-		Correlation score for each candidate variable
 	"""
-	M, N = current_best.shape
 	V = len(remaining_vars)
 
 	for v in numba.prange(V):
@@ -127,19 +121,18 @@ def evaluate_all_candidates_numba(all_distances, current_best,
 		# Find k nearest neighbors for each test point
 		# For each column (test point), find k smallest distances
 
-		for n in range(N):
-			# Get distances for this test point
-			dists = distances[:, n]
+		# Get all distances for all test points at once
+		# Find k nearest neighbors for each test point (column)
+		knn_indices = numpy.zeros((k, distances.shape[1]), dtype = numpy.int32)
+		for a in range(distances.shape[1]):
+			knn_indices[:, a] = numpy.argsort(distances[:, a])[:k, :]
+		knn_dists = numpy.take_along_axis(distances, knn_indices, axis=0)
 
-			# Find k nearest neighbors (k smallest distances)
-			knn_indices = numpy.argsort(dists)[:k] + offset
-			knn_dists = dists[knn_indices]
+		# Simplex weights: exponential weighting
+		min_dists = numpy.fmax(numpy.min(knn_dists, axis=0), 1e-6)
+		weights = numpy.exp(-knn_dists / min_dists)
+		weights /= numpy.sum(weights, axis=0)
 
-			# Simplex weights: exponential weighting
-			min_dist = numpy.fmax(numpy.min(knn_dists), 1e-6)
-			weights = numpy.exp(-knn_dists / min_dist)
-			weights /= numpy.sum(weights)
-
-			# Weighted prediction
-			predictions[n, v] = numpy.sum(weights * train_y[knn_indices])
+		# Weighted predictions for all test points
+		predictions[:, v] = numpy.sum(weights * train_y[knn_indices + offset], axis=0)
 
