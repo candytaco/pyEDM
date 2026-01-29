@@ -19,6 +19,7 @@ class MDEFitter(EDMFitter):
 				 Convergent: bool = True,
 				 Metric: str = "correlation",
 				 BatchSize: int = 1000,
+				 HalfPrecision: bool = False,
 				 Columns: Optional[List[int]] = None,
 				 Target: Optional[int] = None,
 				 Embed: bool = False,
@@ -39,6 +40,7 @@ class MDEFitter(EDMFitter):
 		:param Convergent: 			Whether to use convergence checking
 		:param Metric: 				Metric to use: "correlation" or "MAE"
 		:param BatchSize: 			Number of features to process in each batch
+		:param HalfPrecision: 		Use float16 instead of float32 for GPU tensors
 		:param Columns: 			Column indices to use for embedding
 		:param Target: 				Target column index
 		:param Embde:				whether to embed the data or not
@@ -59,6 +61,7 @@ class MDEFitter(EDMFitter):
 		self.Convergent = Convergent
 		self.Metric = Metric
 		self.BatchSize = BatchSize
+		self.HalfPrecision = HalfPrecision
 		self.Columns = Columns
 		self.Target = Target
 		self.EmbedDimensions = EmbedDimensions
@@ -106,6 +109,7 @@ class MDEFitter(EDMFitter):
 			convergent = self.Convergent,
 			metric = self.Metric,
 			batch_size = self.BatchSize,
+			use_half_precision = self.HalfPrecision,
 			columns = Columns,
 			train = TrainIndices,
 			test = TestIndices,

@@ -20,7 +20,8 @@ class MDEFitterCV(EDMFitter):
 				 IncludeTarget: bool = True,
 				 Convergent: bool = True,
 				 Metric: str = "correlation",
-				 BatchSize: int = 1000,
+				 BatchSize: int = 10000,
+				 HalfPrecision: bool = False,
 				 Folds: int = 5,
 				 TestSize: float = 0.2,
 				 FinalFeatureMode: str = "best_fold",
@@ -34,7 +35,8 @@ class MDEFitterCV(EDMFitter):
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
 				 nThreads: int = -1,
-				 stdThreshold = 1e-2
+				 stdThreshold = 1e-2,
+				 
 				 ):
 		"""
 		Initialize MDECV wrapper with sklearn-style separate arrays.
@@ -44,6 +46,7 @@ class MDEFitterCV(EDMFitter):
 		:param Convergent: 			Whether to use convergence checking
 		:param Metric: 				Metric to use: "correlation" or "MAE"
 		:param BatchSize: 			Number of features to process in each batch
+		:param HalfPrecision: 		Use float16 instead of float32 for GPU tensors
 		:param Folds: 				Number of cross-validation folds
 		:param TestSize: 			Proportion of data to use for test set
 		:param FinalFeatureMode: 	Method for selecting final features
@@ -66,6 +69,7 @@ class MDEFitterCV(EDMFitter):
 		self.Convergent = Convergent
 		self.Metric = Metric
 		self.BatchSize = BatchSize
+		self.HalfPrecision = HalfPrecision
 		self.Folds = Folds
 		self.TestSize = TestSize
 		self.FinalFeatureMode = FinalFeatureMode
@@ -119,6 +123,7 @@ class MDEFitterCV(EDMFitter):
 			convergent = self.Convergent,
 			metric = self.Metric,
 			batch_size = self.BatchSize,
+			use_half_precision = self.HalfPrecision,
 			folds = self.Folds,
 			embedded = not self.embed,
 			test_size = self.TestSize,

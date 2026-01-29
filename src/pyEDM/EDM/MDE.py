@@ -39,6 +39,7 @@ class MDE:
 				 convergent: bool = True,
 				 metric: str = "correlation",
 				 batch_size: int = 1000,
+				 use_half_precision: bool = False,
 				 columns=None,
 				 train=None,
 				 test=None,
@@ -74,7 +75,9 @@ class MDE:
 		metric : str, default="correlation"
 			Metric to use: "correlation" or "MAE"
 		batch_size : int, default=1000
-			Number of features to process in each parallel batch
+			Number of features to process in each batch
+		use_half_precision : bool, default=False
+			Use float16 instead of float32 for GPU tensors to save memory
 		columns : list of int, optional
 			Column indices to use for embedding (defaults to all except time)
 		train : tuple of (int, int), optional
@@ -135,13 +138,14 @@ class MDE:
 		self.solver = solver
 		self.nThreads = nThreads
 		self.stdThreshold = stdThreshold
+		self.use_half_precision = use_half_precision
 
 		if torch.cuda.is_available():
 			self.device = torch.device('cuda')
-		elif torch.backends.mps.is_available():
-			self.device = torch.device('mps')
 		else:
 			self.device = torch.device('cpu')
+
+		self.dtype = torch.float16 if use_half_precision else self.dtype
 
 		self.rankings_ = None # performances of adding each variable at each iteration
 		self.all_distances = None
@@ -215,6 +219,8 @@ class MDE:
 		dummy.EmbedData()
 		trainData = dummy.Embedding[dummy.trainIndices, :]
 		testData = dummy.Embedding[dummy.testIndices, :]
+		self.trainData = trainData
+		self.testData = testData
 
 		nTrain = trainData.shape[0]
 		nTest = testData.shape[0]
@@ -238,43 +244,53 @@ class MDE:
 		# than just storing the lists that come out?
 		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
 
-		allDistances = torch.zeros([nVars, nTrain, nTest], device = self.device, dtype = torch.float32)
-		candidateDistances = torch.zeros_like(allDistances)
-		trainData_tensor = torch.tensor(trainData, device = self.device, dtype = torch.float32)
-		testData_tensor = torch.tensor(testData, device = self.device, dtype = torch.float32)
-		ElementwisePairwiseDistance(trainData_tensor, testData_tensor, allDistances)
-		current_best_distance_matrix = torch.tensor(dummy._BuildExclusionMask(), device = self.device, dtype = torch.float32)
+		trainData_tensor = torch.tensor(trainData, device = self.device, dtype = self.dtype)
+		testData_tensor = torch.tensor(testData, device = self.device, dtype = self.dtype)
+		current_best_distance_matrix = torch.tensor(dummy._BuildExclusionMask(), device = self.device, dtype = self.dtype)
 		train_y = self.data[:, self.target]
-		train_y_tensor = torch.tensor(train_y, device = self.device, dtype = torch.float32)
+		train_y_tensor = torch.tensor(train_y, device = self.device, dtype = self.dtype)
 		test_y = testData[:, self.target]
-		test_y_tensor = torch.tensor(test_y, device = self.device, dtype = torch.float32)
-		predictions = torch.zeros([nTest, nVars], device = self.device, dtype = torch.float32)
-		perfs = torch.zeros(nVars, device = self.device, dtype = torch.float32)
+		test_y_tensor = torch.tensor(test_y, device = self.device, dtype = self.dtype)
 
 		for i in range(self.maxD):
-			# Get target values for scoring
+			# Process remaining variables in batches to avoid OOM
+			metric_results = []
 
-			# calculate the current candidate pairwise distance matrices
-			IncrementPairwiseDistance(allDistances, current_best_distance_matrix, candidateDistances)
+			for batch_start in range(0, len(remaining_variables), self.batch_size):
+				batch_end = min(batch_start + self.batch_size, len(remaining_variables))
+				batch_vars = remaining_variables[batch_start:batch_end]
+				batch_size = len(batch_vars)
 
-			# find k nearest neighbors
-			nearestNeighbors = torch.topk(candidateDistances, self.knn, dim = 1, largest = False)[1]
-			neighborDistances = torch.gather(candidateDistances, 1, nearestNeighbors)
-			FloorArray(neighborDistances, 1e-6)
-			nearestNeighbors = nearestNeighbors + self.predictionHorizon
+				# Compute distances for this batch of variables
+				batch_distances = torch.zeros([batch_size, nTrain, nTest], device = self.device, dtype = self.dtype)
+				for j, var in enumerate(batch_vars):
+					diff = trainData_tensor[:, var].unsqueeze(1) - testData_tensor[:, var].unsqueeze(0)
+					batch_distances[j, :, :] = diff * diff
 
-			minDistances = MinAxis1(neighborDistances)
-			weights = ComputeWeights(neighborDistances, minDistances)
-			weightSum = SumAxis1(weights)
-			select = train_y_tensor[nearestNeighbors]
-			predictions = ComputePredictions(weights, select, weightSum)
+				# Add current best distances
+				candidateDistances = batch_distances + current_best_distance_matrix.unsqueeze(0)
 
-			# calculat eperformances
-			ColumnwiseCorrelation(test_y_tensor, predictions, perfs)
+				# find k nearest neighbors
+				nearestNeighbors = torch.topk(candidateDistances, self.knn, dim = 1, largest = False)[1]
+				neighborDistances = torch.gather(candidateDistances, 1, nearestNeighbors)
+				FloorArray(neighborDistances, 1e-6)
+				nearestNeighbors = nearestNeighbors + self.predictionHorizon
 
-			# Convert to list of tuples
-			perfs_numpy = perfs.cpu().numpy()
-			metric_results = [(var, perfs_numpy[var]) for var in remaining_variables]
+				minDistances = MinAxis1(neighborDistances)
+				weights = ComputeWeights(neighborDistances, minDistances)
+				weightSum = SumAxis1(weights)
+				select = train_y_tensor[nearestNeighbors]
+				predictions = ComputePredictions(weights, select, weightSum)
+
+				# calculate performances
+				perfs = torch.zeros(batch_size, device = self.device, dtype = self.dtype)
+				ColumnwiseCorrelation(test_y_tensor, predictions, perfs)
+
+				# Convert to list of tuples
+				perfs_numpy = perfs.cpu().numpy()
+				batch_results = [(var, perfs_numpy[j]) for j, var in enumerate(batch_vars)]
+				metric_results.extend(batch_results)
+
 			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
 
 			# Flatten results and sort
@@ -323,6 +339,8 @@ class MDE:
 			else:
 				# No more valid candidates
 				break
+
+		self.current_best_distance_matrix = current_best_distance_matrix.cpu().numpy()
 
 	def _evaluate_batch(self, batch: List[int]) -> List[Tuple[int, float]]:
 		"""Evaluate a batch of candidate variables in parallel.
