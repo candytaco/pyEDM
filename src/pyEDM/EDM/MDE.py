@@ -18,7 +18,9 @@ from .SMap import SMap
 from .Simplex import Simplex
 
 from ._MDE import elementwise_pairwise_distance, columnwise_correlation, evaluate_all_candidates_numba, \
-	increment_pairwise_distance, calculate_predictions
+	increment_pairwise_distance, calculate_predictions, floor_array, add_scalar, min_axis1, compute_weights, sum_axis1, \
+	compute_predictions
+from .. import FindOptimalEmbeddingDimensionality
 
 
 class MDE:
@@ -158,6 +160,12 @@ class MDE:
 			and CCM values
 		"""
 		# TODO: If the embedding dimensionality is not specified, estimate it
+		if self.embedDimensions == 0:
+			self.embedDimensions = FindOptimalEmbeddingDimensionality(self.data, [self.target], self.target, self.maxD,
+																	  train = self.train, test = self.test, predictionHorizon = self.predictionHorizon,
+																	  noTime = self.noTime)
+		if self.knn == 0:
+			self.knn = self.embedDimensions + 1
 
 		# variable selection
 		self._select_features()
@@ -230,7 +238,7 @@ class MDE:
 		elementwise_pairwise_distance(trainData, testData, allDistances)
 		current_best_distance_matrix = numpy.zeros([nTrain, nTest])
 		current_best_distance_matrix += dummy._BuildExclusionMask()
-		train_y = trainData[:, self.target]
+		train_y = self.data[:, self.target]
 		test_y = testData[:, self.target]
 		predictions = numpy.zeros([nTest, nVars])
 		perfs = numpy.zeros(nVars)
@@ -242,13 +250,18 @@ class MDE:
 			increment_pairwise_distance(allDistances, current_best_distance_matrix, candidateDistances)
 
 			# find k nearest neighbors
-			nearestNeighbors = numpy.argsort(candidateDistances, axis = 0)[:self.knn, :, :]
-			neighborDistances = numpy.take_along_axis(candidateDistances, nearestNeighbors, axis = 0)
-			neighborDistances[neighborDistances < 1e-6] = 1e-6
+			nearestNeighbors = numpy.argpartition(candidateDistances, self.knn, axis = 1)[:, :self.knn, :]
+			neighborDistances = numpy.take_along_axis(candidateDistances, nearestNeighbors, axis = 1)
+			floor_array(neighborDistances, 1e-6)
 			nearestNeighbors += self.predictionHorizon
 
+			minDistances = min_axis1(neighborDistances)
+			weights = compute_weights(neighborDistances, minDistances)
+			weightSum = sum_axis1(weights)
+			select = train_y[nearestNeighbors]
+			predictions = compute_predictions(weights, select, weightSum)
 			# calcualte predictions
-			calculate_predictions(nearestNeighbors, neighborDistances, train_y, predictions)
+			#calculate_predictions(nearestNeighbors, neighborDistances, train_y, predictions)
 
 			# calculat eperformances
 			columnwise_correlation(test_y, predictions, perfs)
