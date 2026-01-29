@@ -17,7 +17,8 @@ from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
 
-from ._MDE import elementwise_pairwise_distance, columnwise_correlation, evaluate_all_candidates_numba
+from ._MDE import elementwise_pairwise_distance, columnwise_correlation, evaluate_all_candidates_numba, \
+	increment_pairwise_distance, calculate_predictions
 
 
 class MDE:
@@ -225,6 +226,7 @@ class MDE:
 		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
 
 		allDistances = numpy.zeros([nVars, nTrain, nTest], order = 'C')
+		candidateDistances = numpy.zeros_like(allDistances)
 		elementwise_pairwise_distance(trainData, testData, allDistances)
 		current_best_distance_matrix = numpy.zeros([nTrain, nTest])
 		current_best_distance_matrix += dummy._BuildExclusionMask()
@@ -236,19 +238,19 @@ class MDE:
 		for i in range(self.maxD):
 			# Get target values for scoring
 
-			remaining_vars_array = numpy.array(remaining_variables, dtype=numpy.int32)
+			# calculate the current candidate pairwise distance matrices
+			increment_pairwise_distance(allDistances, current_best_distance_matrix, candidateDistances)
 
-			# Compute predictions for all candidates
-			evaluate_all_candidates_numba(
-			    allDistances,
-			    current_best_distance_matrix,
-			    train_y,
-			    numpy.int32(dummy.knn),
-			    remaining_vars_array,
-				numpy.int32(dummy.predictionHorizon),
-				predictions
-			)
+			# find k nearest neighbors
+			nearestNeighbors = numpy.argsort(candidateDistances, axis = 0)[:self.knn, :, :]
+			neighborDistances = numpy.take_along_axis(candidateDistances, nearestNeighbors, axis = 0)
+			neighborDistances[neighborDistances < 1e-6] = 1e-6
+			nearestNeighbors += self.predictionHorizon
 
+			# calcualte predictions
+			calculate_predictions(nearestNeighbors, neighborDistances, train_y, predictions)
+
+			# calculat eperformances
 			columnwise_correlation(test_y, predictions, perfs)
 
 			# Convert to list of tuples
