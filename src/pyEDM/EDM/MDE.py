@@ -17,7 +17,7 @@ from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
 
-from ._MDE import ElementwisePairwiseDistance, ColumnwiseCorrelation, \
+from ._MDE import ElementwisePairwiseDistance, RowwiseCorrelation, \
 	IncrementPairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
 	ComputePredictions
 from .. import FindOptimalEmbeddingDimensionality
@@ -316,7 +316,7 @@ class MDE:
 
 				# calculate performances
 				perfs = torch.zeros(batch_size, device = self.device, dtype = self.dtype)
-				ColumnwiseCorrelation(test_y_tensor, predictions, perfs)
+				RowwiseCorrelation(test_y_tensor, predictions, perfs)
 
 				# Convert to list of tuples
 				perfs_numpy = perfs.cpu().numpy()

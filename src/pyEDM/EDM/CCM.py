@@ -3,7 +3,7 @@ from multiprocessing import get_context
 
 # package modules
 import numpy
-from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros, column_stack
+from numpy import array, exp, fmax, divide, mean, nan, roll, sum, zeros
 from numpy.random import default_rng
 
 from ..Utils import ComputeError, IsNonStringIterable
