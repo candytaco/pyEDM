@@ -74,15 +74,24 @@ def calculate_predictions(neighbors, distances, trainY, predictions):
 	V = predictions.shape[1]
 
 	for v in numba.prange(V):
-		knn_indices = neighbors[:, v]
-		knn_dists = distances[:, v]
+		knn_indices = neighbors[v, :, :]
+		knn_dists = distances[v, :, :]
 
 		# Simplex weights: exponential weighting
-		weights = numpy.exp(-knn_dists / knn_dists)
-		weights /= numpy.sum(weights, axis = 0)
+		minDistances = numpy.zeros(knn_dists.shape[1])
+		for i in range(knn_dists.shape[1]):
+			lower = numpy.min(knn_dists[:, i])
 
-		# Weighted predictions for all test points
-		predictions[:, v] = numpy.sum(weights * trainY[knn_indices], axis = 0)
+		# Divide each column of N x k knn_distances by minDistances
+		scaledDistances = numpy.divide(knn_dists, minDistances)
+		weights = numpy.exp(-scaledDistances)  # Npred x k
+		weightRowSum = numpy.sum(weights, axis = 0)  # Npred x 1
+
+		# Projection is average of weighted knn library target values
+		# selected = trainY[knn_indices]
+		# product = weights * selected
+		for i in range(predictions.shape[0]):
+			predictions[i, v] = numpy.sum(trainY[knn_indices[i, :]] * weights[i, :]) / weightRowSum[i]
 
 
 @numba.jit((float64[:], float64[:, :], float64[:]), nopython = True, parallel = True)
@@ -94,14 +103,67 @@ def columnwise_correlation(vector, array, out):
 	v_std = numpy.sqrt(numpy.sum(v_centered ** 2))
 
 	for j in numba.prange(m):
-		a_mean = numpy.mean(array[:, j])
-		a_centered = array[:, j] - a_mean
+		a_mean = numpy.mean(array[j, :])
+		a_centered = array[j, :] - a_mean
 		a_std = numpy.sqrt(numpy.sum(a_centered ** 2))
 
 		out[j] = numpy.sum(v_centered * a_centered) / (v_std * a_std)
 
 	return out
 
+@numba.jit(nopython = True)
+def floor_array(arr, floor_value):
+	result = numpy.empty_like(arr)
+	for i in range(arr.size):
+		if arr.flat[i] < floor_value:
+			arr.flat[i] = floor_value
+
+@numba.jit(nopython = True, parallel=True)
+def add_scalar(arr, floor_value):
+	result = numpy.empty_like(arr)
+	for i in range(arr.size):
+		arr.flat[i] += floor_value
+
+@numba.jit(nopython = True, parallel=True)
+def min_axis1(arr):
+	result = numpy.empty((arr.shape[0], arr.shape[2]), dtype=arr.dtype)
+	for i in numba.prange(arr.shape[0]):
+		for k in range(arr.shape[2]):
+			min_val = arr[i, 0, k]
+			for j in range(1, arr.shape[1]):
+				if arr[i, j, k] < min_val:
+					min_val = arr[i, j, k]
+			result[i, k] = min_val
+	return result
+
+@numba.jit(nopython = True, parallel=True)
+def sum_axis1(arr):
+	result = numpy.zeros((arr.shape[0], arr.shape[2]), dtype=arr.dtype)
+	for i in numba.prange(arr.shape[0]):
+		for j in range(arr.shape[1]):
+			for k in range(arr.shape[2]):
+				result[i, k] += arr[i, j, k]
+	return result
+
+@numba.jit(nopython = True, parallel=True)
+def compute_weights(neighborDistances, minDistances):
+	result = numpy.empty_like(neighborDistances)
+	for i in numba.prange(neighborDistances.shape[0]):
+		for j in range(neighborDistances.shape[1]):
+			for k in range(neighborDistances.shape[2]):
+				result[i, j, k] = numpy.exp(-neighborDistances[i, j, k] / minDistances[i, k])
+	return result
+
+@numba.jit(nopython = True, parallel=True)
+def compute_predictions(weights, select, weightSum):
+	result = numpy.empty((weights.shape[0], weights.shape[2]), dtype=weights.dtype)
+	for i in numba.prange(weights.shape[0]):
+		for k in range(weights.shape[2]):
+			weighted_sum = 0.0
+			for j in range(weights.shape[1]):
+				weighted_sum += weights[i, j, k] * select[i, j, k]
+			result[i, k] = weighted_sum / weightSum[i, k]
+	return result
 
 # @numba.jit((float64[:, :, :], float64[:, :], float64[:], int32, int32[:], int32, float64[:, :]),
 # 		   nopython=True, parallel=True, nogil=True)
@@ -125,13 +187,13 @@ def evaluate_all_candidates_numba(all_distances, current_best,
 		# Find k nearest neighbors for each test point (column)
 		knn_indices = numpy.zeros((k, distances.shape[1]), dtype = numpy.int32)
 		for a in range(distances.shape[1]):
-			knn_indices[:, a] = numpy.argsort(distances[:, a])[:k, :]
+			knn_indices[:, a] = numpy.argpartition(distances[:, a], k)[:k, :]
 		knn_dists = numpy.take_along_axis(distances, knn_indices, axis=0)
+		knn_dists[knn_dists < 1e-6] = 1e-6
 
 		# Simplex weights: exponential weighting
-		min_dists = numpy.fmax(numpy.min(knn_dists, axis=0), 1e-6)
-		weights = numpy.exp(-knn_dists / min_dists)
-		weights /= numpy.sum(weights, axis=0)
+		weights = numpy.exp(-knn_dists / knn_dists)
+		weights /= numpy.sum(weights, axis = 1)
 
 		# Weighted predictions for all test points
 		predictions[:, v] = numpy.sum(weights * train_y[knn_indices + offset], axis=0)
