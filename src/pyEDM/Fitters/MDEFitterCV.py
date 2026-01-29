@@ -50,7 +50,7 @@ class MDEFitterCV(EDMFitter):
 		:param Embed:				Whether to embed the data
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
-		:param KNN: 				Number of nearest neighbors
+		:param knn: 				Number of nearest neighbors
 		:param Step: 				Time delay step size (tau)
 		:param ExclusionRadius: 	Temporal exclusion radius for neighbors
 		:param Verbose: 			Print diagnostic messages
