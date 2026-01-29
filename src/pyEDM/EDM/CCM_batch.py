@@ -30,7 +30,8 @@ class BatchedCCM:
 				 validLib = None,
 				 includeData = False,
 				 ignoreNan = True,
-				 includeReverse = False):
+				 includeReverse = False,
+				 device = 'cuda'):
 		"""
 		Initialize BatchedCCM.
 
@@ -49,6 +50,7 @@ class BatchedCCM:
 		:param includeData: 		Whether to include detailed prediction statistics
 		:param ignoreNan: 			Remove NaN values from embedding
 		:param includeReverse: 		Whether to compute reverse direction (target -> columns)
+		:param device: 				Device for torch tensors ('cpu', 'cuda', or torch.device object)
 		"""
 
 		self.name = 'BatchedCCM'
@@ -69,6 +71,8 @@ class BatchedCCM:
 		self.sample = sample
 		self.seed = seed
 		self.includeData = includeData
+
+		self.device = torch.device(device) if isinstance(device, str) else device
 
 		self.train = self.test = [1, self.X.shape[0]]
 
@@ -172,13 +176,13 @@ class BatchedCCM:
 		libcorrelationMap = {}
 		libStatMap = {}
 
-		trainEmbeddings = torch.tensor([embedding[libraryIndices, :] for embedding in embeddings])
+		trainEmbeddings = torch.tensor([embedding[libraryIndices, :] for embedding in embeddings]).to(self.device)
 
-		fullDistances = torch.zeros([numPredictors, trainEmbeddings.shape[1], trainEmbeddings.shape[1]])
+		fullDistances = torch.zeros([numPredictors, trainEmbeddings.shape[1], trainEmbeddings.shape[1]], device = self.device)
 		for i in range(numPredictors):
 			# these are the distance matrices summed across all embedding dimensions
 			# for each predictor
-			d = torch.zeros([trainEmbeddings.shape[2], trainEmbeddings.shape[1], trainEmbeddings.shape[1]])
+			d = torch.zeros([trainEmbeddings.shape[2], trainEmbeddings.shape[1], trainEmbeddings.shape[1]], device = self.device)
 			ElementwisePairwiseDistance(trainEmbeddings[i, :, :], trainEmbeddings[i, :, :], d)
 			fullDistances[i, :, :] = torch.sum(d, dim = 0)
 		fullDistances = torch.sqrt(fullDistances)
@@ -186,8 +190,8 @@ class BatchedCCM:
 		# Exclude self-prediction: set diagonal to infinity for each predictor
 		if self.exclusionRadius == 0:
 			for i in range(numPredictors):
-				diagIndices = torch.arange(fullDistances.shape[1])
-				fullDistances[i, diagIndices, diagIndices] = numpy.inf
+				diagIndices = torch.arange(fullDistances.shape[1], device = self.device)
+				fullDistances[i, diagIndices, diagIndices] = float('inf')
 
 		for libSize in self.trainSizes:
 			correlations = zeros([self.sample, numPredictors])
@@ -199,11 +203,11 @@ class BatchedCCM:
 											  size = min(libSize, N_libraryIndices),
 											  replace = False)
 
-				distances = torch.zeros_like(fullDistances)
+				distances = torch.zeros_like(fullDistances, device = self.device)
 				distances.copy_(fullDistances)
 				mask = numpy.ones(distances.shape[1], dtype = bool)
 				mask[subsampleIndices] = False
-				distances[:, mask, :] = numpy.inf
+				distances[:, mask, :] = float('inf')
 
 				neighbors = torch.topk(distances, self.knn, dim = 1, largest = False)[1]
 				distances = torch.gather(distances, 1, neighbors)
@@ -212,12 +216,12 @@ class BatchedCCM:
 				minDistances = MinAxis1(distances)
 				weights = ComputeWeights(distances, minDistances)
 				weightSum = SumAxis1(weights)
-				select = targetVector[neighbors]
+				select = torch.tensor(targetVector, device = self.device)[neighbors]
 				predictions = ComputePredictions(weights, select, weightSum)
 
 				# calculate performances
-				perfs_ = torch.zeros(numPredictors)
-				RowwiseCorrelation(torch.tensor(targetVector), predictions, perfs_)
+				perfs_ = torch.zeros(numPredictors, device = self.device)
+				RowwiseCorrelation(torch.tensor(targetVector, device = self.device), predictions, perfs_)
 				correlations[s, :] = perfs_.cpu().numpy()
 
 			meanCorrelations = mean(correlations, axis = 0)
@@ -289,18 +293,18 @@ class BatchedCCM:
 		libcorrelationMap = {}
 		libStatMap = {}
 
-		targetEmbeddingTensor = torch.tensor(targetEmbedding[libraryIndices, :])
+		targetEmbeddingTensor = torch.tensor(targetEmbedding[libraryIndices, :]).to(self.device)
 
-		d = torch.zeros([targetEmbeddingTensor.shape[1], targetEmbeddingTensor.shape[0], targetEmbeddingTensor.shape[0]])
+		d = torch.zeros([targetEmbeddingTensor.shape[1], targetEmbeddingTensor.shape[0], targetEmbeddingTensor.shape[0]], device = self.device)
 		ElementwisePairwiseDistance(targetEmbeddingTensor, targetEmbeddingTensor, d)
 		fullDistances = torch.sum(d, dim = 0)
 		fullDistances = torch.sqrt(fullDistances)
 
 		if self.exclusionRadius == 0:
-			diagIndices = torch.arange(fullDistances.shape[0])
-			fullDistances[diagIndices, diagIndices] = numpy.inf
+			diagIndices = torch.arange(fullDistances.shape[0], device = self.device)
+			fullDistances[diagIndices, diagIndices] = float('inf')
 
-		predictorVectors = torch.tensor(numpy.column_stack([emb[libraryIndices, 0] for emb in predictorEmbeddings]))
+		predictorVectors = torch.tensor(numpy.column_stack([emb[libraryIndices, 0] for emb in predictorEmbeddings])).to(self.device)
 
 		for libSize in self.trainSizes:
 			correlations = zeros([self.sample, numPredictors])
@@ -312,11 +316,11 @@ class BatchedCCM:
 											  size = min(libSize, N_libraryIndices),
 											  replace = False)
 
-				distances = torch.zeros_like(fullDistances)
+				distances = torch.zeros_like(fullDistances, device = self.device)
 				distances.copy_(fullDistances)
 				mask = numpy.ones(distances.shape[0], dtype = bool)
 				mask[subsampleIndices] = False
-				distances[mask, :] = numpy.inf
+				distances[mask, :] = float('inf')
 
 				neighbors = torch.topk(distances, self.knn, dim = 0, largest = False)[1]
 				distances = torch.gather(distances, 0, neighbors)
@@ -330,7 +334,7 @@ class BatchedCCM:
 					select = predictorVectors[:, m][neighbors.T]
 					prediction = ComputePredictions(weights, select, weightSum)
 
-					correlation = torch.corrcoef(torch.stack([torch.tensor(predictorVectors[:, m]), prediction]))[0, 1]
+					correlation = torch.corrcoef(torch.stack([predictorVectors[:, m], prediction]))[0, 1]
 					correlations[s, m] = correlation.cpu().numpy()
 
 			meanCorrelations = mean(correlations, axis = 0)
