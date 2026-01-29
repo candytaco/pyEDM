@@ -76,7 +76,7 @@ def ComputePredictions(weights, select, weightSum):
 	return (weights * select).sum(dim = 1) / weightSum
 
 
-def ColumnwiseCorrelation(vector, array, out):
+def RowwiseCorrelation(vector, array, out):
 	"""
 	Correlation between a vector and columns of an array
 	:param vector: [n] tensor
@@ -90,7 +90,7 @@ def ColumnwiseCorrelation(vector, array, out):
 	v_centered = vector - v_mean
 	v_std = torch.sqrt(torch.sum(v_centered ** 2))
 
-	for j in range(m):
+	for j in range(n):
 		a_mean = torch.mean(array[j, :])
 		a_centered = array[j, :] - a_mean
 		a_std = torch.sqrt(torch.sum(a_centered ** 2))

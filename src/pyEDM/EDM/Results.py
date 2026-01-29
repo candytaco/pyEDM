@@ -318,3 +318,63 @@ class MDECVResult:
         :return: Dictionary with keys: 'correlation', 'MAE', 'CAE', 'RMSE'
         """
         return ComputeError(self.observations, self.predictions, metric)
+
+@dataclass(frozen=True)
+class BatchedCCMResult:
+	"""
+	Results from Batched Convergent Cross Mapping.
+
+	:param libMeansFwd: Forward direction correlations. Shape (n_lib_sizes, 1+M):
+		Column 0: Library size
+		Columns 1-M: Mean correlation for each predictor variable
+	:param libMeansRev: Reverse direction correlations. Shape (n_lib_sizes, 1+M) or None:
+		Column 0: Library size
+		Columns 1-M: Mean correlation for each predictor variable
+	:param embedDimensions: Embedding dimension used
+	:param predictionHorizon: Prediction horizon used
+	:param predictStatsFwd: Detailed prediction statistics for forward direction
+	:param predictStatsRev: Detailed prediction statistics for reverse direction
+	"""
+	libMeansFwd: np.ndarray
+	libMeansRev: Optional[np.ndarray]
+	embedDimensions: int
+	predictionHorizon: int
+	predictStatsFwd: Optional[Dict] = None
+	predictStatsRev: Optional[Dict] = None
+
+	@property
+	def library_sizes(self) -> np.ndarray:
+		"""
+		Library sizes evaluated.
+		"""
+		return self.libMeansFwd[:, 0]
+
+	@property
+	def forward_correlations(self) -> np.ndarray:
+		"""
+		Forward direction correlation values (excludes library size column).
+		Shape (n_lib_sizes, M) where M is number of predictor variables.
+		"""
+		return self.libMeansFwd[:, 1:]
+
+	@property
+	def reverse_correlations(self) -> Optional[np.ndarray]:
+		"""
+		Reverse direction correlation values (excludes library size column).
+		Shape (n_lib_sizes, M) where M is number of predictor variables.
+		Returns None if reverse direction was not computed.
+		"""
+		if self.libMeansRev is None:
+			return None
+		return self.libMeansRev[:, 1:]
+
+	def GetVariableCorrelations(self, variableIndex: int) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+		"""
+		Get correlations for a specific variable across all library sizes.
+
+		:param variableIndex: Index of the variable (0-based)
+		:return: Tuple of (forward_correlations, reverse_correlations) as 1D arrays
+		"""
+		forwardCorr = self.libMeansFwd[:, 1 + variableIndex]
+		reverseCorr = self.libMeansRev[:, 1 + variableIndex] if self.libMeansRev is not None else None
+		return forwardCorr, reverseCorr
