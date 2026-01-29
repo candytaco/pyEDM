@@ -30,6 +30,7 @@ class MDECV:
 				 convergent: bool = True,
 				 metric: str = "correlation",
 				 batch_size: int = 1000,
+				 use_half_precision: bool = False,
 				 folds: int = 5,
 				 test_size: float = 0.2,
 				 final_feature_mode: str = "best_fold",
@@ -69,6 +70,8 @@ class MDECV:
 			Metric to use: "correlation" or "MAE"
 		batch_size : int, default=1000
 			Number of features to process in each parallel batch
+		use_half_precision : bool, default=False
+			Use float16 instead of float32 for GPU tensors to save memory
 		folds : int, default=5
 			Number of cross-validation folds
 		test_size : float, default=0.2
@@ -120,6 +123,7 @@ class MDECV:
 		self.convergent = convergent
 		self.metric = metric
 		self.batch_size = batch_size
+		self.use_half_precision = use_half_precision
 		self.folds = folds
 		self.test_size = test_size
 		self.final_feature_mode = final_feature_mode
@@ -204,6 +208,7 @@ class MDECV:
 			convergent = self.convergent,
 			metric = self.metric,
 			batch_size = self.batch_size,
+			use_half_precision = self.use_half_precision,
 			columns = self.columns,
 			train = (0, len(train_data) - 1),
 			test = (len(train_data), len(fold_data) - 1),
@@ -254,6 +259,7 @@ class MDECV:
 			convergent = self.convergent,
 			metric = self.metric,
 			batch_size = self.batch_size,
+			use_half_precision = self.use_half_precision,
 			columns = self.columns,
 			train = (0, self.data.shape[0] - 1),
 			test = (self.data.shape[0] - 1, stackedData.shape[0] - 1),
