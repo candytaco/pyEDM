@@ -10,16 +10,16 @@ from typing import List, Tuple
 
 import numpy
 from tqdm import tqdm as ProgressBar
-from joblib import Parallel, delayed, cpu_count
+import torch
 
 from .NeighborFinder import PairwiseDistanceNeighborFinder
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
 
-from ._MDE import elementwise_pairwise_distance, columnwise_correlation, evaluate_all_candidates_numba, \
-	increment_pairwise_distance, calculate_predictions, floor_array, add_scalar, min_axis1, compute_weights, sum_axis1, \
-	compute_predictions
+from ._MDE import ElementwisePairwiseDistance, ColumnwiseCorrelation, \
+	IncrementPairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
+	ComputePredictions
 from .. import FindOptimalEmbeddingDimensionality
 
 
@@ -134,9 +134,14 @@ class MDE:
 		self.theta = theta
 		self.solver = solver
 		self.nThreads = nThreads
-		if self.nThreads < 1:
-			self.nThreads = cpu_count()
 		self.stdThreshold = stdThreshold
+
+		if torch.cuda.is_available():
+			self.device = torch.device('cuda')
+		elif torch.backends.mps.is_available():
+			self.device = torch.device('mps')
+		else:
+			self.device = torch.device('cpu')
 
 		self.rankings_ = None # performances of adding each variable at each iteration
 		self.all_distances = None
@@ -233,41 +238,43 @@ class MDE:
 		# than just storing the lists that come out?
 		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
 
-		allDistances = numpy.zeros([nVars, nTrain, nTest], order = 'C')
-		candidateDistances = numpy.zeros_like(allDistances)
-		elementwise_pairwise_distance(trainData, testData, allDistances)
-		current_best_distance_matrix = numpy.zeros([nTrain, nTest])
-		current_best_distance_matrix += dummy._BuildExclusionMask()
+		allDistances = torch.zeros([nVars, nTrain, nTest], device = self.device, dtype = torch.float32)
+		candidateDistances = torch.zeros_like(allDistances)
+		trainData_tensor = torch.tensor(trainData, device = self.device, dtype = torch.float32)
+		testData_tensor = torch.tensor(testData, device = self.device, dtype = torch.float32)
+		ElementwisePairwiseDistance(trainData_tensor, testData_tensor, allDistances)
+		current_best_distance_matrix = torch.tensor(dummy._BuildExclusionMask(), device = self.device, dtype = torch.float32)
 		train_y = self.data[:, self.target]
+		train_y_tensor = torch.tensor(train_y, device = self.device, dtype = torch.float32)
 		test_y = testData[:, self.target]
-		predictions = numpy.zeros([nTest, nVars])
-		perfs = numpy.zeros(nVars)
+		test_y_tensor = torch.tensor(test_y, device = self.device, dtype = torch.float32)
+		predictions = torch.zeros([nTest, nVars], device = self.device, dtype = torch.float32)
+		perfs = torch.zeros(nVars, device = self.device, dtype = torch.float32)
 
 		for i in range(self.maxD):
 			# Get target values for scoring
 
 			# calculate the current candidate pairwise distance matrices
-			increment_pairwise_distance(allDistances, current_best_distance_matrix, candidateDistances)
+			IncrementPairwiseDistance(allDistances, current_best_distance_matrix, candidateDistances)
 
 			# find k nearest neighbors
-			nearestNeighbors = numpy.argpartition(candidateDistances, self.knn, axis = 1)[:, :self.knn, :]
-			neighborDistances = numpy.take_along_axis(candidateDistances, nearestNeighbors, axis = 1)
-			floor_array(neighborDistances, 1e-6)
-			nearestNeighbors += self.predictionHorizon
+			nearestNeighbors = torch.topk(candidateDistances, self.knn, dim = 1, largest = False)[1]
+			neighborDistances = torch.gather(candidateDistances, 1, nearestNeighbors)
+			FloorArray(neighborDistances, 1e-6)
+			nearestNeighbors = nearestNeighbors + self.predictionHorizon
 
-			minDistances = min_axis1(neighborDistances)
-			weights = compute_weights(neighborDistances, minDistances)
-			weightSum = sum_axis1(weights)
-			select = train_y[nearestNeighbors]
-			predictions = compute_predictions(weights, select, weightSum)
-			# calcualte predictions
-			#calculate_predictions(nearestNeighbors, neighborDistances, train_y, predictions)
+			minDistances = MinAxis1(neighborDistances)
+			weights = ComputeWeights(neighborDistances, minDistances)
+			weightSum = SumAxis1(weights)
+			select = train_y_tensor[nearestNeighbors]
+			predictions = ComputePredictions(weights, select, weightSum)
 
 			# calculat eperformances
-			columnwise_correlation(test_y, predictions, perfs)
+			ColumnwiseCorrelation(test_y_tensor, predictions, perfs)
 
 			# Convert to list of tuples
-			metric_results = [(var, perfs[i]) for var in remaining_variables]
+			perfs_numpy = perfs.cpu().numpy()
+			metric_results = [(var, perfs_numpy[var]) for var in remaining_variables]
 			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
 
 			# Flatten results and sort
@@ -308,14 +315,10 @@ class MDE:
 				self.accuracy.append(best_score)
 
 				# calc distance matrix update
-				train = trainData[:, best_var]
-				test = testData[:, best_var]
-				distances = numpy.subtract.outer(train, test)
-				distances **= 2
-				if self.current_best_distance_matrix is None:
-					self.current_best_distance_matrix = distances
-				else:
-					self.current_best_distance_matrix += distances
+				train = trainData_tensor[:, best_var]
+				test = testData_tensor[:, best_var]
+				distances = (train.unsqueeze(1) - test.unsqueeze(0)) ** 2
+				current_best_distance_matrix += distances
 				progressBar.update(1)
 			else:
 				# No more valid candidates
