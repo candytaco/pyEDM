@@ -269,6 +269,10 @@ class MDE:
 
 		remaining_variables = [c for c in all_columns if c not in excluded]
 
+		# Filter convergent variables BEFORE selection if convergent=True
+		if self.convergent:
+			remaining_variables = self._filter_convergent_variables(remaining_variables)
+
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
 
@@ -344,25 +348,10 @@ class MDE:
 			best_var = None
 			best_score = None
 
-			# If conv=True, use first convergent variable
-			if self.convergent:
-				for c, score in metric_results:
-					if c is None or numpy.isnan(score):
-						continue
-					# Check convergence
-					check = self._check_convergence(c)
-					if check[0]:
-						best_var = c
-						best_score = score
-						self.ccm_values.append(check[1])
-						break
-					else:
-						remaining_variables.remove(c)
-			else:
-				# Pick top scoring candidate
-				if metric_results and not numpy.isnan(metric_results[0][1]):
-					best_var = metric_results[0][0]
-					best_score = metric_results[0][1]
+			# Pick top scoring candidate (convergence already checked if convergent=True)
+			if metric_results and not numpy.isnan(metric_results[0][1]):
+				best_var = metric_results[0][0]
+				best_score = metric_results[0][1]
 
 			# Add best variable if found
 			if best_var is not None:
@@ -545,6 +534,74 @@ class MDE:
 			return result.compute_error()
 		else:
 			return result.compute_error("MAE")
+
+	def _filter_convergent_variables(self, candidate_columns: List[int]) -> List[int]:
+		"""
+		Filter candidate variables to only include convergent ones using BatchedCCM.
+
+		:param candidate_columns: Column indices to check for convergence
+		:type candidate_columns: List[int]
+		:return: Tuple of convergent column indices and their CCM slopes
+		:rtype: Tuple[List[int], List[float]]
+		"""
+		from .CCM_batch import BatchedCCM
+		from sklearn.linear_model import LinearRegression
+
+		if len(candidate_columns) == 0:
+			return []
+
+		train_size = len(self.data) if self.train is None else self.train[1] - self.train[0]
+		lib_start, lib_stop, lib_increment = self.CCMLibrarySizes
+		lib_sizes = list(range(lib_start, min(lib_stop + 1, train_size), lib_increment))
+
+		if len(lib_sizes) < 2:
+			return candidate_columns
+
+		lib_sizes_normalized = numpy.array(lib_sizes, dtype = float)
+		lib_sizes_normalized = (lib_sizes_normalized - lib_sizes_normalized.min()) / (lib_sizes_normalized.max() - lib_sizes_normalized.min())
+
+		X = self.data[:, candidate_columns]
+		Y = self.data[:, self.target]
+
+		batchedCCM = BatchedCCM(
+			X = X,
+			Y = Y,
+			trainSizes = lib_sizes,
+			sample = self.CCMSampleSize,
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = self.predictionHorizon,
+			knn = self.knn if self.knn > 0 else self.embedDimensions + 1,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			seed = None,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			includeData = False,
+			ignoreNan = self.ignoreNan,
+			includeReverse = False,
+			device = self.device
+		)
+
+		try:
+			result = batchedCCM.Run()
+			forward_correlations = result.forward_correlations
+
+			convergent_vars = []
+			convergent_slopes = []
+
+			lr = LinearRegression()
+			for i, col in enumerate(candidate_columns):
+				corr_values = forward_correlations[:, i]
+				lr.fit(lib_sizes_normalized.reshape(-1, 1), corr_values)
+				slope = lr.coef_[0]
+
+				if slope > self.CCMConvergenceThreshold:
+					convergent_vars.append(col)
+
+			return convergent_vars
+
+		except Exception as e:
+			return candidate_columns
 
 	def _check_convergence(self, column: int) -> Tuple[bool, float]:
 		"""Check convergence for a candidate feature.
