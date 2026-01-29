@@ -9,204 +9,16 @@ or S-Map predictions with parallel processing.
 from typing import List, Tuple
 
 import numpy
-import numba
 from tqdm import tqdm as ProgressBar
 from joblib import Parallel, delayed, cpu_count
-from multiprocessing import shared_memory
 
 from .NeighborFinder import PairwiseDistanceNeighborFinder
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
 
-@numba.jit(nopython = True, parallel = True) # numpy broadcast does not work with numba?
-def elementwise_pairwise_distance(a, b, out):
-	"""
-	Pairwise square euclidean distances between elements of a and b
-	along every dimension. Basically an outer subtract.
-	:param a:	[n1 x dims] array 1
-	:param b:	[n2 x dims] array 2
-	:param out:	out array to write to
-	:return:	[n1 x n2 x dims] sq euclid distance along every dim
-	"""
-	n1 = a.shape[0]
-	n2 = b.shape[0]
-	dims = a.shape[1]
-	for v in numba.prange(dims):
-		for j in range(n2):
-			for i in range(n1):
-				d = a[i, v] - b[j, v]
-				out[i, j, v] = d * d
+from ._MDE import elementwise_pairwise_distance, columnwise_correlation, evaluate_all_candidates_numba
 
-@numba.jit(nopython = True, parallel = True)
-def increment_pairwise_distance(distances, increments, out):
-	"""
-	For a set of pairwise distances, increment each slice by the same amount
-	i.e. a 2D array broadcast
-	:param distances: 	[n1 x n2 x dims] set of pairwise distances
-	:param increments: 	[n1 x n2] increments
-	:param out: 		[n1 x n2 x dims] array to write into
-	:return:
-	"""
-	dims = distances.shape[2]
-	for v in numba.prange(dims):
-		out[:, :, v] = distances[:, :, v] + increments
-
-@numba.jit(nopython = True, parallel = True)
-def k_nearest_neighbors(distances, k):
-	"""
-	K nearnest neighbors along the first dimension of a matrix/tensor
-	:param distances:
-	:param k:
-	:return:
-	"""
-	return numpy.argsort(distances, axis = 0)[:k, :, :]
-
-
-@numba.jit(nopython = True, parallel = True)
-def fill_sparse_weight_matrix(distances, neighbors, weights, shift):
-	"""
-	Constructs the sparse weight matrix that maps only the k nearest neighbors for each test sample
-	:param distances:
-	:param neighbors:
-	:param weights:
-	:param shift:
-	:return:
-	"""
-	weights *= 0
-	n1 = distances.shape[0]
-	n2 = distances.shape[1]
-	dims = distances.shape[2]
-	for v in numba.prange(dims):
-		mask = numpy.zeros([n1, n2], dtype = bool)
-		mask[neighbors[:, :, v] + shift] = True
-		min_dist = numpy.min(distances[mask, v], axis = 0)
-		min_dist = numpy.fmax(min_dist, 1e-6)
-		weights[mask, v] = numpy.exp(-1 * distances[mask, v] / min_dist[:, None])
-
-
-@numba.jit(nopython = True, parallel = True)
-def fast_columnwise_correlation(vector, array):
-	n, m = array.shape
-	correlations = numpy.empty(m)
-
-	v_mean = numpy.mean(vector)
-	v_centered = vector - v_mean
-	v_std = numpy.sqrt(numpy.sum(v_centered ** 2))
-
-	for j in numba.prange(m):
-		a_mean = numpy.mean(array[:, j])
-		a_centered = array[:, j] - a_mean
-		a_std = numpy.sqrt(numpy.sum(a_centered ** 2))
-
-		correlations[j] = numpy.sum(v_centered * a_centered) / (v_std * a_std)
-
-	return correlations
-
-@numba.jit(nopython=True, parallel=True, nogil=True)
-def evaluate_all_candidates_numba(all_distances, current_best, train_y, test_y, k, remaining_vars, offset):
-	"""Evaluate all candidate variables using pure numpy operations with GIL released.
-
-	Parameters
-	----------
-	all_distances : ndarray (M, N, F)
-		Precomputed pairwise distances for all features
-	current_best : ndarray (M, N)
-		Current best distance matrix from selected features
-	train_y : ndarray (M,)
-		Training target values
-	test_y : ndarray (N,)
-		Test target values
-	k : int
-		Number of nearest neighbors
-	remaining_vars : ndarray (V,)
-		Indices of remaining candidate variables
-
-	Returns
-	-------
-	scores : ndarray (V,)
-		Correlation score for each candidate variable
-	"""
-	M, N = current_best.shape
-	V = len(remaining_vars)
-	scores = numpy.empty(V, dtype=numpy.float64)
-
-	for v_idx in numba.prange(V):
-		var = remaining_vars[v_idx]
-
-		# Add candidate distance to current best
-		distances = current_best + all_distances[:, :, var]
-
-		# Find k nearest neighbors for each test point
-		# For each column (test point), find k smallest distances
-		predictions = numpy.empty(N, dtype=numpy.float64)
-
-		for n in range(N):
-			# Get distances for this test point
-			dists = distances[:, n]
-
-			# Find k nearest neighbors (k smallest distances)
-			knn_indices = numpy.argsort(dists)[:k] + offset
-			knn_dists = dists[knn_indices]
-
-			# Simplex weights: exponential weighting
-			min_dist = numpy.fmax(numpy.min(knn_dists), 1e-6)
-			weights = numpy.exp(-knn_dists / min_dist)
-			weights /= numpy.sum(weights)
-
-			# Weighted prediction
-			predictions[n] = numpy.sum(weights * train_y[knn_indices])
-
-		# Compute correlation
-		test_mean = numpy.mean(test_y)
-		pred_mean = numpy.mean(predictions)
-
-		test_centered = test_y - test_mean
-		pred_centered = predictions - pred_mean
-
-		numerator = numpy.sum(test_centered * pred_centered)
-		denominator = numpy.sqrt(numpy.sum(test_centered**2) * numpy.sum(pred_centered**2))
-
-		if denominator > 0:
-			scores[v_idx] = numerator / denominator
-		else:
-			scores[v_idx] = numpy.nan
-
-	return scores
-
-
-def _evaluate_batch_shared(dummy, batch: List[int], shm_all_name: str,
-						   shm_current_name: str, shape: Tuple[int, int, int]) -> List[Tuple[int, float]]:
-	"""Evaluate batch using precomputed distances in shared memory"""
-	M, N, F = shape
-
-	# Attach to shared memories
-	shm_all = shared_memory.SharedMemory(name = shm_all_name)
-	all_distances = numpy.ndarray((M, N, F), dtype = numpy.float64, buffer = shm_all.buf)
-
-	shm_current = shared_memory.SharedMemory(name = shm_current_name)
-	current_distances = numpy.ndarray((M, N), dtype = numpy.float64, buffer = shm_current.buf)
-
-	results = []
-	for var in batch:
-		distances = current_distances + all_distances[:, :, var]
-		simplex = dummy
-
-		neighborFinder = PairwiseDistanceNeighborFinder(None)
-		neighborFinder.distanceMatrix = distances
-		neighborFinder.numNeighbors = simplex.knn_
-		knn_distances, knn_neighbors = neighborFinder.requery()
-		simplex.knn_distances, simplex.knn_neighbors = simplex.MapKNNIndicesToData(knn_neighbors, knn_distances)
-		simplex.Project()
-		simplex.FormatProjection()
-
-		result = SimplexResult(projection = simplex.Projection, embedDimensions = 0, predictionHorizon = 0)
-		score = result.compute_error()
-		results.append((var, score))
-
-	shm_all.close()
-	shm_current.close()
-	return results
 
 class MDE:
 	"""Multivariate Delay Embedding for feature selection.
@@ -326,7 +138,6 @@ class MDE:
 		self.rankings_ = None # performances of adding each variable at each iteration
 		self.all_distances = None
 		self.current_best_distance_matrix = None
-		self.dummy = None
 
 		# Initialize feature selection state
 		self.selectedVariables = []
@@ -388,16 +199,14 @@ class MDE:
 			verbose = self.verbose
 		)
 		dummy.EmbedData()
-		dummy.RemoveNan()
-		self.trainData = dummy.Embedding[dummy.trainIndices, :]
-		self.testData = dummy.Embedding[dummy.testIndices, :]
-		self.dummy = dummy
+		trainData = dummy.Embedding[dummy.trainIndices, :]
+		testData = dummy.Embedding[dummy.testIndices, :]
 
-		initial_result = self._run_edm(self.columns if self.columns is not None else [self.target])
-		score = self._compute_performance(initial_result)
-		self.accuracy.append(score)
+		nTrain = trainData.shape[0]
+		nTest = testData.shape[0]
+		nVars = self.data.shape[1]
 		
-		all_columns = list(range(self.data.shape[1] - 1)) # ignore the Y var, which is the last column
+		all_columns = numpy.arange(nVars - 1) # ignore the Y var, which is the last column
 		# ignore all variables with stdev less than threshold
 		excluded = numpy.argwhere(numpy.std(self.data, axis = 0) < self.stdThreshold).squeeze().tolist()
 		if not self.noTime: # time is first column if true and we exclude that
@@ -408,75 +217,6 @@ class MDE:
 
 		remaining_variables = [c for c in all_columns if c not in excluded]
 
-		# make batch size smaller if we have lots of threads
-		jobsPerThread = int(len(remaining_variables) / self.nThreads)
-		if jobsPerThread < self.batch_size:
-			self.batch_size = jobsPerThread
-
-
-		# TODO: This can be much more optimal
-		# - the current thing uses kdtree, which gets suboptimal rapidly with increasing numbers of
-		#   selected variables, the time is like O(n) to O(n log n) or something with n dims, not to mention
-		#	the overhead of building the trees each time
-		# - an optimal way is to
-		#		- use squared Euclidean distances and argsort
-		#		- precompute distance matrices based on each feature
-		#		- this would be basically a bunch of outer products
-		#			- result = A[:, np.newaxis, :] - B[np.newaxis, :, :]
-		#			- then each var will be the last dimension in result
-		#		- and for each new search, add just add the distances based on indexing
-		#		- this is O(1) because we calculate the same same number of numbers per iteration
-		#		- in fact this should get slightly faster with each iteration because we check fewer variables
-		# - We can further speed things up by breaking the prediction logic out of the Simplex (and SMap) classes
-		# 	because they are matrix maths. We would probably use numexpr or numba to speed up the matrix additions
-		#	and neighbor findings, and then do the predictions all in one go
-
-		# as an intermediate step we can compute all the neighbors, and then use the joblib threading to spread
-		# them across threads, and manually fix all the simplex/smap objects with the neighbors and only have them
-		# predict and score
-
-		"""
-		Here's a outline for matrix-izing basically all of this.
-		Train X: M samples x F features
-		Train Y: M samples x 1
-		Test X: N samples x F features
-		Test Y: N samples x 1
-		
-		[numba parallel]
-		for each feature k we calculate the pairwise distance between the train and test samples to create
-		distances: M x N x F
-		
-		best distance: M x N distance matrix : this is accumulated over iterations
-		
-		on each iteration we have:
-		[numba parallel]
-		candidate distances M x N x F = distances + best distance (broadcast add over K)
-		find k nearest neighbors in M for each N in each F
-		indices: k x N x F
-		
-		[numba parallel]
-		weight matrix: M x N x F -- a sparse matrix in which only the k entries for each N x F slice are non-zero
-			these weights are determined by the simplex or smap algorithms.
-			these weights the best way to use train M samples to predict the test N samples
-		
-		[possibly numba parallel]
-		vector-tensor multiply Train Y with weight matrix to produce predictions N x F
-		for numpy.matmul the notes say:
-			If either argument is N-D, N > 2, it is treated as a stack of matrices residing in the last two indexes and broadcast accordingly.
-		predictions: N x F : Y_hat if we include each F into the picture
-		
-		broadcast correlate Y with predictions to produce
-		performance: 1 x F 
-		find best feature f		
-		store candidate distance [:, :, best feature] into best distances
-		
-		repeat until satisfied
-		
-		The problem with this is that we use A LOT of ram. Though perhaps the weight matrix can be made sparse.
-		"""
-
-
-
 		# Iteratively add variables up to maxD
 		progressBar = ProgressBar(total = self.maxD, desc = 'Selecting variables', leave = False)
 
@@ -484,22 +224,41 @@ class MDE:
 		# than just storing the lists that come out?
 		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
 
-		for i in range(self.maxD):
-			# Break up remaining columns into parallel-friendly batches
-			batches = [
-				remaining_variables[i:(i + self.batch_size)]
-				for i in range(0, len(remaining_variables), self.batch_size)
-			]
+		allDistances = numpy.zeros([nVars, nTrain, nTest], order = 'C')
+		elementwise_pairwise_distance(trainData, testData, allDistances)
+		current_best_distance_matrix = numpy.zeros([nTrain, nTest])
+		current_best_distance_matrix += dummy._BuildExclusionMask()
+		train_y = trainData[:, self.target]
+		test_y = testData[:, self.target]
+		predictions = numpy.zeros([nTest, nVars])
+		perfs = numpy.zeros(nVars)
 
-			# Evaluate correlation/MAE for each possible addition in parallel
-			batch_results = Parallel(n_jobs = self.nThreads)(
-				delayed(self._evaluate_batch)(batch) for batch in batches
+		for i in range(self.maxD):
+			# Get target values for scoring
+
+			remaining_vars_array = numpy.array(remaining_variables, dtype=numpy.int32)
+
+			# Compute predictions for all candidates
+			evaluate_all_candidates_numba(
+			    allDistances,
+			    current_best_distance_matrix,
+			    train_y,
+			    numpy.int32(dummy.knn),
+			    remaining_vars_array,
+				numpy.int32(dummy.predictionHorizon),
+				predictions
 			)
 
+			columnwise_correlation(test_y, predictions, perfs)
+
+			# Convert to list of tuples
+			metric_results = [(var, perfs[i]) for var in remaining_variables]
+			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
+
 			# Flatten results and sort
-			# NOTE: there's nothing about aborting if performance doesn't increase
-			metric_results = [item for sublist in batch_results for item in sublist]
-			metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
+			# # NOTE: there's nothing about aborting if performance doesn't increase
+			# metric_results = [item for sublist in batch_results for item in sublist]
+			# metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
 
 			r = numpy.array(metric_results)
 			self.rankings_[i, r[:, 0].astype(int)] = r[:, 1]
@@ -534,8 +293,8 @@ class MDE:
 				self.accuracy.append(best_score)
 
 				# calc distance matrix update
-				train = self.trainData[:, best_var]
-				test = self.testData[:, best_var]
+				train = trainData[:, best_var]
+				test = testData[:, best_var]
 				distances = numpy.subtract.outer(train, test)
 				distances **= 2
 				if self.current_best_distance_matrix is None:
@@ -571,10 +330,6 @@ class MDE:
 			score = self._compute_performance(result)
 			results.append((var, score))
 		return results
-
-	def _run_edm_with_distances(self, var: int, distances: numpy.ndarray) -> SimplexResult:
-		"""Run EDM with pre-computed distance matrix."""
-
 
 	def _run_edm(self, variables: List[int]) -> SimplexResult:
 		"""Run EDM prediction with given variable indices.
@@ -624,7 +379,25 @@ class MDE:
 			result = smap.Run()
 			return result
 		else:
-			simplex = self.dummy
+			simplex = Simplex(
+				data = self.data,
+				columns = variables,
+				target = self.target,
+				train = self.train,
+				test = self.test,
+				embedDimensions = self.embedDimensions,
+				predictionHorizon = self.predictionHorizon,
+				knn = self.knn,
+				step = self.step,
+				exclusionRadius = self.exclusionRadius,
+				embedded = self.embedded,
+				validLib = self.validLib,
+				noTime = self.noTime,
+				ignoreNan = self.ignoreNan,
+				verbose = self.verbose
+			)
+			simplex.EmbedData()
+			simplex.RemoveNan()
 			neighborFinder = PairwiseDistanceNeighborFinder(None)
 			neighborFinder.distanceMatrix = distances
 			neighborFinder.numNeighbors = simplex.knn_
