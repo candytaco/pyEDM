@@ -176,7 +176,7 @@ class BatchedCCM:
 		libcorrelationMap = {}
 		libStatMap = {}
 
-		trainEmbeddings = torch.tensor([embedding[libraryIndices, :] for embedding in embeddings]).to(self.device)
+		trainEmbeddings = torch.tensor(numpy.array([embedding[libraryIndices, :] for embedding in embeddings])).to(self.device)
 
 		fullDistances = torch.zeros([numPredictors, trainEmbeddings.shape[1], trainEmbeddings.shape[1]], device = self.device)
 		for i in range(numPredictors):
