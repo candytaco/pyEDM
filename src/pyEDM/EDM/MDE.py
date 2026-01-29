@@ -57,7 +57,14 @@ class MDE:
 				 theta: float = 0.0,
 				 solver=None,
 				 nThreads = -1,
-				 stdThreshold: float = 1e-3):
+				 stdThreshold: float = 1e-3,
+				 CCMLibrarySizes = None,
+				 CCMSampleSize: int = 100,
+				 CCMConvergenceThreshold: float = 0.01,
+				 MinPredictionThreshold: float = 0.0,
+				 EmbedDimCorrelationMin: float = 0.0,
+				 FirstEMax: bool = False,
+				 TimeDelay: int = 0):
 		"""Initialize MDE with data and parameters.
 
 		Parameters
@@ -112,6 +119,21 @@ class MDE:
 		solver : object, optional
 			Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
 			Can be any sklearn-compatible regressor.
+		CCMLibrarySizes : list, optional
+			Library sizes for CCM testing as [start, stop, increment].
+			If None, defaults to [10, 100, 10]
+		CCMSampleSize : int, default=100
+			Number of random samples per library size for CCM
+		CCMConvergenceThreshold : float, default=0.01
+			Minimum slope threshold for CCM convergence
+		MinPredictionThreshold : float, default=0.0
+			Minimum correlation threshold for candidate filtering
+		EmbedDimCorrelationMin : float, default=0.0
+			Minimum correlation for E selection
+		FirstEMax : bool, default=False
+			Use first local maximum in E-rho curve instead of global max
+		TimeDelay : int, default=0
+			Time delay analysis depth. If 0, time delay analysis is disabled
 		"""
 		self.data = data
 		self.target = target
@@ -139,13 +161,21 @@ class MDE:
 		self.nThreads = nThreads
 		self.stdThreshold = stdThreshold
 		self.use_half_precision = use_half_precision
+		self.CCMLibrarySizes = CCMLibrarySizes if CCMLibrarySizes is not None else [10, 100, 10]
+		self.CCMSampleSize = CCMSampleSize
+		self.CCMConvergenceThreshold = CCMConvergenceThreshold
+		self.MinPredictionThreshold = MinPredictionThreshold
+		self.EmbedDimCorrelationMin = EmbedDimCorrelationMin
+		self.FirstEMax = FirstEMax
+		self.TimeDelay = TimeDelay
+		self.optimalEmbeddingDimensions = {}
 
 		if torch.cuda.is_available():
 			self.device = torch.device('cuda')
 		else:
 			self.device = torch.device('cpu')
 
-		self.dtype = torch.float16 if use_half_precision else self.dtype
+		self.dtype = torch.float16 if use_half_precision else torch.float32
 
 		self.rankings_ = None # performances of adding each variable at each iteration
 		self.all_distances = None
@@ -158,6 +188,7 @@ class MDE:
 		self.results_ = None
 		self.trainData = None
 		self.testData = None
+		self.timeDelayResults = None
 
 	def Run(self) -> MDEResult:
 		"""Execute MDE feature selection and return results.
@@ -187,7 +218,8 @@ class MDE:
 			selected_features = self.selectedVariables,
 			accuracy = self.accuracy,
 			ccm_values = self.ccm_values,
-			rankings = self.rankings_
+			rankings = self.rankings_,
+			timeDelayResults = self.timeDelayResults
 		)
 		return self.results_
 
@@ -293,13 +325,21 @@ class MDE:
 
 			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
 
+			# Apply correlation threshold filtering
+			if self.MinPredictionThreshold > 0:
+				original_count = len(metric_results)
+				metric_results = [(var, score) for var, score in metric_results if not numpy.isnan(score) and score >= self.MinPredictionThreshold]
+				if self.verbose and len(metric_results) < original_count:
+					print(f"Filtered {original_count - len(metric_results)} candidates below correlation threshold {self.MinPredictionThreshold}")
+
 			# Flatten results and sort
 			# # NOTE: there's nothing about aborting if performance doesn't increase
 			# metric_results = [item for sublist in batch_results for item in sublist]
 			# metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
 
-			r = numpy.array(metric_results)
-			self.rankings_[i, r[:, 0].astype(int)] = r[:, 1]
+			r = numpy.array(metric_results) if len(metric_results) > 0 else numpy.array([]).reshape(0, 2)
+			if len(r) > 0:
+				self.rankings_[i, r[:, 0].astype(int)] = r[:, 1]
 
 			best_var = None
 			best_score = None
@@ -339,6 +379,48 @@ class MDE:
 			else:
 				# No more valid candidates
 				break
+
+		# Time delay analysis
+		if self.TimeDelay > 0:
+			if self.verbose:
+				print(f"Starting time delay analysis with max delay {self.TimeDelay}")
+
+			self.timeDelayResults = []
+			best_accuracy = max(self.accuracy) if len(self.accuracy) > 0 else 0
+
+			for var in self.selectedVariables:
+				for delay in range(1, self.TimeDelay + 1):
+					# Create time-delayed version by shifting the column
+					delayed_data = numpy.roll(self.data[:, var], delay)
+					# Zero out the first delay values to avoid wrap-around
+					delayed_data[:delay] = numpy.nan
+
+					# Temporarily add delayed column to data
+					augmented_data = numpy.column_stack([self.data, delayed_data])
+					delayed_col_idx = augmented_data.shape[1] - 1
+
+					# Evaluate with delayed variable added
+					test_variables = self.selectedVariables + [delayed_col_idx]
+
+					# Save original data and restore after
+					original_data = self.data
+					self.data = augmented_data
+
+					try:
+						result = self._run_edm(test_variables)
+						score = self._compute_performance(result)
+
+						improvement = score - best_accuracy
+						self.timeDelayResults.append((var, delay, improvement, score))
+
+						if self.verbose:
+							print(f"Variable {var} with delay {delay}: score={score:.4f}, improvement={improvement:.4f}")
+
+					except Exception as e:
+						if self.verbose:
+							print(f"Warning: Time delay evaluation failed for var {var}, delay {delay}: {e}")
+					finally:
+						self.data = original_data
 
 		self.current_best_distance_matrix = current_best_distance_matrix.cpu().numpy()
 
@@ -477,10 +559,102 @@ class MDE:
 		tuple of (bool, float)
 			(convergent, ccm_value) tuple
 		"""
-		# Simplified convergence check
-		# In full implementation, this would use CCM
-		# TODO: implement CCM convergence check
-		return (True, 0.5)
+		from .CCM import CCM
+		from sklearn.linear_model import LinearRegression
+		from scipy.signal import argrelextrema
+
+		if self.embedDimensions > 0:
+			best_e = self.embedDimensions
+		elif column not in self.optimalEmbeddingDimensions:
+		# Determine optimal E for this column if not cached
+			e_results = FindOptimalEmbeddingDimensionality(
+				self.data,
+				[column],
+				self.target,
+				self.maxD,
+				train = self.train,
+				test = self.test,
+				predictionHorizon = self.predictionHorizon,
+				noTime = self.noTime
+			)
+
+			# Apply firstEMax logic
+			correlations = e_results[:, 1]
+
+			if self.FirstEMax:
+				# Find local maxima
+				local_max_indices = argrelextrema(correlations, numpy.greater)[0]
+				if len(local_max_indices) > 0:
+					best_e_idx = local_max_indices[0]
+				else:
+					best_e_idx = len(correlations) - 1
+			else:
+				# Use global maximum
+				best_e_idx = numpy.argmax(correlations)
+
+			best_e = int(e_results[best_e_idx, 0])
+			best_e_correlation = correlations[best_e_idx]
+
+			# Check if correlation meets minimum threshold
+			if best_e_correlation < self.EmbedDimCorrelationMin:
+				return (False, 0.0)
+
+			self.optimalEmbeddingDimensions[column] = best_e
+		else:
+			best_e = self.optimalEmbeddingDimensions[column]
+
+		# Compute library sizes for CCM
+		train_size = len(self.data) if self.train is None else self.train[1] - self.train[0]
+		lib_start, lib_stop, lib_increment = self.CCMLibrarySizes
+		lib_sizes = list(range(lib_start, min(lib_stop + 1, train_size), lib_increment))
+
+		if len(lib_sizes) < 2:
+			if self.verbose:
+				print(f"Warning: Not enough library sizes for CCM convergence check on column {column}")
+			return (True, 0.5)
+
+		# Normalize library sizes to [0, 1] for slope calculation
+		lib_sizes_normalized = numpy.array(lib_sizes, dtype = float)
+		lib_sizes_normalized = (lib_sizes_normalized - lib_sizes_normalized.min()) / (lib_sizes_normalized.max() - lib_sizes_normalized.min())
+
+		# Run CCM
+		ccm = CCM(
+			data = self.data,
+			columns = [column],
+			target = [self.target],
+			trainSizes = self.CCMLibrarySizes,
+			sample = self.CCMSampleSize,
+			embedDimensions = best_e,
+			predictionHorizon = self.predictionHorizon,
+			knn = self.knn if self.knn > 0 else best_e + 1,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			noTime = self.noTime,
+			ignoreNan = self.ignoreNan,
+			verbose = False
+		)
+		ccm.sequential = True
+
+		try:
+			ccm_result = ccm.Run()
+
+			# Extract forward correlation values (column 1 of libMeans)
+			forward_correlations = ccm_result.libMeans[:, 1]
+
+			# Fit linear regression to check convergence slope
+			lr = LinearRegression()
+			lr.fit(lib_sizes_normalized.reshape(-1, 1), forward_correlations)
+			slope = lr.coef_[0]
+
+			if self.verbose:
+				print(f"Column {column}: CCM slope = {slope:.4f}, threshold = {self.CCMConvergenceThreshold}")
+
+			return (slope > self.CCMConvergenceThreshold, slope)
+
+		except Exception as e:
+			if self.verbose:
+				print(f"Warning: CCM failed for column {column}: {e}")
+			return (False, 0.0)
 
 	def _final_prediction(self) -> numpy.ndarray:
 		"""Run final prediction with selected features.
