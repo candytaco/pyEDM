@@ -3,6 +3,7 @@ import torch
 from numpy import zeros, array, mean
 from numpy.random import default_rng
 
+from pyEDM.EDM.Simplex import Simplex
 from pyEDM.EDM._MDE import ElementwisePairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
 	ComputePredictions, RowwiseCorrelation
 
@@ -52,7 +53,7 @@ class BatchedCCM:
 
 		self.name = 'BatchedCCM'
 		self.X = X
-		self.Y = Y.reshape(-1, 1) if Y.ndim == 1 else Y
+		self.Y = Y[:, None] if Y.ndim == 1 else Y
 		self.numVariables = X.shape[1]
 		self.embedDimensions = embedDimensions
 		self.predictionHorizon = predictionHorizon
@@ -107,18 +108,18 @@ class BatchedCCM:
 
 		if self.includeData:
 			self.PredictStatsFwd = FwdResult['predictStats']
-		#
-		# if self.includeReverse:
-		# 	RevResult = self.BatchedCrossMap(reverse = True)
-		#
-		# 	self.libMeansRev = zeros([len(self.trainSizes), 1 + self.numVariables])
-		# 	for i, size in enumerate(self.trainSizes):
-		# 		self.libMeansRev[i, 0] = size
-		# 		for m in range(self.numVariables):
-		# 			self.libMeansRev[i, 1 + m] = RevResult['libcorrelation'][size][m]
-		#
-		# 	if self.includeData:
-		# 		self.PredictStatsRev = RevResult['predictStats']
+
+		if self.includeReverse:
+			RevResult = self.BatchedCrossMapReverse()
+
+			self.libMeansRev = zeros([len(self.trainSizes), 1 + self.numVariables])
+			for i, size in enumerate(self.trainSizes):
+				self.libMeansRev[i, 0] = size
+				for m in range(self.numVariables):
+					self.libMeansRev[i, 1 + m] = RevResult['libcorrelation'][size][m]
+
+			if self.includeData:
+				self.PredictStatsRev = RevResult['predictStats']
 
 	def BatchedCrossMap(self, reverse: bool = False):
 		"""
@@ -129,55 +130,69 @@ class BatchedCCM:
 
 		RNG = default_rng(self.seed)
 
-		if not reverse:
-			predictorData = self.X
-			targetData = self.Y
-		else:
-			predictorData = self.Y
-			targetData = self.X
+		dummy = Simplex(
+			data = self.X,
+			columns = numpy.arange(self.X.shape[1]).tolist(),
+			target = 0,
+			train = self.train,
+			test = self.test,
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = 0,
+			knn = self.knn,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			noTime = True,
+			ignoreNan = self.ignoreNan,
+			verbose = False
+		)
+		# we use the dummy simplex to calculate indices
+		dummy.EmbedData()
 
-		trainIndices = array(range(self.train[0] - 1, self.train[1]))
-		testIndices = array(range(self.test[0] - 1, self.test[1]))
-
-		numPredictors = predictorData.shape[1]
+		numPredictors = self.X.shape[1]
 
 		embeddings = []
 		for varIndex in range(numPredictors):
 			if self.embedded:
-				embedding = predictorData[:, varIndex].reshape(-1, 1)
+				embedding = self.X[:, varIndex].reshape(-1, 1)
 			else:
-				embedding = Embed(data = predictorData,
+				embedding = Embed(data = self.X,
 								  columns = [varIndex],
 								  embeddingDimensions = self.embedDimensions,
 								  stepSize = self.step,
 								  includeTime = False)
 			embeddings.append(embedding)
 
-		targetVector = targetData[:, 0]
 
-		libraryIndices = trainIndices.copy()
+		libraryIndices = dummy.trainIndices.copy()
 		N_libraryIndices = len(libraryIndices)
+		targetVector = self.Y[libraryIndices, 0]
 
 		libcorrelationMap = {}
 		libStatMap = {}
 
-		numOutputs = numPredictors
-
 		trainEmbeddings = torch.tensor([embedding[libraryIndices, :] for embedding in embeddings])
-		testEmbeddings = torch.tensor([embedding[testIndices, :] for embedding in embeddings])
 
 		fullDistances = torch.zeros([numPredictors, trainEmbeddings.shape[1], trainEmbeddings.shape[1]])
 		for i in range(numPredictors):
 			# these are the distance matrices summed across all embedding dimensions
 			# for each predictor
 			d = torch.zeros([trainEmbeddings.shape[2], trainEmbeddings.shape[1], trainEmbeddings.shape[1]])
-			ElementwisePairwiseDistance(trainEmbeddings[i, :, :], testEmbeddings[i, :, :], d)
+			ElementwisePairwiseDistance(trainEmbeddings[i, :, :], trainEmbeddings[i, :, :], d)
 			fullDistances[i, :, :] = torch.sum(d, dim = 0)
+		fullDistances = torch.sqrt(fullDistances)
+
+		# Exclude self-prediction: set diagonal to infinity for each predictor
+		if self.exclusionRadius == 0:
+			for i in range(numPredictors):
+				diagIndices = torch.arange(fullDistances.shape[1])
+				fullDistances[i, diagIndices, diagIndices] = numpy.inf
 
 		for libSize in self.trainSizes:
-			correlations = zeros([self.sample, numOutputs])
+			correlations = zeros([self.sample, numPredictors])
 			if self.includeData:
-				predictStats = [[None] * self.sample for _ in range(numOutputs)]
+				predictStats = [[None] * self.sample for _ in range(numPredictors)]
 
 			for s in range(self.sample):
 				subsampleIndices = RNG.choice(numpy.arange(fullDistances.shape[1]),
@@ -204,6 +219,119 @@ class BatchedCCM:
 				perfs_ = torch.zeros(numPredictors)
 				RowwiseCorrelation(torch.tensor(targetVector), predictions, perfs_)
 				correlations[s, :] = perfs_.cpu().numpy()
+
+			meanCorrelations = mean(correlations, axis = 0)
+			libcorrelationMap[libSize] = meanCorrelations
+
+			if self.includeData:
+				libStatMap[libSize] = predictStats
+
+		if self.includeData:
+			return {'libcorrelation': libcorrelationMap, 'predictStats': libStatMap}
+		else:
+			return {'libcorrelation': libcorrelationMap}
+
+	def BatchedCrossMapReverse(self):
+		"""
+		Perform reverse cross-mapping: target predicts all M predictor variables.
+		Target embedding determines neighbors, which are then used to predict each predictor.
+		"""
+
+		from .Embed import Embed
+
+		RNG = default_rng(self.seed)
+
+		dummy = Simplex(
+			data = self.Y,
+			columns = [0],
+			target = 0,
+			train = self.train,
+			test = self.test,
+			embedDimensions = self.embedDimensions,
+			predictionHorizon = 0,
+			knn = self.knn,
+			step = self.step,
+			exclusionRadius = self.exclusionRadius,
+			embedded = self.embedded,
+			validLib = self.validLib,
+			noTime = True,
+			ignoreNan = self.ignoreNan,
+			verbose = False
+		)
+		dummy.EmbedData()
+
+		numPredictors = self.X.shape[1]
+
+		if self.embedded:
+			targetEmbedding = self.Y
+		else:
+			targetEmbedding = Embed(data = self.Y,
+									columns = [0],
+									embeddingDimensions = self.embedDimensions,
+									stepSize = self.step,
+									includeTime = False)
+
+		predictorEmbeddings = []
+		for varIndex in range(numPredictors):
+			if self.embedded:
+				embedding = self.X[:, varIndex].reshape(-1, 1)
+			else:
+				embedding = Embed(data = self.X,
+								  columns = [varIndex],
+								  embeddingDimensions = self.embedDimensions,
+								  stepSize = self.step,
+								  includeTime = False)
+			predictorEmbeddings.append(embedding)
+
+		libraryIndices = dummy.trainIndices.copy()
+		N_libraryIndices = len(libraryIndices)
+
+		libcorrelationMap = {}
+		libStatMap = {}
+
+		targetEmbeddingTensor = torch.tensor(targetEmbedding[libraryIndices, :])
+
+		d = torch.zeros([targetEmbeddingTensor.shape[1], targetEmbeddingTensor.shape[0], targetEmbeddingTensor.shape[0]])
+		ElementwisePairwiseDistance(targetEmbeddingTensor, targetEmbeddingTensor, d)
+		fullDistances = torch.sum(d, dim = 0)
+		fullDistances = torch.sqrt(fullDistances)
+
+		if self.exclusionRadius == 0:
+			diagIndices = torch.arange(fullDistances.shape[0])
+			fullDistances[diagIndices, diagIndices] = numpy.inf
+
+		predictorVectors = torch.tensor(numpy.column_stack([emb[libraryIndices, 0] for emb in predictorEmbeddings]))
+
+		for libSize in self.trainSizes:
+			correlations = zeros([self.sample, numPredictors])
+			if self.includeData:
+				predictStats = [[None] * self.sample for _ in range(numPredictors)]
+
+			for s in range(self.sample):
+				subsampleIndices = RNG.choice(numpy.arange(fullDistances.shape[0]),
+											  size = min(libSize, N_libraryIndices),
+											  replace = False)
+
+				distances = torch.zeros_like(fullDistances)
+				distances.copy_(fullDistances)
+				mask = numpy.ones(distances.shape[0], dtype = bool)
+				mask[subsampleIndices] = False
+				distances[mask, :] = numpy.inf
+
+				neighbors = torch.topk(distances, self.knn, dim = 0, largest = False)[1]
+				distances = torch.gather(distances, 0, neighbors)
+				FloorArray(distances, 1e-6)
+
+				minDistances = MinAxis1(distances.T)
+				weights = ComputeWeights(distances.T, minDistances)
+				weightSum = SumAxis1(weights)
+
+				for m in range(numPredictors):
+					select = predictorVectors[:, m][neighbors.T]
+					prediction = ComputePredictions(weights, select, weightSum)
+
+					correlation = torch.corrcoef(torch.stack([torch.tensor(predictorVectors[:, m]), prediction]))[0, 1]
+					correlations[s, m] = correlation.cpu().numpy()
 
 			meanCorrelations = mean(correlations, axis = 0)
 			libcorrelationMap[libSize] = meanCorrelations
