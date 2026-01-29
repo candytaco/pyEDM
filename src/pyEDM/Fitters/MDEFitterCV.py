@@ -27,7 +27,7 @@ class MDEFitterCV(EDMFitter):
 				 Embed: bool = False,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
-				 KNN: int = 0,
+				 knn: int = 0,
 				 Step: int = -1,
 				 ExclusionRadius: int = 0,
 				 Verbose: bool = False,
@@ -71,7 +71,7 @@ class MDEFitterCV(EDMFitter):
 		self.FinalFeatureMode = FinalFeatureMode
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
-		self.KNN = KNN
+		self.KNN = knn
 		self.Step = Step
 		self.ExclusionRadius = ExclusionRadius
 		self.Verbose = Verbose

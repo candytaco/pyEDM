@@ -52,7 +52,7 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 	"""
 	@staticmethod
 	def find_neighbors(distances, k):
-		neighbors = numpy.argsort(distances, axis = 0)[:k, :]
+		neighbors = numpy.argpartition(distances, k, axis = 0)[:k, :]
 		indices = numpy.arange(distances.shape[1])[numpy.newaxis, :]
 		neighbor_distances = distances[neighbors, indices]
 		return numpy.sqrt(neighbor_distances).transpose().squeeze(), neighbors.transpose().squeeze()
