@@ -232,12 +232,14 @@ class MDEResult:
     :param accuracy: Correlation/MAE at each feature addition step
     :param ccm_values: CCM convergence values for selected features
     :param rankings: ranking of adding each feature at each iteration
+    :param timeDelayResults: Time delay analysis results as list of (variable, delay, improvement, score) tuples
     """
     final_forecast: np.ndarray
     selected_features: List[int]
     accuracy: List[float]
     ccm_values: List[float]
     rankings: List[Tuple[int, float]]
+    timeDelayResults: List[Tuple[int, int, float, float]] = None
 
     @property
     def time(self) -> np.ndarray:
