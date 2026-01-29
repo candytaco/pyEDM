@@ -752,7 +752,11 @@ class EDM:
 				assert libStart < libEnd
 
 			# Disallow indices < 1, the user may have specified 0 start
+			# but why??
 			assert libStart >= 0 and libEnd >= 0
+			# for now, to prevent -1 indexing
+			if libStart > 1:
+				libStart = 1
 
 		# Loop over each train pair
 		# Add rows for library segments, disallowing vectors
