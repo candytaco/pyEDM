@@ -59,7 +59,7 @@ class MDE:
 				 nThreads = -1,
 				 stdThreshold: float = 1e-3,
 				 CCMLibrarySizes = None,
-				 CCMSampleSize: int = 100,
+				 CCMSampleSize: int = 10,
 				 CCMConvergenceThreshold: float = 0.01,
 				 MinPredictionThreshold: float = 0.0,
 				 EmbedDimCorrelationMin: float = 0.0,
@@ -569,39 +569,35 @@ class MDE:
 			trainSizes = lib_sizes,
 			sample = self.CCMSampleSize,
 			embedDimensions = self.embedDimensions,
-			predictionHorizon = self.predictionHorizon,
+			predictionHorizon = 0,
 			knn = self.knn if self.knn > 0 else self.embedDimensions + 1,
 			step = self.step,
 			exclusionRadius = self.exclusionRadius,
-			seed = None,
-			embedded = self.embedded,
 			validLib = self.validLib,
 			includeData = False,
 			ignoreNan = self.ignoreNan,
 			includeReverse = False,
-			device = self.device
+			device = self.device,
+			batchSize = int(self.batch_size * self.testData.shape[0] / self.trainData.shape[0]),
+			useHalfPrecision = self.use_half_precision
 		)
 
-		try:
-			result = batchedCCM.Run()
-			forward_correlations = result.forward_correlations
+		result = batchedCCM.Run()
+		forward_correlations = result.forward_correlations
 
-			convergent_vars = []
-			convergent_slopes = []
+		convergent_vars = []
 
-			lr = LinearRegression()
-			for i, col in enumerate(candidate_columns):
-				corr_values = forward_correlations[:, i]
-				lr.fit(lib_sizes_normalized.reshape(-1, 1), corr_values)
-				slope = lr.coef_[0]
+		lr = LinearRegression()
+		for i, col in enumerate(candidate_columns):
+			corr_values = forward_correlations[:, i]
+			lr.fit(lib_sizes_normalized.reshape(-1, 1), corr_values)
+			slope = lr.coef_[0]
 
-				if slope > self.CCMConvergenceThreshold:
-					convergent_vars.append(col)
+			if slope > self.CCMConvergenceThreshold:
+				convergent_vars.append(col)
 
-			return convergent_vars
+		return convergent_vars
 
-		except Exception as e:
-			return candidate_columns
 
 	def _check_convergence(self, column: int) -> Tuple[bool, float]:
 		"""Check convergence for a candidate feature.
