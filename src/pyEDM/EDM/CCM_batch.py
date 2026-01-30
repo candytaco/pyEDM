@@ -207,11 +207,11 @@ class BatchedCCM:
 
 			distances = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
 			neighbors = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = torch.long, device = self.device)
-			minDistances = torch.zeros(batchNumPredictors, dtype = self.dtype, device = self.device)
+			minDistances = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
 			weights = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
-			weightSum = torch.zeros(batchNumPredictors, dtype = self.dtype, device = self.device)
+			weightSum = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
 			select = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
-			predictions = torch.zeros(batchNumPredictors, dtype = self.dtype, device = self.device)
+			predictions = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
 			mask = torch.ones(N_libraryIndices, dtype = torch.bool, device = self.device)
 
 			if self.exclusionRadius == 0:
