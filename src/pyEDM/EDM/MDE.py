@@ -327,6 +327,20 @@ class MDE:
 				batch_results = [(var, perfs_numpy[j]) for j, var in enumerate(batch_vars)]
 				metric_results.extend(batch_results)
 
+				# Clean up batch tensors
+				del batch_distances
+				del candidateDistances
+				del nearestNeighbors
+				del neighborDistances
+				del weights
+				del weightSum
+				del select
+				del predictions
+				del perfs
+
+				if torch.cuda.is_available():
+					torch.cuda.empty_cache()
+
 			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
 
 			# Apply correlation threshold filtering
@@ -368,6 +382,14 @@ class MDE:
 			else:
 				# No more valid candidates
 				break
+
+		# Clean up GPU tensors before time delay analysis
+		if torch.cuda.is_available():
+			del trainData_tensor
+			del testData_tensor
+			del train_y_tensor
+			del test_y_tensor
+			torch.cuda.empty_cache()
 
 		# Time delay analysis
 		if self.TimeDelay > 0:
@@ -411,7 +433,12 @@ class MDE:
 					finally:
 						self.data = original_data
 
+		# Convert and clean up distance matrix
 		self.current_best_distance_matrix = current_best_distance_matrix.cpu().numpy()
+		del current_best_distance_matrix
+
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
 
 	def _evaluate_batch(self, batch: List[int]) -> List[Tuple[int, float]]:
 		"""Evaluate a batch of candidate variables in parallel.
@@ -584,6 +611,11 @@ class MDE:
 
 		result = batchedCCM.Run()
 		forward_correlations = result.forward_correlations
+
+		# Clean up BatchedCCM GPU resources
+		del batchedCCM
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
 
 		convergent_vars = []
 
