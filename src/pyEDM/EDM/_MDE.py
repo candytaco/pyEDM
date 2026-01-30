@@ -13,7 +13,8 @@ def ElementwisePairwiseDistance(a, b, out):
 
 	for v in range(dims):
 		diff = a[:, v].unsqueeze(1) - b[:, v].unsqueeze(0)
-		out[v, :, :] = diff * diff
+		out[v, :, :] = diff
+	out.square_()
 
 
 def IncrementPairwiseDistance(distances, increments, out):
