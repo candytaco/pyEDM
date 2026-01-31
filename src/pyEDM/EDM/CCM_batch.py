@@ -304,20 +304,10 @@ class BatchedCCM:
 									stepSize = self.step,
 									includeTime = False)
 
-		predictorEmbeddings = []
-		for varIndex in range(numPredictors):
-			if self.embedded:
-				embedding = self.X[:, varIndex].reshape(-1, 1)
-			else:
-				embedding = Embed(data = self.X,
-								  columns = [varIndex],
-								  embeddingDimensions = self.embedDimensions,
-								  stepSize = self.step,
-								  includeTime = False)
-			predictorEmbeddings.append(embedding)
-
 		libraryIndices = dummy.trainIndices.copy()
 		N_libraryIndices = len(libraryIndices)
+
+		X_tensor = torch.tensor(self.X[libraryIndices, :], dtype = self.dtype, device = self.device)
 
 		libcorrelationMap = {}
 		libStatMap = {}
@@ -332,8 +322,6 @@ class BatchedCCM:
 		if self.exclusionRadius == 0:
 			diagIndices = torch.arange(fullDistances.shape[0], device = self.device)
 			fullDistances[diagIndices, diagIndices] = float('inf')
-
-		predictorVectors = torch.tensor(numpy.column_stack([emb[libraryIndices, 0] for emb in predictorEmbeddings]), dtype = self.dtype, device = self.device)
 
 		for libSize in self.trainSizes:
 			correlations = zeros([self.sample, numPredictors])
@@ -360,10 +348,10 @@ class BatchedCCM:
 				weightSum = SumAxis1(weights)
 
 				for m in range(numPredictors):
-					select = predictorVectors[:, m][neighbors.T]
+					select = X_tensor[:, m][neighbors.T]
 					prediction = ComputePredictions(weights, select, weightSum)
 
-					correlation = torch.corrcoef(torch.stack([predictorVectors[:, m], prediction]))[0, 1]
+					correlation = torch.corrcoef(torch.stack([X_tensor[:, m], prediction]))[0, 1]
 					correlations[s, m] = correlation.cpu().numpy()
 
 			meanCorrelations = mean(correlations, axis = 0)
