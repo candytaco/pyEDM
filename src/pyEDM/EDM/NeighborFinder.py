@@ -55,6 +55,12 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 		neighbors = numpy.argpartition(distances, k, axis = 0)[:k, :]
 		indices = numpy.arange(distances.shape[1])[numpy.newaxis, :]
 		neighbor_distances = distances[neighbors, indices]
+
+		# Sort the top-k neighbors by distance, breaking ties by index
+		sort_order = numpy.lexsort((neighbors, neighbor_distances), axis = 0)
+		neighbors = numpy.take_along_axis(neighbors, sort_order, axis = 0)
+		neighbor_distances = numpy.take_along_axis(neighbor_distances, sort_order, axis = 0)
+
 		return numpy.sqrt(neighbor_distances).transpose().squeeze(), neighbors.transpose().squeeze()
 
 	def __init__(self, data: numpy.ndarray, x: Optional[numpy.ndarray] = None, exclusion: Optional[numpy.ndarray] = None):
