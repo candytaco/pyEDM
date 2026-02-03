@@ -25,10 +25,9 @@ def main():
     df = EDM.FindOptimalPredictionHorizon(data = data,
                                           columns = [col_index], target = target_index,
                                           train = [1, 100], test = [201, 500], maxTp = 10,
-                                          embedDimensions = 2, knn = 0, step = -1, exclusionRadius = 0,
+                                          embedDimensions = 2, step = -1, exclusionRadius = 0,
                                           embedded = False, validLib = [], noTime = False,
-                                          ignoreNan = True, numProcess = 4, mpMethod = None,
-                                          chunksize = 1);
+                                          ignoreNan = True);
 
     df_ = EDM.sampleData["TentMapNoise"]
     data = df_.values
