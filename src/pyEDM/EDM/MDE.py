@@ -67,73 +67,39 @@ class MDE:
 				 TimeDelay: int = 0):
 		"""Initialize MDE with data and parameters.
 
-		Parameters
-		----------
-		data : numpy.ndarray
-			2D numpy array where column 0 is time (unless noTime=True)
-		target : int
-			Column index of the target column to forecast
-		maxD : int, default=5
-			Maximum number of features to select (including target if include_target=True)
-		include_target : bool, default=True
-			Whether to start with target in feature list
-		convergent : bool, default=True
-			Whether to use convergence checking for feature selection
-		metric : str, default="correlation"
-			Metric to use: "correlation" or "MAE"
-		batch_size : int, default=1000
-			Number of features to process in each batch
-		use_half_precision : bool, default=False
-			Use float16 instead of float32 for GPU tensors to save memory
-		columns : list of int, optional
-			Column indices to use for embedding (defaults to all except time)
-		train : tuple of (int, int), optional
-			Training set indices [start, end]
-		test : tuple of (int, int), optional
-			Test set indices [start, end]
-		embedDimensions : int, default=0
-			Embedding dimension (E). If 0, will be set by Validate()
-		predictionHorizon : int, default=1
-			Prediction time horizon (Tp)
-		knn : int, default=0
-			Number of nearest neighbors. If 0, will be set to E+1 by Validate()
-		step : int, default=-1
-			Time delay step size (tau). Negative values indicate lag
-		exclusionRadius : int, default=0
-			Temporal exclusion radius for neighbors
-		embedded : bool, default=False
-			Whether data is already embedded
-		validLib : list, optional
-			Boolean mask for valid library points
-		noTime : bool, default=False
-			Whether first column is time or data
-		ignoreNan : bool, default=True
-			Remove NaN values from embedding
-		verbose : bool, default=False
-			Print diagnostic messages
-		useSMap : bool, default=False
-			Whether to use SMap instead of Simplex
-		theta : float, default=0.0
-			S-Map localization parameter. theta=0 is global linear map,
-			larger values increase localization
-		solver : object, optional
-			Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq.
-			Can be any sklearn-compatible regressor.
-		CCMLibrarySizes : list, optional
-			Library sizes for CCM testing as [start, stop, increment].
-			If None, defaults to [10, 100, 10]
-		CCMSampleSize : int, default=100
-			Number of random samples per library size for CCM
-		CCMConvergenceThreshold : float, default=0.01
-			Minimum slope threshold for CCM convergence
-		MinPredictionThreshold : float, default=0.0
-			Minimum correlation threshold for candidate filtering
-		EmbedDimCorrelationMin : float, default=0.0
-			Minimum correlation for E selection
-		FirstEMax : bool, default=False
-			Use first local maximum in E-rho curve instead of global max
-		TimeDelay : int, default=0
-			Time delay analysis depth. If 0, time delay analysis is disabled
+		:param data: 	2D numpy array where column 0 is time (unless noTime=True)
+		:param target: 	Column index of the target column to forecast
+		:param maxD: 	Maximum number of features to select (including target if include_target=True)
+		:param include_target: 	Whether to start with target in feature list
+		:param convergent: 	Whether to use convergence checking for feature selection
+		:param metric: 	Metric to use: "correlation" or "MAE"
+		:param batch_size: 	Number of features to process in each batch
+		:param use_half_precision: 	Use float16 instead of float32 for GPU tensors to save memory
+		:param columns: 	Column indices to use for embedding (defaults to all except time)
+		:param train: 	Training set indices [start, end]
+		:param test: 	Test set indices [start, end]
+		:param embedDimensions: 	Embedding dimension (E). If 0, will be set by Validate()
+		:param predictionHorizon: 	Prediction time horizon (Tp)
+		:param knn: 	Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+		:param step: 	Time delay step size (tau). Negative values indicate lag
+		:param exclusionRadius: 	Temporal exclusion radius for neighbors
+		:param embedded: 	Whether data is already embedded
+		:param validLib: 	Boolean mask for valid library points
+		:param noTime: 	Whether first column is time or data
+		:param ignoreNan: 	Remove NaN values from embedding
+		:param verbose: 	Print diagnostic messages
+		:param useSMap: 	Whether to use SMap instead of Simplex
+		:param theta: 	S-Map localization parameter. theta=0 is global linear map, larger values increase localization
+		:param solver: 	Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
+		:param nThreads: 	Number of threads to use
+		:param stdThreshold: 	Minimum standard deviation threshold
+		:param CCMLibrarySizes: 	Library sizes for CCM testing as [start, stop, increment]. If None, defaults to [10, 100, 10]
+		:param CCMSampleSize: 	Number of random samples per library size for CCM
+		:param CCMConvergenceThreshold: 	Minimum slope threshold for CCM convergence
+		:param MinPredictionThreshold: 	Minimum correlation threshold for candidate filtering
+		:param EmbedDimCorrelationMin: 	Minimum correlation for E selection
+		:param FirstEMax: 	Use first local maximum in E-rho curve instead of global max
+		:param TimeDelay: 	Time delay analysis depth. If 0, time delay analysis is disabled
 		"""
 		self.data = data
 		self.target = target
@@ -193,11 +159,8 @@ class MDE:
 	def Run(self) -> MDEResult:
 		"""Execute MDE feature selection and return results.
 
-		Returns
-		-------
-		MDEResult
-			Results containing final prediction, selected features, accuracy,
-			and CCM values
+		:return: Results containing final prediction, selected features, accuracy, and CCM values
+		:rtype: MDEResult
 		"""
 		# TODO: If the embedding dimensionality is not specified, estimate it
 		if self.embedDimensions == 0:
@@ -242,7 +205,7 @@ class MDE:
 			knn = self.knn,
 			step = self.step,
 			exclusionRadius = self.exclusionRadius,
-			embedded = self.embedded,
+			embedded = True,
 			validLib = self.validLib,
 			noTime = self.noTime,
 			ignoreNan = self.ignoreNan,
@@ -440,43 +403,12 @@ class MDE:
 		if torch.cuda.is_available():
 			torch.cuda.empty_cache()
 
-	def _evaluate_batch(self, batch: List[int]) -> List[Tuple[int, float]]:
-		"""Evaluate a batch of candidate variables in parallel.
-
-		Parameters
-		----------
-		batch : list of int
-			List of variable indices to evaluate
-
-		Returns
-		-------
-		list of tuple
-			List of (column_index, metric_value) tuples
-		"""
-		results = []
-
-		# TODO: this is quite suboptimal because:
-		#  1. the performance is calculated on each item rather than array broadcast
-		#  2. each Simplex/SMap object redoes the entire validation, embedding, and index building
-		for var in batch:
-			thesePredictors = [var] + self.selectedVariables
-			result = self._run_edm(thesePredictors)
-			score = self._compute_performance(result)
-			results.append((var, score))
-		return results
-
 	def _run_edm(self, variables: List[int]) -> SimplexResult:
 		"""Run EDM prediction with given variable indices.
 
-		Parameters
-		----------
-		variables : list of int
-			Column indices to use for prediction
-
-		Returns
-		-------
-		SimplexResult or SMapResult
-			Prediction results
+		:param variables: Column indices to use for prediction
+		:return: Prediction results
+		:rtype: SimplexResult or SMapResult
 		"""
 		# distance matrix
 		# the new one to be added is always the first one in the list
@@ -547,15 +479,9 @@ class MDE:
 	def _compute_performance(self, result: SimplexResult) -> float:
 		"""Compute optimization metric from prediction result.
 
-		Parameters
-		----------
-		result : SimplexResult
-			Prediction result
-
-		Returns
-		-------
-		float
-			Metric value (correlation or MAE)
+		:param result: Prediction result
+		:return: Metric value (correlation or MAE)
+		:rtype: float
 		"""
 		if self.metric == "correlation":
 			return result.compute_error()
@@ -563,13 +489,11 @@ class MDE:
 			return result.compute_error("MAE")
 
 	def _filter_convergent_variables(self, candidate_columns: List[int]) -> List[int]:
-		"""
-		Filter candidate variables to only include convergent ones using BatchedCCM.
+		"""Filter candidate variables to only include convergent ones using BatchedCCM.
 
 		:param candidate_columns: Column indices to check for convergence
-		:type candidate_columns: List[int]
 		:return: Tuple of convergent column indices and their CCM slopes
-		:rtype: Tuple[List[int], List[float]]
+		:rtype: List[int]
 		"""
 		from .CCM_batch import BatchedCCM
 		from sklearn.linear_model import LinearRegression
@@ -634,15 +558,9 @@ class MDE:
 	def _check_convergence(self, column: int) -> Tuple[bool, float]:
 		"""Check convergence for a candidate feature.
 
-		Parameters
-		----------
-		column : int
-			Column index to check
-
-		Returns
-		-------
-		tuple of (bool, float)
-			(convergent, ccm_value) tuple
+		:param column: Column index to check
+		:return: (convergent, ccm_value) tuple
+		:rtype: Tuple[bool, float]
 		"""
 		from .CCM import CCM
 		from sklearn.linear_model import LinearRegression
@@ -720,34 +638,23 @@ class MDE:
 		)
 		ccm.sequential = True
 
-		try:
-			ccm_result = ccm.Run()
+		ccm_result = ccm.Run()
 
-			# Extract forward correlation values (column 1 of libMeans)
-			forward_correlations = ccm_result.libMeans[:, 1]
+		# Extract forward correlation values (column 1 of libMeans)
+		forward_correlations = ccm_result.libMeans[:, 1]
 
-			# Fit linear regression to check convergence slope
-			lr = LinearRegression()
-			lr.fit(lib_sizes_normalized.reshape(-1, 1), forward_correlations)
-			slope = lr.coef_[0]
+		# Fit linear regression to check convergence slope
+		lr = LinearRegression()
+		lr.fit(lib_sizes_normalized.reshape(-1, 1), forward_correlations)
+		slope = lr.coef_[0]
 
-			if self.verbose:
-				print(f"Column {column}: CCM slope = {slope:.4f}, threshold = {self.CCMConvergenceThreshold}")
-
-			return (slope > self.CCMConvergenceThreshold, slope)
-
-		except Exception as e:
-			if self.verbose:
-				print(f"Warning: CCM failed for column {column}: {e}")
-			return (False, 0.0)
+		return (slope > self.CCMConvergenceThreshold, slope)
 
 	def _final_prediction(self) -> numpy.ndarray:
 		"""Run final prediction with selected features.
 
-		Returns
-		-------
-		numpy.ndarray
-			Final prediction array [Time, Observations, Predictions]
+		:return: Final prediction array [Time, Observations, Predictions]
+		:rtype: numpy.ndarray
 		"""
 		result = self._run_edm(self.selectedVariables)
 		return result.projection
