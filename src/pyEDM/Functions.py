@@ -535,11 +535,14 @@ def FindOptimalPredictionHorizon(data: numpy.ndarray,
 								 validLib: List = [],
 								 noTime: bool = False,
 								 ignoreNan: bool = True,
-								 numProcess: int = 4,
-								 mpMethod: Any = None,
-								 chunksize: int = 1) -> numpy.ndarray:
+								 batched: bool = False) -> numpy.ndarray:
 	"""
-	Estimate optimal prediction interval [1:maxTp].
+	Estimate optimal prediction interval [1:maxTp] using GPU-accelerated Simplex.
+
+	When batched=False, each Tp gets its own proper train library (CreateIndices
+	adjusts the library endpoint by predictionHorizon). When batched=True, the
+	maxTp library (most restrictive) is used for all Tp values, and distances
+	and neighbors are computed once with predictions batched across all Tp.
 
 	:param data: 			2D numpy array where column 0 is time
 	:param columns: 		Column indices to use (defaults to all except time)
@@ -554,39 +557,115 @@ def FindOptimalPredictionHorizon(data: numpy.ndarray,
 	:param validLib: 		Valid library indices
 	:param noTime: 			Whether to exclude time column
 	:param ignoreNan: 		Whether to ignore NaN values
-	:param numProcess: 		Number of processes for multiprocessing
-	:param mpMethod: 		Multiprocessing method
-	:param chunksize: 		Chunk size for pool.starmap
+	:param batched: 		Use shared maxTp library for all Tp (faster, slightly less accurate for low Tp)
 	:return: Array with columns [predictionHorizon, correlation]
 	"""
 
-	# Setup Pool
-	Evals = [predictionHorizon for predictionHorizon in range(1, maxTp + 1)]
-	args = {'columns': columns,
-			'target': target,
-			'train': train,
-			'test': test,
-			'embedDims': embedDimensions,
-			'step': step,
-			'exclusionRadius': exclusionRadius,
-			'embedded': embedded,
-			'validLib': validLib,
-			'noTime': noTime,
-			'ignoreNan': ignoreNan}
+	TpVals = list(range(1, maxTp + 1))
 
-	# Create iterable for Pool.starmap, use repeated copies of data, args
-	poolArgs = zip(Evals, repeat(data), repeat(args))
+	if batched:
+		correlations = _FindOptimalPredictionHorizonBatched(
+			data, columns, target, TpVals, train, test,
+			embedDimensions, step, exclusionRadius, embedded,
+			validLib, noTime, ignoreNan)
+	else:
+		correlations = _FindOptimalPredictionHorizonIterative(
+			data, columns, target, TpVals, train, test,
+			embedDimensions, step, exclusionRadius, embedded,
+			validLib, noTime, ignoreNan)
 
-	# Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
-	mpContext = get_context(mpMethod)
-	with mpContext.Pool(processes = numProcess) as pool:
-		correlationList = pool.starmap(PoolFunc.PredictIntervalSimplexFunc, poolArgs,
-									   chunksize = chunksize)
+	return numpy.column_stack([TpVals, correlations])
 
-	import numpy as np
-	result = np.column_stack([Evals, correlationList])
 
-	return result
+def _FindOptimalPredictionHorizonIterative(data, columns, target, TpVals,
+											train, test, embedDimensions,
+											step, exclusionRadius, embedded,
+											validLib, noTime, ignoreNan):
+	"""
+	Evaluate each Tp with its own proper train library.
+	"""
+	correlations = []
+
+	for Tp in TpVals:
+		S = Simplex(data=data, columns=columns, target=target,
+					train=train, test=test, embedDimensions=embedDimensions,
+					predictionHorizon=Tp, knn=0,
+					step=step, exclusionRadius=exclusionRadius,
+					embedded=embedded, validLib=validLib,
+					noTime=noTime, ignoreNan=ignoreNan)
+
+		result = S.Run()
+		correlation = ComputeError(result.projection[:, 1], result.projection[:, 2], None)
+		correlations.append(correlation)
+
+	return correlations
+
+
+def _FindOptimalPredictionHorizonBatched(data, columns, target, TpVals,
+										  train, test, embedDimensions,
+										  step, exclusionRadius, embedded,
+										  validLib, noTime, ignoreNan):
+	"""
+	Evaluate all Tp values using shared maxTp library. Distances and neighbors
+	are computed once (using the most restrictive library from maxTp), then
+	predictions for all Tp values are batched in a single tensor operation.
+	"""
+	maxTp = max(TpVals)
+
+	# Create Simplex with maxTp to get the most restrictive library
+	S = Simplex(data=data, columns=columns, target=target,
+				train=train, test=test, embedDimensions=embedDimensions,
+				predictionHorizon=maxTp, knn=0,
+				step=step, exclusionRadius=exclusionRadius,
+				embedded=embedded, validLib=validLib,
+				noTime=noTime, ignoreNan=ignoreNan)
+
+	S.EmbedData()
+	S.RemoveNan()
+	S.FindNeighborsTorch()
+
+	device = S.device
+	dtype = S.dtype
+
+	distances = torch.tensor(S.knn_distances, device=device, dtype=dtype)
+	neighbors = torch.tensor(S.knn_neighbors, device=device, dtype=torch.long)
+	targetVector = torch.tensor(S.targetVec.squeeze(), device=device, dtype=dtype)
+
+	# Weights depend only on distances, shared across all Tp
+	minDist = distances[:, 0].clone()
+	torch.clamp_min(minDist, 1e-6, out=minDist)
+	scaledDistances = distances / minDist.unsqueeze(1)
+	weights = torch.exp(-scaledDistances)
+	weightRowSum = torch.sum(weights, dim=1)
+
+	# Batch predictions: neighborsPlusTp is [maxTp, nTest, knn]
+	TpTensor = torch.tensor(TpVals, device=device, dtype=torch.long)
+	neighborsPlusTp = neighbors.unsqueeze(0) + TpTensor.unsqueeze(1).unsqueeze(2)
+
+	# libTargetValues: [maxTp, nTest, knn]
+	libTargetValues = targetVector[neighborsPlusTp]
+
+	# predictions: [maxTp, nTest]
+	predictions = torch.sum(weights.unsqueeze(0) * libTargetValues, dim=2) / weightRowSum.unsqueeze(0)
+
+	predictionsNumpy = predictions.cpu().numpy()
+
+	# Compute correlations for each Tp
+	correlations = []
+	for i, Tp in enumerate(TpVals):
+		observationIndices = S.testIndices + Tp
+		validObsIndices = observationIndices[observationIndices < len(S.targetVec)]
+		observations = S.targetVec[validObsIndices, 0]
+		nValid = len(validObsIndices)
+		correlation = ComputeError(observations[:nValid], predictionsNumpy[i, :nValid], None)
+		correlations.append(correlation)
+
+	del distances, neighbors, targetVector, weights, weightRowSum
+	del TpTensor, neighborsPlusTp, libTargetValues, predictions
+	if torch.cuda.is_available():
+		torch.cuda.empty_cache()
+
+	return correlations
 
 
 def FindSMapNeighborhood(data: numpy.ndarray,

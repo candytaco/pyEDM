@@ -698,8 +698,7 @@ class test_EDM( unittest.TestCase ):
                                                   maxTp = 15, train = [1, 150], test = [151, 198],
                                                   embedDimensions = 3, step = -1,
                                                   embedded = False, validLib = [], noTime = False,
-                                                  ignoreNan = True, numProcess = 10, mpMethod = None,
-                                                  chunksize = 1)
+                                                  ignoreNan = True)
 
         dfv = self.ValidationFiles["PredictInterval_valid.csv"].values
 
