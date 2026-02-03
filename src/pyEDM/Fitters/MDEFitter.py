@@ -30,8 +30,7 @@ class MDEFitter(EDMFitter):
 				 ExclusionRadius: int = 0,
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
-				 Theta: float = 0.0,
-				 nThreads: int = -1):
+				 Theta: float = 0.0):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
@@ -72,7 +71,6 @@ class MDEFitter(EDMFitter):
 		self.Verbose = Verbose
 		self.UseSMap = UseSMap
 		self.Theta = Theta
-		self.nThreads = nThreads
 		self.Embed = Embed
 
 		self.MDE = None
@@ -122,8 +120,7 @@ class MDEFitter(EDMFitter):
 			noTime = NoTime,
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
-			theta = self.Theta,
-			nThreads = self.nThreads
+			theta = self.Theta
 		)
 
 		self.Result = self.MDE.Run()
