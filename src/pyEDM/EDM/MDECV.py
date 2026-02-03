@@ -50,7 +50,6 @@ class MDECV:
 				 useSMap: bool = False,
 				 theta: float = 0.0,
 				 solver=None,
-				 nThreads = -1,
 				 stdThreshold = 1e-2):
 		"""Initialize MDECV with data and parameters.
 
@@ -143,7 +142,6 @@ class MDECV:
 		self.useSMap = useSMap
 		self.theta = theta
 		self.solver = solver
-		self.nThreads = nThreads
 
 		self.stdThreshold = stdThreshold
 
@@ -225,7 +223,6 @@ class MDECV:
 			useSMap = self.useSMap,
 			theta = self.theta,
 			solver = self.solver,
-			nThreads = self.nThreads,
 			stdThreshold = self.stdThreshold
 		)
 

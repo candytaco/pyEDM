@@ -55,7 +55,6 @@ class MDE:
 				 useSMap: bool = False,
 				 theta: float = 0.0,
 				 solver=None,
-				 nThreads = -1,
 				 stdThreshold: float = 1e-3,
 				 CCMLibrarySizes = None,
 				 CCMSampleSize: int = 10,
@@ -90,7 +89,6 @@ class MDE:
 		:param useSMap: 	Whether to use SMap instead of Simplex
 		:param theta: 	S-Map localization parameter. theta=0 is global linear map, larger values increase localization
 		:param solver: 	Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
-		:param nThreads: 	Number of threads to use
 		:param stdThreshold: 	Minimum standard deviation threshold
 		:param CCMLibrarySizes: 	Library sizes for CCM testing as [start, stop, increment]. If None, defaults to [10, 100, 10]
 		:param CCMSampleSize: 	Number of random samples per library size for CCM
@@ -123,7 +121,6 @@ class MDE:
 		self.useSMap = useSMap
 		self.theta = theta
 		self.solver = solver
-		self.nThreads = nThreads
 		self.stdThreshold = stdThreshold
 		self.use_half_precision = use_half_precision
 		self.CCMLibrarySizes = CCMLibrarySizes if CCMLibrarySizes is not None else [10, 100, 10]

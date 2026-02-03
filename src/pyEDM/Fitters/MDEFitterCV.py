@@ -34,7 +34,6 @@ class MDEFitterCV(EDMFitter):
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
-				 nThreads: int = -1,
 				 stdThreshold = 1e-2,
 				 
 				 ):
@@ -81,7 +80,6 @@ class MDEFitterCV(EDMFitter):
 		self.Verbose = Verbose
 		self.UseSMap = UseSMap
 		self.Theta = Theta
-		self.nThreads = nThreads
 		self.embed = Embed
 
 		self.stdThreshold = stdThreshold
@@ -137,7 +135,6 @@ class MDEFitterCV(EDMFitter):
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
 			theta = self.Theta,
-			nThreads = self.nThreads,
 			noTime = not self.DataAdapter.HasTime,
 			stdThreshold = self.stdThreshold
 		)
