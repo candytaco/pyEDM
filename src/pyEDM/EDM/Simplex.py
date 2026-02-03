@@ -115,7 +115,7 @@ class Simplex(EDM):
 		self.EmbedData()
 		self.RemoveNan()
 		self.FindNeighborsTorch()
-		self.ProjectTorch()
+		self.Project()
 		self.FormatProjection()
 
 		return SimplexResult(
@@ -180,7 +180,7 @@ class Simplex(EDM):
 			torch.cuda.empty_cache()
 
 	#-------------------------------------------------------------------
-	def ProjectTorch(self):
+	def Project(self):
 	#-------------------------------------------------------------------
 		"""
 		Simplex Projection on GPU using torch.
