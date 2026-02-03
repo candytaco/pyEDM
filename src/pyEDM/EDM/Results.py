@@ -106,7 +106,7 @@ class SMapResult:
             predictionHorizon=self.predictionHorizon
         )
 
-    def compute_error(self, metric = None) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> float:
         """
         Compute prediction error statistics.
 
@@ -200,7 +200,7 @@ class MultiviewResult:
         """
         return list(self.topRankProjections.keys())
 
-    def compute_error(self, metric = None) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> float:
         """
         Compute prediction error statistics for ensemble prediction.
 
@@ -262,7 +262,7 @@ class MDEResult:
         """
         return self.final_forecast[:, 2]
 
-    def compute_error(self, metric = None) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> float:
         """
         Compute prediction error statistics.
 
@@ -310,7 +310,7 @@ class MDECVResult:
         """
         return self.final_forecast[:, 2]
 
-    def compute_error(self, metric = None) -> Dict[str, float]:
+    def compute_error(self, metric = None) -> float:
         """
         Compute prediction error statistics.
 
