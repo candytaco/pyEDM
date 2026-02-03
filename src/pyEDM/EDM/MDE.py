@@ -67,39 +67,39 @@ class MDE:
 				 TimeDelay: int = 0):
 		"""Initialize MDE with data and parameters.
 
-		:param data: 2D numpy array where column 0 is time (unless noTime=True)
-		:param target: Column index of the target column to forecast
-		:param maxD: Maximum number of features to select (including target if include_target=True)
-		:param include_target: Whether to start with target in feature list
-		:param convergent: Whether to use convergence checking for feature selection
-		:param metric: Metric to use: "correlation" or "MAE"
-		:param batch_size: Number of features to process in each batch
-		:param use_half_precision: Use float16 instead of float32 for GPU tensors to save memory
-		:param columns: Column indices to use for embedding (defaults to all except time)
-		:param train: Training set indices [start, end]
-		:param test: Test set indices [start, end]
-		:param embedDimensions: Embedding dimension (E). If 0, will be set by Validate()
-		:param predictionHorizon: Prediction time horizon (Tp)
-		:param knn: Number of nearest neighbors. If 0, will be set to E+1 by Validate()
-		:param step: Time delay step size (tau). Negative values indicate lag
-		:param exclusionRadius: Temporal exclusion radius for neighbors
-		:param embedded: Whether data is already embedded
-		:param validLib: Boolean mask for valid library points
-		:param noTime: Whether first column is time or data
-		:param ignoreNan: Remove NaN values from embedding
-		:param verbose: Print diagnostic messages
-		:param useSMap: Whether to use SMap instead of Simplex
-		:param theta: S-Map localization parameter. theta=0 is global linear map, larger values increase localization
-		:param solver: Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
-		:param nThreads: Number of threads to use
-		:param stdThreshold: Minimum standard deviation threshold
-		:param CCMLibrarySizes: Library sizes for CCM testing as [start, stop, increment]. If None, defaults to [10, 100, 10]
-		:param CCMSampleSize: Number of random samples per library size for CCM
-		:param CCMConvergenceThreshold: Minimum slope threshold for CCM convergence
-		:param MinPredictionThreshold: Minimum correlation threshold for candidate filtering
-		:param EmbedDimCorrelationMin: Minimum correlation for E selection
-		:param FirstEMax: Use first local maximum in E-rho curve instead of global max
-		:param TimeDelay: Time delay analysis depth. If 0, time delay analysis is disabled
+		:param data: 	2D numpy array where column 0 is time (unless noTime=True)
+		:param target: 	Column index of the target column to forecast
+		:param maxD: 	Maximum number of features to select (including target if include_target=True)
+		:param include_target: 	Whether to start with target in feature list
+		:param convergent: 	Whether to use convergence checking for feature selection
+		:param metric: 	Metric to use: "correlation" or "MAE"
+		:param batch_size: 	Number of features to process in each batch
+		:param use_half_precision: 	Use float16 instead of float32 for GPU tensors to save memory
+		:param columns: 	Column indices to use for embedding (defaults to all except time)
+		:param train: 	Training set indices [start, end]
+		:param test: 	Test set indices [start, end]
+		:param embedDimensions: 	Embedding dimension (E). If 0, will be set by Validate()
+		:param predictionHorizon: 	Prediction time horizon (Tp)
+		:param knn: 	Number of nearest neighbors. If 0, will be set to E+1 by Validate()
+		:param step: 	Time delay step size (tau). Negative values indicate lag
+		:param exclusionRadius: 	Temporal exclusion radius for neighbors
+		:param embedded: 	Whether data is already embedded
+		:param validLib: 	Boolean mask for valid library points
+		:param noTime: 	Whether first column is time or data
+		:param ignoreNan: 	Remove NaN values from embedding
+		:param verbose: 	Print diagnostic messages
+		:param useSMap: 	Whether to use SMap instead of Simplex
+		:param theta: 	S-Map localization parameter. theta=0 is global linear map, larger values increase localization
+		:param solver: 	Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
+		:param nThreads: 	Number of threads to use
+		:param stdThreshold: 	Minimum standard deviation threshold
+		:param CCMLibrarySizes: 	Library sizes for CCM testing as [start, stop, increment]. If None, defaults to [10, 100, 10]
+		:param CCMSampleSize: 	Number of random samples per library size for CCM
+		:param CCMConvergenceThreshold: 	Minimum slope threshold for CCM convergence
+		:param MinPredictionThreshold: 	Minimum correlation threshold for candidate filtering
+		:param EmbedDimCorrelationMin: 	Minimum correlation for E selection
+		:param FirstEMax: 	Use first local maximum in E-rho curve instead of global max
+		:param TimeDelay: 	Time delay analysis depth. If 0, time delay analysis is disabled
 		"""
 		self.data = data
 		self.target = target
@@ -205,7 +205,7 @@ class MDE:
 			knn = self.knn,
 			step = self.step,
 			exclusionRadius = self.exclusionRadius,
-			embedded = self.embedded,
+			embedded = True,
 			validLib = self.validLib,
 			noTime = self.noTime,
 			ignoreNan = self.ignoreNan,
@@ -402,25 +402,6 @@ class MDE:
 
 		if torch.cuda.is_available():
 			torch.cuda.empty_cache()
-
-	def _evaluate_batch(self, batch: List[int]) -> List[Tuple[int, float]]:
-		"""Evaluate a batch of candidate variables in parallel.
-
-		:param batch: List of variable indices to evaluate
-		:return: List of (column_index, metric_value) tuples
-		:rtype: List[Tuple[int, float]]
-		"""
-		results = []
-
-		# TODO: this is quite suboptimal because:
-		#  1. the performance is calculated on each item rather than array broadcast
-		#  2. each Simplex/SMap object redoes the entire validation, embedding, and index building
-		for var in batch:
-			thesePredictors = [var] + self.selectedVariables
-			result = self._run_edm(thesePredictors)
-			score = self._compute_performance(result)
-			results.append((var, score))
-		return results
 
 	def _run_edm(self, variables: List[int]) -> SimplexResult:
 		"""Run EDM prediction with given variable indices.
