@@ -18,8 +18,7 @@ from .SMap import SMap
 from .Simplex import Simplex
 
 from ._MDE import ElementwisePairwiseDistance, RowwiseCorrelation, \
-	IncrementPairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
-	ComputePredictions
+	IncrementPairwiseDistance, FloorArray
 from .. import FindOptimalEmbeddingDimensionality
 
 
@@ -251,6 +250,18 @@ class MDE:
 		test_y = testData[:, self.target]
 		test_y_tensor = torch.tensor(test_y, device = self.device, dtype = self.dtype)
 
+		# Pre-allocate tensors at full batch size to avoid repeated allocation/deallocation
+		batch_distances = torch.zeros([self.batch_size, nTrain, nTest], device = self.device, dtype = self.dtype)
+		candidateDistances = torch.empty([self.batch_size, nTrain, nTest], device = self.device, dtype = self.dtype)
+		neighborDistances = torch.empty([self.batch_size, self.knn, nTest], device = self.device, dtype = self.dtype)
+		nearestNeighbors = torch.empty([self.batch_size, self.knn, nTest], device = self.device, dtype = torch.long)
+		minDistances = torch.empty([self.batch_size, nTest], device = self.device, dtype = self.dtype)
+		weights = torch.empty([self.batch_size, self.knn, nTest], device = self.device, dtype = self.dtype)
+		weightSum = torch.empty([self.batch_size, nTest], device = self.device, dtype = self.dtype)
+		select = torch.empty([self.batch_size, self.knn, nTest], device = self.device, dtype = self.dtype)
+		predictions = torch.empty([self.batch_size, nTest], device = self.device, dtype = self.dtype)
+		perfs = torch.zeros(self.batch_size, device = self.device, dtype = self.dtype)
+
 		for i in range(self.maxD):
 			# Process remaining variables in batches to avoid OOM
 			metric_results = []
@@ -261,48 +272,35 @@ class MDE:
 				batch_size = len(batch_vars)
 
 				# Compute distances for this batch of variables
-				batch_distances = torch.zeros([batch_size, nTrain, nTest], device = self.device, dtype = self.dtype)
 				for j, var in enumerate(batch_vars):
 					diff = trainData_tensor[:, var].unsqueeze(1) - testData_tensor[:, var].unsqueeze(0)
 					batch_distances[j, :, :] = diff * diff
 
-				# Add current best distances
-				candidateDistances = batch_distances + current_best_distance_matrix.unsqueeze(0)
+				# Add current best distances (slice to actual batch size)
+				torch.add(batch_distances[:batch_size], current_best_distance_matrix.unsqueeze(0), out = candidateDistances[:batch_size])
 
-				# find k nearest neighbors
-				nearestNeighbors = torch.topk(candidateDistances, self.knn, dim = 1, largest = False)[1]
-				neighborDistances = torch.gather(candidateDistances, 1, nearestNeighbors)
-				FloorArray(neighborDistances, 1e-6)
-				nearestNeighbors = nearestNeighbors + self.predictionHorizon
+				# find k nearest neighbors (topk writes values and indices into pre-allocated buffers)
+				torch.topk(candidateDistances[:batch_size], self.knn, dim = 1, largest = False, out = (neighborDistances[:batch_size], nearestNeighbors[:batch_size]))
+				FloorArray(neighborDistances[:batch_size], 1e-6)
+				nearestNeighbors[:batch_size].add_(self.predictionHorizon)
 
-				minDistances = MinAxis1(neighborDistances)
-				weights = ComputeWeights(neighborDistances, minDistances)
-				weightSum = SumAxis1(weights)
-				select = train_y_tensor[nearestNeighbors]
-				predictions = ComputePredictions(weights, select, weightSum)
+				# compute weights and predictions in-place
+				torch.amin(neighborDistances[:batch_size], dim = 1, out = minDistances[:batch_size])
+				torch.div(neighborDistances[:batch_size], minDistances[:batch_size].unsqueeze(1), out = weights[:batch_size])
+				weights[:batch_size].neg_().exp_()
+				torch.sum(weights[:batch_size], dim = 1, out = weightSum[:batch_size])
+				select[:batch_size] = train_y_tensor[nearestNeighbors[:batch_size]]
+				torch.sum(weights[:batch_size] * select[:batch_size], dim = 1, out = predictions[:batch_size])
+				predictions[:batch_size].div_(weightSum[:batch_size])
 
-				# calculate performances
-				perfs = torch.zeros(batch_size, device = self.device, dtype = self.dtype)
-				RowwiseCorrelation(test_y_tensor, predictions, perfs)
+				# calculate performances (slice to actual batch size)
+				perfs[:batch_size].zero_()
+				RowwiseCorrelation(test_y_tensor, predictions[:batch_size], perfs[:batch_size])
 
 				# Convert to list of tuples
-				perfs_numpy = perfs.cpu().numpy()
+				perfs_numpy = perfs[:batch_size].cpu().numpy()
 				batch_results = [(var, perfs_numpy[j]) for j, var in enumerate(batch_vars)]
 				metric_results.extend(batch_results)
-
-				# Clean up batch tensors
-				del batch_distances
-				del candidateDistances
-				del nearestNeighbors
-				del neighborDistances
-				del weights
-				del weightSum
-				del select
-				del predictions
-				del perfs
-
-				if torch.cuda.is_available():
-					torch.cuda.empty_cache()
 
 			metric_results.sort(key=lambda x: x[1] if not numpy.isnan(x[1]) else -numpy.inf, reverse=True)
 
@@ -369,6 +367,16 @@ class MDE:
 			del testData_tensor
 			del train_y_tensor
 			del test_y_tensor
+			del batch_distances
+			del candidateDistances
+			del neighborDistances
+			del nearestNeighbors
+			del minDistances
+			del weights
+			del weightSum
+			del select
+			del predictions
+			del perfs
 			torch.cuda.empty_cache()
 
 		# Time delay analysis
