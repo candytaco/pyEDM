@@ -675,8 +675,7 @@ class test_EDM( unittest.TestCase ):
                                                         maxE = 12, train = [1, 500], test=[501, 800],
                                                         predictionHorizon = 15, step = -5, exclusionRadius = 20,
                                                         embedded = False, validLib = [], noTime = False,
-                                                        ignoreNan = True, numProcess = 10, mpMethod = None,
-                                                        chunksize = 1)
+                                                        ignoreNan = True)
 
         dfv = self.ValidationFiles["EmbedDim_valid.csv"].values
 

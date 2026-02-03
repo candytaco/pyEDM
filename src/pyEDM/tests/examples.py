@@ -14,10 +14,9 @@ def main():
     df = EDM.FindOptimalEmbeddingDimensionality(data = data,
                                                 columns = [col_index], target = target_index,
                                                 train = [1, 100], test = [201, 500], maxE = 10,
-                                                predictionHorizon = 1, knn = 0, step = -1, exclusionRadius = 0,
+                                                predictionHorizon = 1, step = -1, exclusionRadius = 0,
                                                 embedded = False, validLib = [], noTime = False,
-                                                ignoreNan = True, numProcess = 4, mpMethod = None,
-                                                chunksize = 1)
+                                                ignoreNan = True)
 
     df_ = EDM.sampleData["TentMap"]
     data = df_.values
