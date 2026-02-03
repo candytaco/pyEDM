@@ -36,7 +36,7 @@ class MDE:
 				 target: int,
 				 maxD: int = 5,
 				 include_target: bool = True,
-				 convergent: bool = True,
+				 convergent = 'post',
 				 metric: str = "correlation",
 				 batch_size: int = 1000,
 				 use_half_precision: bool = False,
@@ -44,7 +44,7 @@ class MDE:
 				 train=None,
 				 test=None,
 				 embedDimensions=0,
-				 predictionHorizon=1,
+				 predictionHorizon=0,
 				 knn=0,
 				 step=-1,
 				 exclusionRadius=0,
@@ -71,7 +71,7 @@ class MDE:
 		:param target: 	Column index of the target column to forecast
 		:param maxD: 	Maximum number of features to select (including target if include_target=True)
 		:param include_target: 	Whether to start with target in feature list
-		:param convergent: 	Whether to use convergence checking for feature selection
+		:param convergent: 	Convergence checking mode: 'pre' runs batch CCM on all variables before selection, 'post' checks convergence within each selection loop iteration, False disables convergence checking
 		:param metric: 	Metric to use: "correlation" or "MAE"
 		:param batch_size: 	Number of features to process in each batch
 		:param use_half_precision: 	Use float16 instead of float32 for GPU tensors to save memory
@@ -232,8 +232,8 @@ class MDE:
 
 		remaining_variables = [c for c in all_columns if c not in excluded]
 
-		# Filter convergent variables BEFORE selection if convergent=True
-		if self.convergent:
+		# Filter convergent variables BEFORE selection if convergent='pre'
+		if self.convergent == 'pre':
 			remaining_variables = self._filter_convergent_variables(remaining_variables)
 
 		# Iteratively add variables up to maxD
@@ -325,10 +325,27 @@ class MDE:
 			best_var = None
 			best_score = None
 
-			# Pick top scoring candidate (convergence already checked if convergent=True)
-			if metric_results and not numpy.isnan(metric_results[0][1]):
-				best_var = metric_results[0][0]
-				best_score = metric_results[0][1]
+			if self.convergent == 'post':
+				# Iterate down ranked candidates, pick first that is convergent
+				for candidate_var, candidate_score in metric_results:
+					if numpy.isnan(candidate_score):
+						continue
+					is_convergent, ccm_slope = self._check_convergence(int(candidate_var))
+					if is_convergent:
+						best_var = candidate_var
+						best_score = candidate_score
+						self.ccm_values.append(ccm_slope)
+						if self.verbose:
+							print(f"Variable {int(candidate_var)} is convergent (slope={ccm_slope:.4f}), score={candidate_score:.4f}")
+						break
+					else:
+						if self.verbose:
+							print(f"Variable {int(candidate_var)} is NOT convergent (slope={ccm_slope:.4f}), skipping")
+			else:
+				# No post-convergence check: pick top scoring candidate
+				if metric_results and not numpy.isnan(metric_results[0][1]):
+					best_var = metric_results[0][0]
+					best_score = metric_results[0][1]
 
 			# Add best variable if found
 			if best_var is not None:
