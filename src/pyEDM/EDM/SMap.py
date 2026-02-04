@@ -2,10 +2,10 @@
 
 # package modules
 import numpy
+import torch
 from numpy import apply_along_axis, insert, isnan, isfinite, exp
 from numpy import column_stack
 from numpy import full, linspace, mean, nan, power, sum, array
-from numpy.linalg import lstsq  # from scipy.linalg import lstsq
 
 # local modules
 from .EDM import EDM
@@ -30,14 +30,15 @@ class SMap(EDM):
                  step=-1,
                  theta=0.0,
                  exclusionRadius=0,
-                 solver=None,
                  embedded=False,
                  validLib=None,
                  noTime=False,
                  ignoreNan=True,
                  verbose=False,
                  generateSteps=0,
-                 generateConcat=False):
+                 generateConcat=False,
+                 device=None,
+                 dtype=None):
         """
         Initialize SMap as child of EDM.
 
@@ -52,7 +53,6 @@ class SMap(EDM):
         :param step: Time delay step size (tau). Negative values indicate lag
         :param theta: S-Map localization parameter. theta=0 is global linear map, larger values increase localization
         :param exclusionRadius: Temporal exclusion radius for neighbors
-        :param solver: Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
         :param embedded: Whether data is already embedded
         :param validLib: Boolean mask for valid library points
         :param noTime: Whether first column is time or data
@@ -60,6 +60,8 @@ class SMap(EDM):
         :param verbose: Print diagnostic messages
         :param generateSteps: Number of iterative generation steps. If 0, uses standard prediction.
         :param generateConcat: Whether to concatenate generated predictions
+        :param device: torch device to use (None for auto-detect)
+        :param dtype: torch dtype to use (None for float64)
         """
 
         # Instantiate EDM class: inheret all members to self
@@ -73,7 +75,6 @@ class SMap(EDM):
         self.step            = step
         self.theta           = theta
         self.exclusionRadius = exclusionRadius
-        self.solver          = solver if solver is not None else lstsq
         self.embedded        = embedded
         self.validLib        = validLib if validLib is not None else []
         self.noTime          = noTime
@@ -91,6 +92,16 @@ class SMap(EDM):
         # Map API parameter names to EDM base class names
         self.embedStep         = self.step
         self.isEmbedded        = self.embedded
+
+        # GPU setup
+        if device is not None:
+            self.device = device
+        elif torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+        self.dtype = dtype if dtype is not None else torch.float64
 
         # SMap storage
         self.Coefficients   = None # DataFrame SMap API output
@@ -117,7 +128,7 @@ class SMap(EDM):
     #-------------------------------------------------------------------
     # Methods
     #-------------------------------------------------------------------
-    def Run( self ) :
+    def Run(self):
     #-------------------------------------------------------------------
         """
         Execute S-Map prediction and return SMapResult.
@@ -126,8 +137,8 @@ class SMap(EDM):
         """
         self.EmbedData()
         self.RemoveNan()
-        self.FindNeighbors()
-        self.Project()
+        self.FindNeighborsTorch()
+        self.ProjectTorch()
         self.FormatProjection()
 
         return SMapResult(
@@ -140,148 +151,170 @@ class SMap(EDM):
         )
 
     #-------------------------------------------------------------------
-    def Project( self ) :
+    def FindNeighborsTorch(self):
     #-------------------------------------------------------------------
         """
+        Find k nearest neighbors using torch.
+        Computes pairwise Euclidean distances, applies exclusion
+        mask, and selects k nearest via torch.topk.
+        """
+        if self.verbose:
+            print(f'{self.name}: FindNeighborsTorch()')
+
+        self.CheckValidTrainSamples()
+
+        trainEmbedding = self.Embedding[self.trainIndices, :]
+        testEmbedding = self.Embedding[self.testIndices, :]
+
+        trainTensor = torch.tensor(trainEmbedding, device=self.device, dtype=self.dtype)
+        testTensor = torch.tensor(testEmbedding, device=self.device, dtype=self.dtype)
+
+        # Pairwise Euclidean distances: [nTrain x nTest]
+        distanceMatrix = torch.cdist(trainTensor, testTensor, p=2)
+
+        # Apply exclusion mask: set excluded pairs to infinity
+        exclusionMask = self._BuildExclusionMask()
+        if exclusionMask.any():
+            maskTensor = torch.tensor(exclusionMask, device=self.device, dtype=torch.bool)
+            distanceMatrix[maskTensor] = float('inf')
+
+        # topk on dim=0 finds k smallest distances per test point (columns)
+        topkDistances, topkIndices = torch.topk(distanceMatrix, self.knn, dim=0, largest=False)
+
+        # Transpose to [nTest x knn] to match expected shape
+        neighborDistances = topkDistances.t()
+        neighborIndices = topkIndices.t()
+
+        # Move results to CPU numpy
+        self.knn_distances = neighborDistances.cpu().numpy()
+        neighborIndicesNumpy = neighborIndices.cpu().numpy()
+
+        # Map neighbor indices from library-local to data-space indices
+        self.knn_neighbors = self._MapKNNIndicesToLibraryIndices(neighborIndicesNumpy)
+
+        # Clean up GPU tensors
+        del trainTensor, testTensor, distanceMatrix, topkDistances, topkIndices
+        del neighborDistances, neighborIndices
+        if exclusionMask.any():
+            del maskTensor
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    #-------------------------------------------------------------------
+    def ProjectTorch(self):
+    #-------------------------------------------------------------------
+        """
+        Vectorized S-Map projection using batched torch.linalg.lstsq.
+
         For each prediction row compute projection as the linear
-		combination of regression coefficients (C) of weighted
-		embedding vectors (A) against target vector (B) : AC = B.
+        combination of regression coefficients (C) of weighted
+        embedding vectors (A) against target vector (B) : AC = B.
 
-		Weights reflect the SMap theta localization of the knn
-		for each prediction. Default knn = len( lib_i ). 
+        Weights reflect the SMap theta localization of the knn
+        for each prediction. Default knn = len( lib_i ).
 
-		Matrix A has (weighted) constant (1) first column
-		to enable a linear intercept/bias term.
+        Matrix A has (weighted) constant (1) first column
+        to enable a linear intercept/bias term.
 
-		Sugihara (1994) doi.org/10.1098/rsta.1994.0106
+        Sugihara (1994) doi.org/10.1098/rsta.1994.0106
         """
 
         if self.verbose:
-            print( f'{self.name}: Project()' )
+            print(f'{self.name}: ProjectTorch()')
 
-        N_pred = len(self.testIndices)
-        N_dim  = self.embedDimensions + 1
+        numberOfPredictions = len(self.testIndices)
+        numberOfDimensions = self.embedDimensions + 1
 
-        self.projection     = full( N_pred, nan, dtype = float )
-        self.variance       = full( N_pred, nan, dtype = float )
-        self.coefficients   = full( (N_pred, N_dim), nan, dtype = float )
-        self.singularValues = full( (N_pred, N_dim), nan, dtype = float )
+        # Convert data to tensors
+        distances = torch.tensor(self.knn_distances, device=self.device, dtype=self.dtype)
+        neighbors = torch.tensor(self.knn_neighbors, device=self.device, dtype=torch.long)
+        embedding = torch.tensor(self.Embedding, device=self.device, dtype=self.dtype)
+        targetVector = torch.tensor(self.targetVec.squeeze(), device=self.device, dtype=self.dtype)
+        testIndices = torch.tensor(self.testIndices, device=self.device, dtype=torch.long)
 
-        embedding = self.Embedding # reference to ndarray
+        # Compute weights: W[i,j] = exp(-theta * d[i,j] / mean(d[i,:]))
+        distanceRowMean = torch.mean(distances, dim=1, keepdim=True)
+        torch.clamp_min_(distanceRowMean, 1e-10)
 
-        # Compute average distance for knn test rows into a vector
-        distRowMean = mean( self.knn_distances, axis = 1 )
+        if self.theta == 0:
+            weights = torch.ones_like(distances)
+        else:
+            distanceRowScale = self.theta / distanceRowMean
+            weights = torch.exp(-distanceRowScale * distances)
 
-        # Weight matrix of row vectors
-        if self.theta == 0 :
-            W = full( self.knn_distances.shape, 1., dtype = float )
-        else :
-            distRowScale = self.theta / distRowMean
-            W = exp( -distRowScale[:,None] * self.knn_distances )
+        # Target values at neighbor indices + predictionHorizon: shape (N_pred, knn)
+        neighborsPlusTp = neighbors + self.predictionHorizon
+        targetValues = targetVector[neighborsPlusTp]
 
-        # knn_neighbors + predictionHorizon
-        knn_neighbors_Tp = self.knn_neighbors + self.predictionHorizon # N_pred x knn
+        # Handle NaN in target values by zeroing out those entries in both
+        # the design matrix and target vector (effectively removing those equations)
+        validMask = torch.isfinite(targetValues)
+        maskedWeights = torch.where(validMask, weights, torch.zeros_like(weights))
 
-        # Function to select targetVec for rows of Boundary condition matrix
-        def GetTargetRow( knn_neighbor_row ) :
-            return self.targetVec[ knn_neighbor_row ][:,0]
+        # Weighted target vector: shape (N_pred, knn)
+        # Replace NaN with 0 before multiplying (masked out anyway)
+        maskedTargetValues = torch.where(validMask, targetValues, torch.zeros_like(targetValues))
+        weightedTargets = maskedWeights * maskedTargetValues
 
-        # Boundary condition matrix of knn + predictionHorizon targets : N_pred x knn
-        B = apply_along_axis( GetTargetRow, 1, knn_neighbors_Tp )
+        # Build batched design matrix A: shape (N_pred, knn, E+1)
+        # Column 0: weights (intercept term)
+        # Columns 1:E+1: weighted embedding vectors of neighbors
+        designMatrix = torch.zeros(numberOfPredictions, self.knn, numberOfDimensions,
+                                   device=self.device, dtype=self.dtype)
 
-        if self.targetVecNan :
-            # If there are nan in the targetVec need to remove them
-            # from B since Solver returns nan. B_valid is matrix of
-            # B row booleans of valid data for test rows
-            # Function to apply isfinite to rows
-            def FiniteRow( B_row ) :
-                return isfinite( B_row )
+        # Column 0: intercept weights (masked)
+        designMatrix[:, :, 0] = maskedWeights
 
-            B_valid = apply_along_axis( FiniteRow, 1, B )
+        # Columns 1:E+1: gather neighbor embeddings and weight them (masked)
+        # neighbors has shape (N_pred, knn), need to gather from embedding (N_data, E)
+        neighborEmbeddings = embedding[neighbors]  # shape (N_pred, knn, E)
+        designMatrix[:, :, 1:] = maskedWeights.unsqueeze(2) * neighborEmbeddings
 
-        # Weighted boundary condition matrix of targets : N_pred x knn
-        wB = W * B
+        # Solve batched least squares: A @ C = wB
+        # torch.linalg.lstsq expects A of shape (..., m, n) and B of shape (..., m) or (..., m, k)
+        # We have A: (N_pred, knn, E+1), wB: (N_pred, knn)
+        # lstsq returns solution of shape (..., n) or (..., n, k)
+        lstsqResult = torch.linalg.lstsq(designMatrix, weightedTargets)
+        coefficients = lstsqResult.solution  # shape (N_pred, E+1)
 
-        # Process each prediction row
-        for row in range( N_pred ) :
-            # Allocate array
-            A = full( ( self.knn, N_dim ), nan, dtype = float )
+        # Compute predictions: prediction = C[0] + sum(C[1:] * embedding[test_row, :])
+        # testEmbeddings: shape (N_pred, E)
+        testEmbeddings = embedding[testIndices]
+        # prediction = C[:,0] + sum(C[:,1:] * testEmbeddings, dim=1)
+        predictions = coefficients[:, 0] + torch.sum(coefficients[:, 1:] * testEmbeddings, dim=1)
 
-            A[:,0] = W[row,:] # Intercept bias terms in column 0 (weighted)
+        # Compute variance estimate: sum(W * (B - prediction)^2) / sum(W)
+        # Use masked values for variance computation
+        residuals = maskedTargetValues - predictions.unsqueeze(1)
+        residualsSquared = residuals ** 2
+        weightSum = torch.sum(maskedWeights, dim=1)
+        variance = torch.sum(maskedWeights * residualsSquared, dim=1) / weightSum
 
-            libRows = self.knn_neighbors[ row, : ] # 1 x knn
+        # Compute singular values via SVD of the design matrix
+        # For each prediction row, compute SVD of A to get singular values
+        singularValues = torch.linalg.svdvals(designMatrix)  # shape (N_pred, min(knn, E+1))
 
-            for j in range( 1, N_dim ) :
-                A[ :, j ] = W[ row, : ] * embedding[ libRows, j-1 ]
+        # Pad singular values to match numberOfDimensions if needed
+        if singularValues.shape[1] < numberOfDimensions:
+            padding = torch.full((numberOfPredictions, numberOfDimensions - singularValues.shape[1]),
+                                 float('nan'), device=self.device, dtype=self.dtype)
+            singularValues = torch.cat([singularValues, padding], dim=1)
 
-            wB_ = wB[row,:]
+        # Move results to CPU numpy
+        self.projection = predictions.cpu().numpy()
+        self.variance = variance.cpu().numpy()
+        self.coefficients = coefficients.cpu().numpy()
+        self.singularValues = singularValues.cpu().numpy()
 
-            if self.targetVecNan :
-                # Redefine A, wB_ to remove targetVec nan
-                valid_i = B_valid[ row, : ]
-                A       = A [ valid_i, : ]
-                wB_     = wB[ row, valid_i ]
-
-            # Linear mapping of theta weighted embedding A onto weighted target B
-            C, SV = self.Solver( A, wB_ )
-
-            self.coefficients  [ row, : ] = C
-            self.singularValues[ row, : ] = SV
-
-            # Prediction is local linear projection.
-            if isnan( C[0] ) :
-                projection_ = 0
-            else :
-                projection_ = C[0]
-
-            for e in range( 1, N_dim ) :
-                projection_ = projection_ + \
-                    C[e] * embedding[ self.testIndices[ row], e - 1]
-
-            self.projection[ row ] = projection_
-
-            # "Variance" estimate assuming weights are probabilities
-            if self.targetVecNan :
-                deltaSqr = power( B[ row, valid_i ] - projection_, 2 )
-                self.variance[ row ] = \
-                    sum( W[ row, valid_i ] * deltaSqr ) \
-                    / sum( W[ row, valid_i ] )
-            else :
-                deltaSqr = power( B[row,:] - projection_, 2 )
-                self.variance[ row ] = sum(W[row]*deltaSqr) / sum(W[row])
-
-    #-------------------------------------------------------------------
-    def Solver( self, A, wB ) :
-    #-------------------------------------------------------------------
-        """
-        Call SMap solver. Default is numpy.lstsq
-        """
-
-        if self.solver.__class__.__name__ in \
-           [ 'function', '_ArrayFunctionDispatcher' ] and \
-           self.solver.__name__ == 'lstsq' :
-            # numpy default lstsq or scipy lstsq
-            C, residuals, rank, SV = self.solver( A, wB, rcond = None )
-            return C, SV
-
-        # Otherwise, sklearn.linear_model passed as solver
-        # Coefficient matrix A has weighted unity vector in the first
-        # column to create a bias (intercept) term. sklearn.linear_model's
-        # include an intercept term by default. Ignore first column of A.
-        LM = self.solver.fit( A[:,1:], wB )
-        C  = LM.coef_
-        if hasattr( LM, 'intercept_' ) :
-            C = insert( C, 0, LM.intercept_ ) 
-        else :
-            C = insert( C, 0, nan ) # Insert nan for intercept term
-
-        if self.solver.__class__.__name__ == 'LinearRegression' :
-            SV = LM.singular_ # Only LinearRegression has singular_
-            SV = insert( SV, 0, nan )
-        else :
-            SV = None # full( A.shape[0], nan )
-
-        return C, SV
+        # Clean up GPU tensors
+        del distances, neighbors, embedding, targetVector, testIndices
+        del distanceRowMean, weights, neighborsPlusTp, targetValues
+        del validMask, maskedWeights, maskedTargetValues, weightedTargets
+        del designMatrix, neighborEmbeddings, lstsqResult, coefficients
+        del testEmbeddings, predictions, residuals, residualsSquared, weightSum, variance
+        del singularValues
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     #-------------------------------------------------------------------
     def Generate( self ) :
@@ -350,24 +383,25 @@ class SMap(EDM):
 
             # Local SMapClass for generation
             G = SMap(data = newData,
-                     columns         = [column],
-                     target          = target,
-                     train             = train,
-                     test            = test,
+                     columns = [column],
+                     target = target,
+                     train = train,
+                     test = test,
                      embedDimensions = self.embedDimensions,
-                     predictionHorizon              = self.predictionHorizon,
-                     knn             = self.knn,
-                     step             = self.step,
-                     theta           = self.theta,
+                     predictionHorizon = self.predictionHorizon,
+                     knn = self.knn,
+                     step = self.step,
+                     theta = self.theta,
                      exclusionRadius = self.exclusionRadius,
-                     solver          = self.solver,
-                     embedded        = self.embedded,
-                     validLib        = self.validLib,
-                     noTime          = self.noTime,
-                     generateSteps   = self.generateSteps,
-                     generateConcat  = self.generateConcat,
-                     ignoreNan       = self.ignoreNan,
-                     verbose         = self.verbose)
+                     embedded = self.embedded,
+                     validLib = self.validLib,
+                     noTime = self.noTime,
+                     generateSteps = self.generateSteps,
+                     generateConcat = self.generateConcat,
+                     ignoreNan = self.ignoreNan,
+                     verbose = self.verbose,
+                     device = self.device,
+                     dtype = self.dtype)
 
             # 1) Generate prediction ----------------------------------
             G.Run()
