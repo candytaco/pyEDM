@@ -139,7 +139,7 @@ class MDE:
 
 		self.dtype = torch.float16 if use_half_precision else torch.float32
 
-		self.rankings_ = None # performances of adding each variable at each iteration
+		self.stepwise_performance = None # performances of adding each variable at each iteration
 		self.all_distances = None
 		self.current_best_distance_matrix = None
 
@@ -176,7 +176,7 @@ class MDE:
 			selected_features = self.selectedVariables,
 			accuracy = self.accuracy,
 			ccm_values = self.ccm_values,
-			rankings = self.rankings_,
+			stepwise_performance = self.stepwise_performance,
 			timeDelayResults = self.timeDelayResults
 		)
 		return self.results_
@@ -236,7 +236,7 @@ class MDE:
 
 		# rankings is a numpy array because it's apparently more multithreading friendly
 		# than just storing the lists that come out?
-		self.rankings_ = numpy.zeros([self.maxD, self.data.shape[1]])
+		self.stepwise_performance = numpy.zeros([self.maxD, self.data.shape[1]])
 
 		trainData_tensor = torch.tensor(trainData, device = self.device, dtype = self.dtype)
 		testData_tensor = torch.tensor(testData, device = self.device, dtype = self.dtype)
@@ -314,7 +314,7 @@ class MDE:
 
 			r = numpy.array(metric_results) if len(metric_results) > 0 else numpy.array([]).reshape(0, 2)
 			if len(r) > 0:
-				self.rankings_[i, r[:, 0].astype(int)] = r[:, 1]
+				self.stepwise_performance[i, r[:, 0].astype(int)] = r[:, 1]
 
 			best_var = None
 			best_score = None
@@ -455,7 +455,6 @@ class MDE:
 				step = self.step,
 				exclusionRadius = self.exclusionRadius,
 				theta = self.theta,
-				solver = self.solver,
 				embedded = self.embedded,
 				validLib = self.validLib,
 				noTime = self.noTime,
