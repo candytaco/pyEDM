@@ -275,9 +275,9 @@ class DataAdapterMultipleRuns(DataAdapter):
 			test = numpy.hstack([self.XTest, self.YTest])
 			data = numpy.vstack([data, test])
 
-		start = n + self.TestStart
-		end = n + self.XTest.shape[0] - self.TestEnd - 1
-		self.testIndices = (start, end)
+			start = n + self.TestStart
+			end = n + self.XTest.shape[0] - self.TestEnd - 1
+			self.testIndices = (start, end)
 
 		# add time if needed
 		if self.trainTime is not None:
