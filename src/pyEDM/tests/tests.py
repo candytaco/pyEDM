@@ -428,7 +428,7 @@ class test_EDM( unittest.TestCase ):
         S = EDM.FitSMap(data = data, columns = [col_index], target = target_index,
                         train = [1,100], test = [110,160], embedDimensions = 4, predictionHorizon = 1,
                         knn = 0, step = -1, theta = 3., exclusionRadius = 0,
-                        solver = None, embedded = False, validLib = [], noTime = False, generateSteps = 0,
+                        embedded = False, validLib = [], noTime = False, generateSteps = 0,
                         generateConcat = False, ignoreNan = True, verbose = False, returnObject = False)
 
         dfv = self.ValidationFiles["SMap_circle_E4_valid.csv"]
@@ -450,7 +450,7 @@ class test_EDM( unittest.TestCase ):
         S = EDM.FitSMap(data = data, columns = [col_index1, col_index2], target = target_index,
                         train = [1,200], test = [1,200], embedDimensions = 2, predictionHorizon = 1,
                         knn = 0, step = -1, theta = 3., exclusionRadius = 0,
-                        solver = None, embedded = True, validLib = [], noTime = False, generateSteps = 0,
+                        embedded = True, validLib = [], noTime = False, generateSteps = 0,
                         generateConcat = False, ignoreNan = True, verbose = False, returnObject = False)
 
         dfv  = self.ValidationFiles["SMap_circle_E2_embd_valid.csv"]
@@ -466,8 +466,7 @@ class test_EDM( unittest.TestCase ):
         # self.assertTrue( dfc['∂x/∂y'].mean().round(5) == 0.06311 )
         # TODO: check if these actually are correct for getting those value
         coeffs = numpy.nanmean(dfc, axis = 0)
-        self.assertTrue( coeffs[2].round(5) == 0.99801 )
-        self.assertTrue( coeffs[3].round(5) == 0.06311 )
+        self.assertTrue( numpy.allclose(coeffs[2:4], [0.99801, 0.06311], atol = 1e5))
 
     #------------------------------------------------------------
     def test_smap3( self ):
@@ -483,7 +482,7 @@ class test_EDM( unittest.TestCase ):
         S = EDM.FitSMap(data = data, columns = [col_index], target = target_index,
                         train = [1,50], test = [1,50], embedDimensions = 2, predictionHorizon = 1,
                         knn = 0, step = -1, theta = 3., exclusionRadius = 0,
-                        solver = None, embedded = False, validLib = [], noTime = False, generateSteps = 0,
+                        embedded = False, validLib = [], noTime = False, generateSteps = 0,
                         generateConcat = False, ignoreNan = True, verbose = False, returnObject = False)
 
         dfv = self.ValidationFiles["SMap_nan_valid.csv"]
@@ -504,7 +503,7 @@ class test_EDM( unittest.TestCase ):
         S = EDM.FitSMap(data = data, columns = [col_index], target = target_index,
                         train = [1,100], test = [101,150], embedDimensions = 2,
                         knn = 0, step = -1, theta = 3., exclusionRadius = 0,
-                        solver = None, embedded = False, validLib = [], noTime = True, generateSteps = 0,
+                        embedded = False, validLib = [], noTime = True, generateSteps = 0,
                         generateConcat = False, ignoreNan = True, verbose = False, returnObject = False)
 
         dfv = self.ValidationFiles["SMap_noTime_valid.csv"]

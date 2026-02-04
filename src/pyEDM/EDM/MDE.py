@@ -158,7 +158,6 @@ class MDE:
 		:return: Results containing final prediction, selected features, accuracy, and CCM values
 		:rtype: MDEResult
 		"""
-		# TODO: If the embedding dimensionality is not specified, estimate it
 		if self.embedDimensions == 0:
 			self.embedDimensions = FindOptimalEmbeddingDimensionality(self.data, [self.target], self.target, self.maxD,
 																	  train = self.train, test = self.test, predictionHorizon = self.predictionHorizon,
