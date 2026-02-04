@@ -4,6 +4,7 @@ from warnings import filterwarnings, catch_warnings
 
 from numpy import nan, array, array_equal, ndarray
 import numpy
+import torch
 from pandas import DataFrame, read_csv
 
 from pyEDM import Functions as EDM
@@ -621,42 +622,46 @@ class test_EDM( unittest.TestCase ):
     #------------------------------------------------------------
     # Multiview
     #------------------------------------------------------------
-    def test_multiview( self ):
-        with catch_warnings():
-            # Python-3.13 multiprocessing fork DeprecationWarning 
-            filterwarnings( "ignore", category = DeprecationWarning )
+    def test_multiview(self):
+        if self.verbose: print("--- Multiview ---")
+        df_ = sampleDataFrames['block_3sp']
+        data = df_.values
+        col_index1 = df_.columns.get_loc('x_t')
+        col_index2 = df_.columns.get_loc('y_t')
+        col_index3 = df_.columns.get_loc('z_t')
+        target_index = df_.columns.get_loc('x_t')
+        M = EDM.FitMultiview(data = data,
+                             columns = [col_index1, col_index2, col_index3], target = target_index,
+                             train = [1, 100], test = [101, 198],
+                             D = 0, embedDimensions = 3, predictionHorizon = 1, knn = 0, step = -1,
+                             multiview = 0, exclusionRadius = 0,
+                             trainLib = False, excludeTarget = False,
+                             ignoreNan = True, verbose = False,
+                             dtype = torch.float64,
+                             returnObject = False)
 
-            if self.verbose : print ( "--- Multiview ---" )
-            df_ = sampleDataFrames['block_3sp']
-            data = df_.values
-            col_index1 = df_.columns.get_loc('x_t')
-            col_index2 = df_.columns.get_loc('y_t')
-            col_index3 = df_.columns.get_loc('z_t')
-            target_index = df_.columns.get_loc('x_t')
-            M = EDM.FitMultiview(data = data,
-                                 columns = [col_index1, col_index2, col_index3], target = target_index,
-                                 train = [1, 100], test = [101, 198],
-                                 D = 0, embedDimensions = 3, predictionHorizon = 1, knn = 0, step = -1,
-                                 multiview = 0, exclusionRadius = 0,
-                                 trainLib = False, excludeTarget = False,
-                                 ignoreNan = True, verbose = False,
-                                 numProcess = 4, mpMethod = None, chunksize = 1,
-                                 returnObject = False)
+        predictions = M['Predictions']
+        viewList = M['View']
 
-        df_pred  = M['Predictions']
-        df_combo = M['View'][ ['correlation', 'MAE', 'RMSE'] ]
+        # Validate predictions (column 2 is Predictions)
+        dfvp = self.ValidationFiles["Multiview_pred_valid.csv"]
+        predValid = dfvp['Predictions'].values
+        test = predictions[:, 2]
+        self.assertTrue(numpy.allclose(predValid, test, atol = 1e-4, equal_nan = True))
 
-        # Validate predictions
-        dfvp      = self.ValidationFiles["Multiview_pred_valid.csv"]
-        predValid = round( dfvp.get('Predictions'), 4 )
-        test      = round( df_pred.get('Predictions'), 4 )
-        self.assertTrue( predValid.equals( test ) )
+        # Validate combinations (View is list of [combo_str, correlation, MAE, CAE, RMSE])
+        dfvc = self.ValidationFiles['Multiview_combos_valid.csv']
+        validCorr = dfvc['correlation'].values
+        validMAE = dfvc['MAE'].values
+        validRMSE = dfvc['RMSE'].values
 
-        # Validate combinations
-        dfvc = round(self.ValidationFiles['Multiview_combos_valid.csv'], 4)
-        dfvc = dfvc[ ['correlation', 'MAE', 'RMSE'] ]
+        testCorr = numpy.array([row[1] for row in viewList])
+        testMAE = numpy.array([row[2] for row in viewList])
+        testRMSE = numpy.array([row[4] for row in viewList])
 
-        self.assertTrue( dfvc.equals( round( df_combo, 4 ) ) )
+        self.assertTrue(numpy.allclose(validCorr, testCorr, atol = 1e-4, equal_nan = True))
+        self.assertTrue(numpy.allclose(validMAE, testMAE, atol = 1e-4, equal_nan = True))
+        self.assertTrue(numpy.allclose(validRMSE, testRMSE, atol = 1e-4, equal_nan = True))
 
     #------------------------------------------------------------
     # EmbedDimension

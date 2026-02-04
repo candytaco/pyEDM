@@ -80,7 +80,6 @@ def main():
                          multiview = 0, exclusionRadius = 0,
                          trainLib = False, excludeTarget = False,
                          ignoreNan = True, verbose = False,
-                         numProcess = 4, mpMethod = None, chunksize = 1,
                          returnObject = False)
 
     # S-map circle : specify multivariable columns embedded = True

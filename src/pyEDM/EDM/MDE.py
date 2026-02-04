@@ -518,7 +518,6 @@ class MDE:
 		:rtype: List[int]
 		"""
 		from .CCM_batch import BatchedCCM
-		from sklearn.linear_model import LinearRegression
 
 		if len(candidate_columns) == 0:
 			return []
@@ -563,16 +562,20 @@ class MDE:
 		if torch.cuda.is_available():
 			torch.cuda.empty_cache()
 
-		convergent_vars = []
+		# Compute linear regression slopes for all columns in parallel
+		# slope = cov(x,y) / var(x) = (mean(xy) - mean(x)*mean(y)) / (mean(x^2) - mean(x)^2)
+		x = torch.tensor(lib_sizes_normalized, dtype = torch.float32, device = self.device)
+		y = torch.tensor(forward_correlations, dtype = torch.float32, device = self.device)
 
-		lr = LinearRegression()
-		for i, col in enumerate(candidate_columns):
-			corr_values = forward_correlations[:, i]
-			lr.fit(lib_sizes_normalized.reshape(-1, 1), corr_values)
-			slope = lr.coef_[0]
+		x_mean = x.mean()
+		y_mean = y.mean(dim = 0)
+		xy_mean = (x.unsqueeze(1) * y).mean(dim = 0)
+		x_var = (x ** 2).mean() - x_mean ** 2
+		slopes = (xy_mean - x_mean * y_mean) / x_var
 
-			if slope > self.CCMConvergenceThreshold:
-				convergent_vars.append(col)
+		convergent_mask = slopes > self.CCMConvergenceThreshold
+		convergent_indices = torch.where(convergent_mask)[0].cpu().tolist()
+		convergent_vars = [candidate_columns[i] for i in convergent_indices]
 
 		return convergent_vars
 
