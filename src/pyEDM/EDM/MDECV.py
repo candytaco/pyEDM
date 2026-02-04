@@ -233,6 +233,7 @@ class MDECV:
 		Note that this is different than the original implementation where the test data is
 		internally generated from the data array
 
+
 		:param testData:	test data with same variables as train data
 
 		:return: Cross-validation results including final prediction
@@ -248,6 +249,7 @@ class MDECV:
 		stackedData = numpy.vstack((self.data, testData))
 
 		# Run final prediction on test set
+		# TODO: shouldn't this be a simplex or smap?
 		mde = MDE(
 			data = stackedData,
 			target = self.target,
