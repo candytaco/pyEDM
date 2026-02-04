@@ -26,7 +26,7 @@ class MDEFitterCV(EDMFitter):
 				 BatchSize: int = 10000,
 				 HalfPrecision: bool = False,
 				 Folds: int = 5,
-				 LeaveOneRunOut: bool = False,
+				 LeaveOneRunOut: bool = True,
 				 FinalFeatureMode: str = "best_fold",
 				 Embed: bool = False,
 				 EmbedDimensions: int = 0,
