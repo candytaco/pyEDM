@@ -279,12 +279,12 @@ def FitMultiview(data: numpy.ndarray,
 				 excludeTarget: bool = False,
 				 ignoreNan: bool = True,
 				 verbose: bool = False,
-				 numProcess: int = 4,
-				 mpMethod: Any = None,
-				 chunksize: int = 1,
+				 device: Any = None,
+				 dtype: Any = None,
+				 batchSize: int = 1000,
 				 returnObject: bool = False) -> Union[Dict[str, Any], Multiview]:
 	"""
-	Multiview prediction.
+	Multiview prediction using CUDA parallelism.
 
 	:param data: 				2D numpy array where column 0 is time
 	:param columns: 			Column indices to use (defaults to all except time)
@@ -302,9 +302,9 @@ def FitMultiview(data: numpy.ndarray,
 	:param excludeTarget: 		Whether to exclude target from columns
 	:param ignoreNan: 			Whether to ignore NaN values
 	:param verbose: 			Print diagnostic messages
-	:param numProcess: 			Number of processes for multiprocessing
-	:param mpMethod: 			Multiprocessing method
-	:param chunksize: 			Chunk size for pool.starmap
+	:param device: 				torch device to use (None for auto-detect)
+	:param dtype: 				torch dtype to use (None for float64)
+	:param batchSize: 			Number of column combinations to process per batch
 	:param returnObject: 		Whether to return Multiview object instead of prediction dict
 	:return: Dictionary with predictions and view rankings or Multiview object
 	"""
@@ -326,9 +326,9 @@ def FitMultiview(data: numpy.ndarray,
 				  excludeTarget = excludeTarget,
 				  ignoreNan = ignoreNan,
 				  verbose = verbose,
-				  numProcess = numProcess,
-				  mpMethod = mpMethod,
-				  chunksize = chunksize)
+				  device = device,
+				  dtype = dtype,
+				  batchSize = batchSize)
 
 	result = M.Run()
 
