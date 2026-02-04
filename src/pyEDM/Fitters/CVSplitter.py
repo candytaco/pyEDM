@@ -16,7 +16,7 @@ class EDMCVSplitter:
 	def __init__(self,
 				 dataAdapter: DataAdapter,
 				 nFolds: int = 5,
-				 leaveOneRunOut: bool = False,
+				 leaveOneRunOut: bool = True,
 				 edmStyleIndices: bool = False):
 		"""
 		Initialize the cross-validation splitter.
@@ -32,8 +32,8 @@ class EDMCVSplitter:
 		self.edmStyleIndices = edmStyleIndices
 
 		self.runs = []
-		self.trainStart = 0
-		self.trainEnd = 0
+		self.trainStart = []
+		self.trainEnd = []
 		self.ExtractRunInfo()
 
 		self.numRuns = len(self.runs)
@@ -43,11 +43,12 @@ class EDMCVSplitter:
 	def ExtractRunInfo(self):
 		"""
 		Extract run lengths and exclusion indices from the data adapter.
+		TrainStart and TrainEnd are lists with one value per run.
 		"""
 		if isinstance(self.dataAdapter, DataAdapterSingleRun):
 			self.runs = [self.dataAdapter.XTrain.shape[0]]
-			self.trainStart = self.dataAdapter.TrainStart
-			self.trainEnd = self.dataAdapter.TrainEnd
+			self.trainStart = [self.dataAdapter.TrainStart]
+			self.trainEnd = [self.dataAdapter.TrainEnd]
 		elif isinstance(self.dataAdapter, DataAdapterMultipleRuns):
 			self.runs = [X.shape[0] for X in self.dataAdapter.XTrain]
 			self.trainStart = self.dataAdapter.TrainStart
@@ -69,14 +70,14 @@ class EDMCVSplitter:
 	def ComputeValidRangesPerRun(self) -> List[Tuple[int, int]]:
 		"""
 		Compute valid sample ranges for each run after applying exclusions.
-		The same trainStart and trainEnd values are applied to all runs.
+		Uses per-run trainStart and trainEnd values.
 
 		:return: list of (start, end) tuples with valid range for each run (end is inclusive for EDM)
 		"""
 		validRanges = []
-		for start, end in self.runBoundaries:
-			runStart = start + self.trainStart
-			runEnd = end - self.trainEnd - 1
+		for i, (start, end) in enumerate(self.runBoundaries):
+			runStart = start + self.trainStart[i]
+			runEnd = end - self.trainEnd[i] - 1
 			if runStart <= runEnd:
 				validRanges.append((runStart, runEnd))
 			else:
