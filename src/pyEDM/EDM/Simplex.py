@@ -137,8 +137,6 @@ class Simplex(EDM):
 		if self.verbose:
 			print(f'{self.name}: FindNeighborsTorch()')
 
-		self.CheckValidTrainSamples()
-
 		trainEmbedding = self.Embedding[self.trainIndices, :]
 		testEmbedding = self.Embedding[self.testIndices, :]
 
@@ -166,10 +164,9 @@ class Simplex(EDM):
 
 		# Move results to CPU numpy
 		self.knn_distances = neighborDistances.cpu().numpy()
-		neighborIndicesNumpy = neighborIndices.cpu().numpy()
-
-		# Map neighbor indices from library-local to data-space indices
-		self.knn_neighbors = self._MapKNNIndicesToLibraryIndices(neighborIndicesNumpy)
+		# We no long map the neighbor indices back to original data indices
+		# because for predictions, we also just mask the Y data to the same indices
+		self.knn_neighbors = neighborIndices.cpu().numpy()
 
 		# Clean up GPU tensors
 		del trainTensor, testTensor, distanceMatrix, topkDistances, topkIndices
@@ -191,7 +188,7 @@ class Simplex(EDM):
 
 		distances = torch.tensor(self.knn_distances, device=self.device, dtype=self.dtype)
 		neighbors = torch.tensor(self.knn_neighbors, device=self.device, dtype=torch.long)
-		targetVector = torch.tensor(self.targetVec.squeeze(), device=self.device, dtype=self.dtype)
+		y_train = torch.tensor(self.targetVec[self.trainIndices + self.predictionHorizon].squeeze(), device=self.device, dtype=self.dtype)
 
 		# Minimum distance per test row (first neighbor), floored at 1e-6
 		minDistances = distances[:, 0]
@@ -203,8 +200,7 @@ class Simplex(EDM):
 		weightRowSum = torch.sum(weights, dim=1)
 
 		# Library target values at neighbor + predictionHorizon
-		neighborsPlusTp = neighbors + self.predictionHorizon
-		libTargetValues = targetVector[neighborsPlusTp]
+		libTargetValues = y_train[neighbors]
 
 		# Weighted average prediction
 		projection = torch.sum(weights * libTargetValues, dim=1) / weightRowSum
@@ -219,8 +215,8 @@ class Simplex(EDM):
 		self.variance = variance.cpu().numpy()
 
 		# Clean up GPU tensors
-		del distances, neighbors, targetVector, minDistances, scaledDistances
-		del weights, weightRowSum, neighborsPlusTp, libTargetValues
+		del distances, neighbors, y_train, minDistances, scaledDistances
+		del weights, weightRowSum, libTargetValues
 		del projection, libTargetPredDiff, deltaSqr, variance
 		if torch.cuda.is_available():
 			torch.cuda.empty_cache()

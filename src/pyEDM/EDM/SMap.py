@@ -161,8 +161,6 @@ class SMap(EDM):
         if self.verbose:
             print(f'{self.name}: FindNeighborsTorch()')
 
-        self.CheckValidTrainSamples()
-
         trainEmbedding = self.Embedding[self.trainIndices, :]
         testEmbedding = self.Embedding[self.testIndices, :]
 
