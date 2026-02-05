@@ -142,7 +142,6 @@ def PredictNLSMapFunc( theta, data, args ) :
                     step             = args['step'],
                     theta           = theta,
                     exclusionRadius = args['exclusionRadius'],
-                    solver          = args['solver'],
                     embedded        = args['embedded'],
                     validLib        = args['validLib'],
                     noTime          = args['noTime'],

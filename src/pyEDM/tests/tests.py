@@ -779,7 +779,7 @@ class test_EDM( unittest.TestCase ):
         S = EDM.FitSMap(data = data, columns = [col_index], target = target_index, theta = 3.,
                         train = [1,200], test = [1,2], embedDimensions = 2, predictionHorizon = 1,
                         knn = 0, step = -1, exclusionRadius = 0,
-                        solver = None, embedded = False, validLib = [], noTime = False, generateSteps = 100,
+                        embedded = False, validLib = [], noTime = False, generateSteps = 100,
                         generateConcat = True, ignoreNan = True, verbose = False, returnObject = False)
 
         self.assertTrue( S['predictions'].shape == (300,2) )
