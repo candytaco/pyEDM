@@ -37,8 +37,10 @@ class EDM:
 		self.Embedding: numpy.ndarray = None  # DataFrame, includes nan
 		self.Projection = None  # DataFrame Simplex & SMap output
 
+		# Note: these two are over-written by the indexing-making function into list of actual indices
 		self.trainIndices: List[Tuple[int, int]] = None  # ndarray library indices
 		self.testIndices: List[Tuple[int, int]] = None  # ndarray prediction indices : nan removed
+
 		self.pred_i_all = None  # ndarray prediction indices : nan included
 		self.predList = []  # list of disjoint pred_i_all
 		self.disjointLib = False  # True if disjoint library
@@ -130,8 +132,6 @@ class EDM:
 		"""
 		if self.verbose:
 			print(f'{self.name}: FindNeighbors()')
-		
-		self.CheckValidTrainSamples()
 
 		if (self.neighborFinder is None) or (not self.requery):
 			if self.KDTree:
@@ -905,6 +905,8 @@ class EDM:
 					msg = f'{self.name} CreateIndices(): ' + \
 					      f'Set knn = {self.knn} for SMap.'
 					print(msg, flush = True)
+
+		self.CheckValidTrainSamples()
 
 	# --------------------------------------------------------------------
 	def PredictionValid(self):

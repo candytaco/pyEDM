@@ -255,7 +255,7 @@ class test_EDM( unittest.TestCase ):
         y = df_.columns.get_loc('y')
         df = EDM.FitSimplex(data = df_.values, columns = [x], target = [x],
                             train = [1,200], test = [1,200], embedDimensions = 2, predictionHorizon = 1,
-                            validLib = df_.eval('x > 0.5 | x < -0.5'))
+                            validLib = df_.eval('x > 0.5 | x < -0.5').values)
 
         dfv = self.ValidationFiles["Smplx_validLib_valid.csv"]
 
@@ -367,7 +367,7 @@ class test_EDM( unittest.TestCase ):
 
         # covert time to numerical values
         time = numpy.array([datetime.strptime(t, '%Y-%m-%d').timestamp() for t in df_['Date']])
-        data = numpy.column_stack([time, df_.values[:, 1]])
+        data = numpy.column_stack([time, df_.values[:, 1]]).astype(numpy.float64)
 
         df = EDM.FitSimplex(data = data,
                             columns = [col_index], target = [target_index],
@@ -393,7 +393,7 @@ class test_EDM( unittest.TestCase ):
                             train = [301,400], test = [350,355],
                             knn = 1, embedded = True, returnObject = True)
 
-        knn = df.knn_neighbors
+        knn = df._MapKNNIndicesToLibraryIndices(df.knn_neighbors)
         knnValid = array( [322,334,362,387,356,355] )[:,None]
         self.assertTrue( array_equal( knn, knnValid ) )
 
@@ -411,7 +411,7 @@ class test_EDM( unittest.TestCase ):
                             train = [1,100], test = [101,110],
                             embedDimensions = 5, exclusionRadius = 10, returnObject = True)
 
-        knn = df.knn_neighbors[:,0]
+        knn = df._MapKNNIndicesToLibraryIndices(df.knn_neighbors[:,0])
         knnValid = array( [89, 90, 91, 92, 93, 94, 95, 96, 97, 98] )
         self.assertTrue( array_equal( knn, knnValid ) )
 

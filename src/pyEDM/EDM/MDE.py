@@ -207,8 +207,11 @@ class MDE:
 			verbose = self.verbose
 		)
 		dummy.EmbedData()
-		trainData = dummy.Embedding[dummy.trainIndices, :]
-		testData = dummy.Embedding[dummy.testIndices, :]
+		trainIndices = numpy.array(dummy.trainIndices, dtype = numpy.int)
+		testIndices = numpy.array(dummy.testIndices, dtype = numpy.int)
+
+		trainData = dummy.Embedding[trainIndices, :]
+		testData = dummy.Embedding[testIndices, :]
 		self.trainData = trainData
 		self.testData = testData
 
@@ -241,9 +244,11 @@ class MDE:
 		trainData_tensor = torch.tensor(trainData, device = self.device, dtype = self.dtype)
 		testData_tensor = torch.tensor(testData, device = self.device, dtype = self.dtype)
 		current_best_distance_matrix = torch.tensor(dummy._BuildExclusionMask(), device = self.device, dtype = self.dtype)
-		train_y = self.data[:, self.target]
+
+		# we offset the prediction horizon with the indices because this accounts for non-continuous data selection
+		train_y = self.data[trainIndices + self.predictionHorizon, self.target]
 		train_y_tensor = torch.tensor(train_y, device = self.device, dtype = self.dtype)
-		test_y = testData[:, self.target]
+		test_y = self.data[testIndices + self.predictionHorizon, self.target]
 		test_y_tensor = torch.tensor(test_y, device = self.device, dtype = self.dtype)
 
 		# Pre-allocate tensors at full batch size to avoid repeated allocation/deallocation
@@ -278,7 +283,6 @@ class MDE:
 				# find k nearest neighbors (topk writes values and indices into pre-allocated buffers)
 				torch.topk(candidateDistances[:batch_size], self.knn, dim = 1, largest = False, out = (neighborDistances[:batch_size], nearestNeighbors[:batch_size]))
 				FloorArray(neighborDistances[:batch_size], 1e-6)
-				nearestNeighbors[:batch_size].add_(self.predictionHorizon)
 
 				# compute weights and predictions in-place
 				torch.amin(neighborDistances[:batch_size], dim = 1, out = minDistances[:batch_size])
