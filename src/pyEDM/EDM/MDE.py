@@ -56,7 +56,7 @@ class MDE:
 				 theta: float = 0.0,
 				 solver=None,
 				 stdThreshold: float = 1e-3,
-				 CCMLibrarySizes = None,
+				 CCMLibrarySizes = numpy.linspace(10, 100, 10),
 				 CCMSampleSize: int = 10,
 				 CCMConvergenceThreshold: float = 0.01,
 				 MinPredictionThreshold: float = 0.0,
@@ -90,7 +90,7 @@ class MDE:
 		:param theta: 	S-Map localization parameter. theta=0 is global linear map, larger values increase localization
 		:param solver: 	Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
 		:param stdThreshold: 	Minimum standard deviation threshold
-		:param CCMLibrarySizes: 	Library sizes for CCM testing as [start, stop, increment]. If None, defaults to [10, 100, 10]
+		:param CCMLibrarySizes: 	Library sizes for CCM testing
 		:param CCMSampleSize: 	Number of random samples per library size for CCM
 		:param CCMConvergenceThreshold: 	Minimum slope threshold for CCM convergence
 		:param MinPredictionThreshold: 	Minimum correlation threshold for candidate filtering
@@ -123,7 +123,7 @@ class MDE:
 		self.solver = solver
 		self.stdThreshold = stdThreshold
 		self.use_half_precision = use_half_precision
-		self.CCMLibrarySizes = CCMLibrarySizes if CCMLibrarySizes is not None else [10, 100, 10]
+		self.CCMLibrarySizes = CCMLibrarySizes
 		self.CCMSampleSize = CCMSampleSize
 		self.CCMConvergenceThreshold = CCMConvergenceThreshold
 		self.MinPredictionThreshold = MinPredictionThreshold
@@ -521,8 +521,7 @@ class MDE:
 			return []
 
 		train_size = len(self.data) if self.train is None else self.train[1] - self.train[0]
-		lib_start, lib_stop, lib_increment = self.CCMLibrarySizes
-		lib_sizes = list(range(lib_start, min(lib_stop + 1, train_size), lib_increment))
+		lib_sizes = list(self.CCMLibrarySizes)
 
 		if len(lib_sizes) < 2:
 			return candidate_columns
