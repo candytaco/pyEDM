@@ -4,15 +4,12 @@ While the underlying classes have been refactored, these functions should
 return roughly the same data structures returned by the original pyEDM functions
 """
 
-from itertools import repeat
 # python modules
-from multiprocessing import get_context
 from typing import Any, Dict, List, Tuple, Union
 import numpy
 import torch
 
 # local modules
-from .EDM import PoolFunc
 from .Utils import IsNonStringIterable, ComputeError
 from .EDM.CCM import CCM
 from .EDM.Multiview import Multiview
@@ -700,14 +697,14 @@ def FindSMapNeighborhood(data: numpy.ndarray,
 	:param knn: 				Number of nearest neighbors
 	:param step: 				Step size for embedding
 	:param exclusionRadius: 	Exclusion radius
-	:param solver: 				SMap solver
+	:param solver: 				SMap solver (unused, kept for API compatibility)
 	:param embedded: 			Whether data is already embedded
 	:param validLib: 			Valid library indices
 	:param noTime: 				Whether to exclude time column
 	:param ignoreNan: 			Whether to ignore NaN values
-	:param numProcess: 			Number of processes for multiprocessing
-	:param mpMethod: 			Multiprocessing method
-	:param chunksize: 			Chunk size for pool.starmap
+	:param numProcess: 			Unused, kept for API compatibility
+	:param mpMethod: 			Unused, kept for API compatibility
+	:param chunksize: 			Unused, kept for API compatibility
 	:return: Array with columns [theta, correlation]
 	"""
 
@@ -717,32 +714,110 @@ def FindSMapNeighborhood(data: numpy.ndarray,
 	elif not IsNonStringIterable(theta):
 		theta = [float(t) for t in theta.split()]
 
-	# Setup Pool
-	args = {'columns': columns,
-			'target': target,
-			'train': train,
-			'test': test,
-			'embedDims': embedDimensions,
-			'predictionHorizon': predictionHorizon,
-			'knn': knn,
-			'step': step,
-			'exclusionRadius': exclusionRadius,
-			'solver': solver,
-			'embedded': embedded,
-			'validLib': validLib,
-			'noTime': noTime,
-			'ignoreNan': ignoreNan}
+	correlations = _FindSMapNeighborhoodBatched(
+		data, columns, target, theta, train, test,
+		embedDimensions, predictionHorizon, knn, step,
+		exclusionRadius, embedded, validLib, noTime, ignoreNan)
 
-	# Create iterable for Pool.starmap, use repeated copies of data, args
-	poolArgs = zip(theta, repeat(data), repeat(args))
+	return numpy.column_stack([theta, correlations])
 
-	# Multiargument starmap : EmbedDimSimplexFunc in PoolFunc
-	mpContext = get_context(mpMethod)
-	with mpContext.Pool(processes = numProcess) as pool:
-		correlationList = pool.starmap(PoolFunc.PredictNLSMapFunc, poolArgs,
-									   chunksize = chunksize)
 
-	import numpy as np
-	result = np.column_stack([theta, correlationList])
+def _FindSMapNeighborhoodBatched(data, columns, target, thetaValues, train, test,
+								 embedDimensions, predictionHorizon, knn, step,
+								 exclusionRadius, embedded, validLib, noTime, ignoreNan):
+	"""
+	Evaluate all theta values using shared neighbor computation.
+	Neighbors are found once, then projections for all theta values
+	are computed by varying only the distance weighting.
+	"""
+	# Create SMap with theta=0 (won't affect neighbor finding)
+	S = SMap(data = data,
+			 columns = columns,
+			 target = target,
+			 train = train,
+			 test = test,
+			 embedDimensions = embedDimensions,
+			 predictionHorizon = predictionHorizon,
+			 knn = knn,
+			 step = step,
+			 theta = 0,
+			 exclusionRadius = exclusionRadius,
+			 embedded = embedded,
+			 validLib = validLib,
+			 noTime = noTime,
+			 ignoreNan = ignoreNan)
 
-	return result
+	S.EmbedData()
+	S.RemoveNan()
+	S.FindNeighborsTorch()
+
+	device = S.device
+	dtype = S.dtype
+
+	numberOfPredictions = len(S.testIndices)
+	numberOfDimensions = S.embedDimensions + 1
+
+	# Convert data to tensors once
+	distances = torch.tensor(S.knn_distances, device = device, dtype = dtype)
+	neighbors = torch.tensor(S.knn_neighbors, device = device, dtype = torch.long)
+	embedding = torch.tensor(S.Embedding, device = device, dtype = dtype)
+	targetVector = torch.tensor(S.targetVec.squeeze(), device = device, dtype = dtype)
+	testIndices = torch.tensor(S.testIndices, device = device, dtype = torch.long)
+
+	# Precompute values shared across all theta
+	distanceRowMean = torch.mean(distances, dim = 1, keepdim = True)
+	torch.clamp_min_(distanceRowMean, 1e-10)
+
+	neighborsPlusTp = neighbors + predictionHorizon
+	targetValues = targetVector[neighborsPlusTp]
+
+	validMask = torch.isfinite(targetValues)
+	maskedTargetValues = torch.where(validMask, targetValues, torch.zeros_like(targetValues))
+
+	neighborEmbeddings = embedding[neighbors]
+	testEmbeddings = embedding[testIndices]
+
+	# Observation values for correlation computation
+	observationIndices = S.testIndices + predictionHorizon
+	validObsIndices = observationIndices[observationIndices < len(S.targetVec)]
+	observations = S.targetVec[validObsIndices, 0]
+	nValid = len(validObsIndices)
+
+	correlations = []
+
+	for theta in thetaValues:
+		# Compute weights for this theta
+		if theta == 0:
+			weights = torch.ones_like(distances)
+		else:
+			distanceRowScale = theta / distanceRowMean
+			weights = torch.exp(-distanceRowScale * distances)
+
+		maskedWeights = torch.where(validMask, weights, torch.zeros_like(weights))
+		weightedTargets = maskedWeights * maskedTargetValues
+
+		# Build design matrix
+		designMatrix = torch.zeros(numberOfPredictions, S.knn, numberOfDimensions,
+								   device = device, dtype = dtype)
+		designMatrix[:, :, 0] = maskedWeights
+		designMatrix[:, :, 1:] = maskedWeights.unsqueeze(2) * neighborEmbeddings
+
+		# Solve least squares
+		lstsqResult = torch.linalg.lstsq(designMatrix, weightedTargets)
+		coefficients = lstsqResult.solution
+
+		# Compute predictions
+		predictions = coefficients[:, 0] + torch.sum(coefficients[:, 1:] * testEmbeddings, dim = 1)
+		predictionsNumpy = predictions.cpu().numpy()
+
+		correlation = ComputeError(observations[:nValid], predictionsNumpy[:nValid], None)
+		correlations.append(correlation)
+
+	# Clean up
+	del distances, neighbors, embedding, targetVector, testIndices
+	del distanceRowMean, neighborsPlusTp, targetValues, validMask
+	del maskedTargetValues, neighborEmbeddings, testEmbeddings
+	if torch.cuda.is_available():
+		torch.cuda.empty_cache()
+
+	return correlations
