@@ -221,7 +221,7 @@ class BatchedCCM:
 
 			for libSize in ProgressBar(self.trainSizes, desc = 'CCM library sizes', leave = False):
 				for s in ProgressBar(range(self.sample), desc = 'Repeats', leave = False):
-					subsampleIndices = RNG.choice(numpy.arange(N_libraryIndices),
+					subsampleIndices = RNG.choice(N_libraryIndices,
 												  size = min(libSize, N_libraryIndices),
 												  replace = False)
 
