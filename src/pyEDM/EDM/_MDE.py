@@ -88,18 +88,14 @@ def RowwiseCorrelation(vector, array, out):
 	:param out: [m] output tensor
 	:return: out tensor with correlations
 	"""
-	n, m = array.shape
+	vectorCentered = vector - torch.mean(vector)
+	vectorStd = torch.sqrt(torch.sum(vectorCentered ** 2))
 
-	v_mean = torch.mean(vector)
-	v_centered = vector - v_mean
-	v_std = torch.sqrt(torch.sum(v_centered ** 2))
+	arrayMeans = torch.mean(array, dim = 1, keepdim = True)
+	arrayCentered = array - arrayMeans
+	arrayStd = torch.sqrt(torch.sum(arrayCentered ** 2, dim = 1))
 
-	for j in range(n):
-		a_mean = torch.mean(array[j, :])
-		a_centered = array[j, :] - a_mean
-		a_std = torch.sqrt(torch.sum(a_centered ** 2))
-
-		out[j] = torch.sum(v_centered * a_centered) / (v_std * a_std)
+	out[:] = torch.sum(vectorCentered * arrayCentered, dim = 1) / (vectorStd * arrayStd)
 
 	return out
 
@@ -112,13 +108,10 @@ def RowwiseR2(vector, array, out):
 	:param out: [m] output tensor
 	:return: out tensor with R2 values
 	"""
-	numberOfRows, numberOfColumns = array.shape
-
 	vectorMean = torch.mean(vector)
 	totalSumOfSquares = torch.sum((vector - vectorMean) ** 2)
 
-	for j in range(numberOfRows):
-		residualSumOfSquares = torch.sum((vector - array[j, :]) ** 2)
-		out[j] = 1 - residualSumOfSquares / totalSumOfSquares
+	residualSumOfSquares = torch.sum((vector - array) ** 2, dim = 1)
+	out[:] = 1 - residualSumOfSquares / totalSumOfSquares
 
 	return out
