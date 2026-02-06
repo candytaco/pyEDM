@@ -56,7 +56,7 @@ class MDE:
 				 theta: float = 0.0,
 				 solver=None,
 				 stdThreshold: float = 1e-3,
-				 CCMLibrarySizes = numpy.linspace(10, 100, 10),
+				 CCMLibrarySizes = numpy.linspace(10, 100, 10, dtype = numpy.int32),
 				 CCMSampleSize: int = 10,
 				 CCMConvergenceThreshold: float = 0.01,
 				 MinPredictionThreshold: float = 0.0,
