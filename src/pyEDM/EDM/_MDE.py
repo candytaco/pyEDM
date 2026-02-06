@@ -80,6 +80,9 @@ def ComputePredictions(weights, select, weightSum):
 def RowwiseCorrelation(vector, array, out):
 	"""
 	Correlation between a vector and columns of an array
+
+	Because of the order of operations in the MDE tensors, things end up in rows instead of columns
+
 	:param vector: [n] tensor
 	:param array: [m x n] tensor
 	:param out: [m] output tensor
@@ -97,5 +100,25 @@ def RowwiseCorrelation(vector, array, out):
 		a_std = torch.sqrt(torch.sum(a_centered ** 2))
 
 		out[j] = torch.sum(v_centered * a_centered) / (v_std * a_std)
+
+	return out
+
+
+def RowwiseR2(vector, array, out):
+	"""
+	R2 (coefficient of determination) between a vector (Y_true) and rows of an array (Y_pred)
+	:param vector: [n] tensor of true values
+	:param array: [m x n] tensor of predicted values (each row is a set of predictions)
+	:param out: [m] output tensor
+	:return: out tensor with R2 values
+	"""
+	numberOfRows, numberOfColumns = array.shape
+
+	vectorMean = torch.mean(vector)
+	totalSumOfSquares = torch.sum((vector - vectorMean) ** 2)
+
+	for j in range(numberOfRows):
+		residualSumOfSquares = torch.sum((vector - array[j, :]) ** 2)
+		out[j] = 1 - residualSumOfSquares / totalSumOfSquares
 
 	return out
