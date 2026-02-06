@@ -109,7 +109,7 @@ class BatchedCCM:
 		Execute batched cross-mapping for all predictor variables.
 		"""
 
-		FwdResult = self.BatchedCrossMap()
+		FwdResult = self.CrossMap(self.X, self.Y)
 
 		self.libMeansFwd = zeros([len(self.trainSizes), 1 + self.numVariables])
 		for i, size in enumerate(self.trainSizes):
@@ -121,7 +121,7 @@ class BatchedCCM:
 			self.PredictStatsFwd = FwdResult['predictStats']
 
 		if self.includeReverse:
-			RevResult = self.BatchedCrossMapReverse()
+			RevResult = self.CrossMap(self.Y, self.X)
 
 			self.libMeansRev = zeros([len(self.trainSizes), 1 + self.numVariables])
 			for i, size in enumerate(self.trainSizes):
@@ -132,18 +132,14 @@ class BatchedCCM:
 			if self.includeData:
 				self.PredictStatsRev = RevResult['predictStats']
 
-	def BatchedCrossMap(self):
-		"""
-		Perform batched cross-mapping across M predictor variables.
-		"""
-
+	def CrossMap(self, X, Y):
 		from .Embed import Embed
 
 		RNG = default_rng(self.seed)
 
 		dummy = Simplex(
-			data = self.X,
-			columns = numpy.arange(self.X.shape[1]).tolist(),
+			data = X,
+			columns = numpy.arange(X.shape[1]).tolist(),
 			target = 0,
 			train = self.train,
 			test = self.test,
@@ -160,14 +156,14 @@ class BatchedCCM:
 		)
 		dummy.EmbedData()
 
-		numPredictors = self.X.shape[1]
+		numPredictors = X.shape[1]
 
 		embeddings = []
 		for varIndex in range(numPredictors):
 			if self.embedded:
-				embedding = self.X[:, varIndex].reshape(-1, 1)
+				embedding = X[:, varIndex].reshape(-1, 1)
 			else:
-				embedding = Embed(data = self.X,
+				embedding = Embed(data = X,
 								  columns = [varIndex],
 								  embeddingDimensions = self.embedDimensions,
 								  stepSize = self.step,
@@ -176,7 +172,7 @@ class BatchedCCM:
 
 		libraryIndices = dummy.trainIndices.copy()
 		N_libraryIndices = len(libraryIndices)
-		targetVector = self.Y[libraryIndices, 0]
+		targetVector = Y[libraryIndices, 0]
 
 		libcorrelationMap = {libSize: zeros([self.sample, numPredictors]) for libSize in self.trainSizes}
 		libStatMap = {}
@@ -258,119 +254,6 @@ class BatchedCCM:
 
 		for libSize in self.trainSizes:
 			libcorrelationMap[libSize] = mean(libcorrelationMap[libSize], axis = 0)
-
-		if self.includeData:
-			return {'libcorrelation': libcorrelationMap, 'predictStats': libStatMap}
-		else:
-			return {'libcorrelation': libcorrelationMap}
-
-	def BatchedCrossMapReverse(self):
-		"""
-		Perform reverse cross-mapping: target predicts all M predictor variables.
-		Target embedding determines neighbors, which are then used to predict each predictor.
-		"""
-
-		from .Embed import Embed
-
-		RNG = default_rng(self.seed)
-
-		dummy = Simplex(
-			data = self.Y,
-			columns = [0],
-			target = 0,
-			train = self.train,
-			test = self.test,
-			embedDimensions = self.embedDimensions,
-			predictionHorizon = 0,
-			knn = self.knn,
-			step = self.step,
-			exclusionRadius = self.exclusionRadius,
-			embedded = self.embedded,
-			validLib = self.validLib,
-			noTime = True,
-			ignoreNan = self.ignoreNan,
-			verbose = False
-		)
-		dummy.EmbedData()
-
-		numPredictors = self.X.shape[1]
-
-		if self.embedded:
-			targetEmbedding = self.Y
-		else:
-			targetEmbedding = Embed(data = self.Y,
-									columns = [0],
-									embeddingDimensions = self.embedDimensions,
-									stepSize = self.step,
-									includeTime = False)
-
-		predictorEmbeddings = []
-		for varIndex in range(numPredictors):
-			if self.embedded:
-				embedding = self.X[:, varIndex].reshape(-1, 1)
-			else:
-				embedding = Embed(data = self.X,
-								  columns = [varIndex],
-								  embeddingDimensions = self.embedDimensions,
-								  stepSize = self.step,
-								  includeTime = False)
-			predictorEmbeddings.append(embedding)
-
-		libraryIndices = dummy.trainIndices.copy()
-		N_libraryIndices = len(libraryIndices)
-
-		libcorrelationMap = {}
-		libStatMap = {}
-
-		targetEmbeddingTensor = torch.tensor(targetEmbedding[libraryIndices, :], dtype = self.dtype, device = self.device)
-
-		d = torch.zeros([targetEmbeddingTensor.shape[1], targetEmbeddingTensor.shape[0], targetEmbeddingTensor.shape[0]], dtype = self.dtype, device = self.device)
-		ElementwisePairwiseDistance(targetEmbeddingTensor, targetEmbeddingTensor, d)
-		fullDistances = torch.sum(d, dim = 0)
-		fullDistances = torch.sqrt(fullDistances)
-
-		if self.exclusionRadius == 0:
-			diagIndices = torch.arange(fullDistances.shape[0], device = self.device)
-			fullDistances[diagIndices, diagIndices] = float('inf')
-
-		predictorVectors = torch.tensor(numpy.column_stack([emb[libraryIndices, 0] for emb in predictorEmbeddings]), dtype = self.dtype, device = self.device)
-
-		for libSize in self.trainSizes:
-			correlations = zeros([self.sample, numPredictors])
-			if self.includeData:
-				predictStats = [[None] * self.sample for _ in range(numPredictors)]
-
-			for s in range(self.sample):
-				subsampleIndices = RNG.choice(numpy.arange(fullDistances.shape[0]),
-											  size = min(libSize, N_libraryIndices),
-											  replace = False)
-
-				distances = torch.zeros_like(fullDistances, device = self.device)
-				distances.copy_(fullDistances)
-				mask = numpy.ones(distances.shape[0], dtype = bool)
-				mask[subsampleIndices] = False
-				distances[mask, :] = float('inf')
-
-				neighbors = torch.topk(distances, self.knn, dim = 0, largest = False)[1]
-				distances = torch.gather(distances, 0, neighbors)
-				FloorArray(distances, 1e-6)
-
-				minDistances = MinAxis1(distances.T)
-				weights = ComputeWeights(distances.T, minDistances)
-				weightSum = SumAxis1(weights)
-
-				for m in range(numPredictors):
-					select = predictorVectors[:, m][neighbors.T]
-					prediction = ComputePredictions(weights, select, weightSum)
-
-					correlation = torch.corrcoef(torch.stack([predictorVectors[:, m], prediction]))[0, 1]
-					correlations[s, m] = correlation.cpu().numpy()
-
-			meanCorrelations = mean(correlations, axis = 0)
-			libcorrelationMap[libSize] = meanCorrelations
-
-			if self.includeData:
-				libStatMap[libSize] = predictStats
 
 		if self.includeData:
 			return {'libcorrelation': libcorrelationMap, 'predictStats': libStatMap}
