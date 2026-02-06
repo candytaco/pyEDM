@@ -406,7 +406,7 @@ class MDE:
 					self.data = augmented_data
 
 					try:
-						result = self._run_edm(test_variables)
+						result = self._fit_single_EDM_instance(test_variables)
 						score = self._compute_performance(result)
 
 						improvement = score - best_accuracy
@@ -428,23 +428,14 @@ class MDE:
 		if torch.cuda.is_available():
 			torch.cuda.empty_cache()
 
-	def _run_edm(self, variables: List[int]) -> SimplexResult:
-		"""Run EDM prediction with given variable indices.
+	def _fit_single_EDM_instance(self, variables: List[int]) -> SimplexResult:
+		"""
+		Fit a single EDM instalce with given variable indices.
 
 		:param variables: Column indices to use for prediction
 		:return: Prediction results
 		:rtype: SimplexResult or SMapResult
 		"""
-		# distance matrix
-		# the new one to be added is always the first one in the list
-		var = variables[0]
-		train = self.trainData[:, var]
-		test = self.testData[:, var]
-		distances = numpy.subtract.outer(train, test)
-		distances **= 2
-		if self.current_best_distance_matrix is not None:
-			distances += self.current_best_distance_matrix
-
 		# Run prediction
 		if self.useSMap:
 			smap = SMap(
@@ -486,19 +477,7 @@ class MDE:
 				ignoreNan = self.ignoreNan,
 				verbose = self.verbose
 			)
-			simplex.EmbedData()
-			simplex.RemoveNan()
-			neighborFinder = PairwiseDistanceNeighborFinder(None)
-			neighborFinder.distanceMatrix = distances
-			neighborFinder.numNeighbors = simplex.knn_
-			knn_distances, knn_neighbors = neighborFinder.requery()
-			simplex.knn_distances, simplex.knn_neighbors = simplex.MapKNNIndicesToData(knn_neighbors, knn_distances)
-			simplex.Project()
-			simplex.FormatProjection()
-			res = SimplexResult(projection = simplex.Projection,
-								embedDimensions = 0,
-								predictionHorizon = 0)
-			return res
+			return simplex.Run()
 
 	def _compute_performance(self, result: SimplexResult) -> float:
 		"""Compute optimization metric from prediction result.
@@ -682,5 +661,5 @@ class MDE:
 		:return: Final prediction array [Time, Observations, Predictions]
 		:rtype: numpy.ndarray
 		"""
-		result = self._run_edm(self.selectedVariables)
+		result = self._fit_single_EDM_instance(self.selectedVariables)
 		return result.projection
