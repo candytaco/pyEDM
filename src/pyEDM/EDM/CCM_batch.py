@@ -157,18 +157,21 @@ class BatchedCCM:
 		dummy.EmbedData()
 
 		numPredictors = X.shape[1]
+		libraryIndices = dummy.trainIndices.copy()
+		N_libraryIndices = len(libraryIndices)
+		targetVector = Y[libraryIndices, 0]
 
 		embeddings = []
 		for varIndex in range(numPredictors):
 			if self.embedded:
-				embedding = X[:, varIndex].reshape(-1, 1)
+				embedding = X[libraryIndices, varIndex].reshape(-1, 1)
 			else:
 				embedding = Embed(data = X,
 								  columns = [varIndex],
 								  embeddingDimensions = self.embedDimensions,
 								  stepSize = self.step,
 								  includeTime = False)
-			embeddings.append(embedding)
+			embeddings.append(embedding[libraryIndices, :])
 
 		libraryIndices = dummy.trainIndices.copy()
 		N_libraryIndices = len(libraryIndices)
