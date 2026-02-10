@@ -154,7 +154,7 @@ class BatchedCCM:
 		embeddings = []
 		for varIndex in range(numPredictors):
 			if self.embedded:
-				embedding = X[libraryIndices, varIndex].reshape(-1, 1)
+				embedding = X[:, varIndex].reshape(-1, 1)
 			else:
 				embedding = Embed(data = X,
 								  columns = [varIndex],
@@ -238,4 +238,4 @@ class BatchedCCM:
 			if torch.cuda.is_available():
 				torch.cuda.empty_cache()
 
-		return numpy.mean(performance, axis = 0)
+		return numpy.mean(performance, axis = 1)
