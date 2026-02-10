@@ -29,7 +29,9 @@ class BatchedCCM:
 				 validLib = None,
 				 includeData = False,
 				 ignoreNan = True,
-				 includeReverse = False,
+				 includeReverse = True,
+				 trainBlockIndices = None,
+				 testBlockIndices = None,
 				 device = 'cuda',
 				 batchSize = 10000,
 				 useHalfPrecision = False):
@@ -51,6 +53,8 @@ class BatchedCCM:
 		:param includeData: 		Whether to include detailed prediction statistics
 		:param ignoreNan: 			Remove NaN values from embedding
 		:param includeReverse: 		Whether to compute reverse direction (target -> columns)
+		:param trainBlockIndices: 	Train block index range [start, end]. If None, uses all data.
+		:param testBlockIndices: 	Test block index range [start, end]. If None, uses all data.
 		:param device: 				Device for torch tensors ('cpu', 'cuda', or torch.device object)
 		:param batchSize: 			Number of variables to process per batch to limit VRAM usage
 		:param useHalfPrecision: 	Use float16 instead of float32 to save VRAM
@@ -79,10 +83,16 @@ class BatchedCCM:
 		self.device = torch.device(device) if isinstance(device, str) else device
 		self.dtype = torch.float16 if useHalfPrecision else torch.float32
 
-		self.train = self.test = [1, self.X.shape[0]]
+		if trainBlockIndices is not None:
+			self.train = trainBlockIndices
+		else:
+			self.train = [1, self.X.shape[0]]
 
-		self.libMeansFwd = None
-		self.libMeansRev = None
+		if testBlockIndices is not None:
+			self.test = testBlockIndices
+		else:
+			self.test = [1, self.X.shape[0]]
+
 		self.forward_performance_ = None
 		self.reverse_performance_ = None
 		self.PredictStatsFwd = None

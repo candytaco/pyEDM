@@ -36,6 +36,8 @@ class CCM:
 				 includeData = False,
 				 noTime = False,
 				 ignoreNan = True,
+				 trainBlockIndices = None,
+				 testBlockIndices = None,
 				 mpMethod = None,
 				 sequential = False,
 				 verbose = False,
@@ -59,6 +61,8 @@ class CCM:
 		:param includeData: 		Whether to include detailed prediction statistics in results
 		:param noTime: 				Whether first column is time or data
 		:param ignoreNan: 			Remove NaN values from embedding
+		:param trainBlockIndices: 	Train block index range [start, end]. If None, uses all data.
+		:param testBlockIndices: 	Test block index range [start, end]. If None, uses all data.
 		:param mpMethod: 			Multiprocessing context method (ExecutionMode.SPAWN, ExecutionMode.FORK, ExecutionMode.FORKSERVER). If None, uses platform default
 		:param sequential: 			Use sequential execution instead of multiprocessing
 		:param verbose: 			Print diagnostic messages
@@ -91,8 +95,16 @@ class CCM:
 		self.mpMethod = mpMethod
 		self.sequential = sequential
 
-		# Set full train & test
-		self.train = self.test = [1, self.Data.shape[0]]
+		# Set train & test block indices
+		if trainBlockIndices is not None:
+			self.train = trainBlockIndices
+		else:
+			self.train = [1, self.Data.shape[0]]
+
+		if testBlockIndices is not None:
+			self.test = testBlockIndices
+		else:
+			self.test = [1, self.Data.shape[0]]
 
 		self.CrossMapList = None  # List of CrossMap results
 		self.libMeans = None  # DataFrame of CrossMap results
@@ -235,20 +247,22 @@ class CCM:
 		if self.verbose:
 			print(f'{self.name}: CrossMap()')
 
-		S = self.RevMap if reverse else self.FwdMap
+		simplex = self.RevMap if reverse else self.FwdMap
+		simplex.EmbedData()
+		simplex.RemoveNan()
 
 		# Create random number generator : None sets random state from OS
 		RNG = default_rng(self.seed)
 
 		# Copy S.lib_i since it's replaced every iteration
-		lib_i = S.trainIndices.copy()
+		lib_i = simplex.trainIndices.copy()
 		N_lib_i = len(lib_i)
 
 		libcorrelationMap = {}  # Output dict libSize key : mean correlation value
 		libStatMap = {}  # Output dict libSize key : list of ComputeError dicts
 
 		if not self.kdtree:
-			S.FindNeighbors()
+			simplex.FindNeighbors()
 
 		# Loop for library sizes
 		for libSize in self.trainSizes:
@@ -263,19 +277,19 @@ class CCM:
 					rng_i = RNG.choice(lib_i, size = min(libSize, N_lib_i),
 									   replace = False)
 
-					S.trainIndices = rng_i
-					S.FindNeighbors()  # Depends on S.lib_i
-					neighbor_distances = S.knn_distances
-					neighbor_indices = S.knn_neighbors
+					simplex.trainIndices = rng_i
+					simplex.FindNeighbors()  # Depends on S.lib_i
+					neighbor_distances = simplex.knn_distances
+					neighbor_indices = simplex.knn_neighbors
 				else:
-					rng_i = RNG.choice(numpy.arange(S.neighborFinder.distanceMatrix.shape[0]), size = min(libSize, N_lib_i),
+					rng_i = RNG.choice(numpy.arange(simplex.neighborFinder.distanceMatrix.shape[0]), size = min(libSize, N_lib_i),
 									   replace = False)
-					d = S.neighborFinder.distanceMatrix.copy()
+					d = simplex.neighborFinder.distanceMatrix.copy()
 					mask = numpy.ones(d.shape[0], dtype = bool)
 					mask[rng_i] = False
 					d[mask, :] = numpy.inf # artificially make all the other ones far awa
-					neighbor_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn)
-					neighbor_indices = S._MapKNNIndicesToLibraryIndices(raw_indices)
+					neighbor_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, simplex.knn)
+					neighbor_indices = simplex._MapKNNIndicesToLibraryIndices(raw_indices)
 
 				# Code from Simplex:Project ---------------------------------
 				# First column is minimum distance of all N test rows
@@ -291,7 +305,7 @@ class CCM:
 				# Matrix of knn_neighbors + predictionHorizon defines library target values
 				knn_neighbors_Tp = neighbor_indices + self.predictionHorizon  # Npred x k
 
-				libTargetValues = S.targetVec[knn_neighbors_Tp].squeeze()
+				libTargetValues = simplex.targetVec[knn_neighbors_Tp].squeeze()
 				# Code from Simplex:Project ----------------------------------
 
 				# Projection is average of weighted knn library target values
@@ -300,13 +314,13 @@ class CCM:
 
 				# Align observations & predictions as in FormatProjection()
 				# Shift projection_ by predictionHorizon
-				projection_ = roll(projection_, S.predictionHorizon)
-				if S.predictionHorizon > 0:
-					projection_[:S.predictionHorizon] = nan
-				elif S.predictionHorizon < 0:
-					projection_[S.predictionHorizon:] = nan
+				projection_ = roll(projection_, simplex.predictionHorizon)
+				if simplex.predictionHorizon > 0:
+					projection_[:simplex.predictionHorizon] = nan
+				elif simplex.predictionHorizon < 0:
+					projection_[simplex.predictionHorizon:] = nan
 
-				err = ComputeError(S.targetVec[S.testIndices, 0], projection_, None, digits = 5)
+				err = ComputeError(simplex.targetVec[simplex.testIndices, 0], projection_, None, digits = 5)
 
 				correlations[s] = err
 
@@ -319,13 +333,13 @@ class CCM:
 				libStatMap[libSize] = predictStats
 
 		# Reset S.lib_i to original
-		S.trainIndices = lib_i
+		simplex.trainIndices = lib_i
 
 		if self.includeData:
-			return {'columns': S.columns, 'target': S.target,
+			return {'columns': simplex.columns, 'target': simplex.target,
 					'libcorrelation': libcorrelationMap, 'predictStats': libStatMap}
 		else:
-			return {'columns': S.columns, 'target': S.target, 'libcorrelation': libcorrelationMap}
+			return {'columns': simplex.columns, 'target': simplex.target, 'libcorrelation': libcorrelationMap}
 
 	# --------------------------------------------------------------------
 	def Validate(self):

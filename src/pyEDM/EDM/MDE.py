@@ -12,13 +12,12 @@ import numpy
 from tqdm import tqdm as ProgressBar
 import torch
 
-from .NeighborFinder import PairwiseDistanceNeighborFinder
+from .CCM_batch import BatchedCCM
 from .Results import MDEResult, SimplexResult
 from .SMap import SMap
 from .Simplex import Simplex
 
-from ._MDE import ElementwisePairwiseDistance, RowwiseCorrelation, \
-	IncrementPairwiseDistance, FloorArray
+from ._MDE import RowwiseCorrelation, RowwiseR2, FloorArray
 from .. import FindOptimalEmbeddingDimensionality
 
 
@@ -151,6 +150,13 @@ class MDE:
 		self.trainData = None
 		self.testData = None
 		self.timeDelayResults = None
+
+		if metric == 'correlation':
+			self.EvaluatePerformance = RowwiseCorrelation
+		elif metric in ['R2', 'r2', 'rsquared']:
+			self.EvaluatePerformance = RowwiseR2
+		else:
+			raise ValueError('Metric {} not supported'.format(metric))
 
 	def Run(self) -> MDEResult:
 		"""Execute MDE feature selection and return results.
@@ -295,7 +301,7 @@ class MDE:
 
 				# calculate performances (slice to actual batch size)
 				perfs[:batch_size].zero_()
-				RowwiseCorrelation(test_y_tensor, predictions[:batch_size], perfs[:batch_size])
+				self.EvaluatePerformance(test_y_tensor, predictions[:batch_size], perfs[:batch_size])
 
 				# Convert to list of tuples
 				perfs_numpy = perfs[:batch_size].cpu().numpy()
@@ -380,6 +386,7 @@ class MDE:
 			torch.cuda.empty_cache()
 
 		# Time delay analysis
+		# TODO: parallelize this
 		if self.TimeDelay > 0:
 			if self.verbose:
 				print(f"Starting time delay analysis with max delay {self.TimeDelay}")
@@ -498,12 +505,10 @@ class MDE:
 		:return: Tuple of convergent column indices and their CCM slopes
 		:rtype: List[int]
 		"""
-		from .CCM_batch import BatchedCCM
 
 		if len(candidate_columns) == 0:
 			return []
 
-		train_size = len(self.data) if self.train is None else self.train[1] - self.train[0]
 		lib_sizes = list(self.CCMLibrarySizes)
 
 		if len(lib_sizes) < 2:
@@ -529,13 +534,14 @@ class MDE:
 			includeData = False,
 			ignoreNan = self.ignoreNan,
 			includeReverse = False,
+			trainBlockIndices = self.train,
+			testBlockIndices = self.test,
 			device = self.device,
 			batchSize = int(self.batch_size * self.testData.shape[0] / self.trainData.shape[0]),
 			useHalfPrecision = self.use_half_precision
 		)
 
 		result = batchedCCM.Run()
-		forward_correlations = result.forward_correlations
 
 		# Clean up BatchedCCM GPU resources
 		del batchedCCM
@@ -545,7 +551,7 @@ class MDE:
 		# Compute linear regression slopes for all columns in parallel
 		# slope = cov(x,y) / var(x) = (mean(xy) - mean(x)*mean(y)) / (mean(x^2) - mean(x)^2)
 		x = torch.tensor(lib_sizes_normalized, dtype = torch.float32, device = self.device)
-		y = torch.tensor(forward_correlations, dtype = torch.float32, device = self.device)
+		y = torch.tensor(result.forward_performance, dtype = torch.float32, device = self.device)
 
 		x_mean = x.mean()
 		y_mean = y.mean(dim = 0)
@@ -612,9 +618,7 @@ class MDE:
 			best_e = self.optimalEmbeddingDimensions[column]
 
 		# Compute library sizes for CCM
-		train_size = len(self.data) if self.train is None else self.train[1] - self.train[0]
-		lib_start, lib_stop, lib_increment = self.CCMLibrarySizes
-		lib_sizes = list(range(lib_start, min(lib_stop + 1, train_size), lib_increment))
+		lib_sizes = self.CCMLibrarySizes
 
 		if len(lib_sizes) < 2:
 			if self.verbose:
