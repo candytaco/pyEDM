@@ -162,9 +162,10 @@ class MDE:
 		:rtype: MDEResult
 		"""
 		if self.embedDimensions == 0:
-			self.embedDimensions = FindOptimalEmbeddingDimensionality(self.data, [self.target], self.target, self.maxD,
+			dims, corrs = FindOptimalEmbeddingDimensionality(self.data, [self.target], self.target, self.maxD,
 																	  train = self.train, test = self.test, predictionHorizon = self.predictionHorizon,
 																	  noTime = self.noTime)
+			self.embedDimensions = dims[numpy.argmax(corrs)]
 		if self.knn == 0:
 			self.knn = self.embedDimensions + 1
 

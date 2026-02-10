@@ -346,7 +346,7 @@ def FindOptimalEmbeddingDimensionality(data: numpy.ndarray,
 									   validLib: List = [],
 									   noTime: bool = False,
 									   ignoreNan: bool = True,
-									   batched: bool = False) -> numpy.ndarray:
+									   batched: bool = False):
 	"""
 	Estimate optimal embedding dimension [1:maxE] using GPU-accelerated Simplex.
 
@@ -370,23 +370,23 @@ def FindOptimalEmbeddingDimensionality(data: numpy.ndarray,
 	:param noTime: 				Whether to exclude time column
 	:param ignoreNan: 			Whether to ignore NaN values
 	:param batched: 			Use shared maxE indices for all E (faster, slightly less accurate for low E)
-	:return: Array with columns [E, correlation]
+	:return: best embedding dimensions
 	"""
 
-	Evals = list(range(1, maxE + 1))
+	dimensions = list(range(1, maxE + 1))
 
 	if batched:
 		correlations = _FindOptimalEmbeddingDimensionalityBatched(
-			data, columns, target, maxE, Evals, train, test,
+			data, columns, target, maxE, dimensions, train, test,
 			predictionHorizon, step, exclusionRadius, embedded,
 			validLib, noTime, ignoreNan)
 	else:
 		correlations = _FindOptimalEmbeddingDimensionalityIterative(
-			data, columns, target, Evals, train, test,
+			data, columns, target, dimensions, train, test,
 			predictionHorizon, step, exclusionRadius, embedded,
 			validLib, noTime, ignoreNan)
 
-	return numpy.column_stack([Evals, correlations])
+	return dimensions, correlations
 
 
 def _FindOptimalEmbeddingDimensionalityIterative(data, columns, target, Evals,
