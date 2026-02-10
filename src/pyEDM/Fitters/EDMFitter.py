@@ -18,13 +18,15 @@ class EDMFitter:
 	and calling Fit(XTrain, YTrain, ...) gives you a result object that is also stored in the fitter
 	"""
 
-	def __init__(self):
+	def __init__(self, progressBar = True):
 		"""
 		Init. Classes should set their algorithm parameters with this function
+		:param progressBar:
 		"""
 
 		self.DataAdapter = None
 		self.Result = None
+		self.hideProgress = not progressBar
 
 	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
 			TrainStart = 1, TrainEnd = 0, TestStart = 0, TestEnd = 0,

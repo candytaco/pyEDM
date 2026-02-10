@@ -17,7 +17,7 @@ class MDEFitterCV(EDMFitter):
 
 	def __init__(self,
 				 MaxD: int = 5,
-				 IncludeTarget: bool = True,
+				 IncludeTarget: bool = False,
 				 Convergent: Union[str, bool] = 'pre',
 				 Metric: str = "correlation",
 				 BatchSize: int = 10000,
@@ -41,7 +41,8 @@ class MDEFitterCV(EDMFitter):
 				 MinPredictionThreshold: float = 0.0,
 				 EmbedDimCorrelationMin: float = 0.0,
 				 FirstEMax: bool = False,
-				 TimeDelay: int = 0):
+				 TimeDelay: int = 0,
+				 progressBar: bool = True):
 		"""
 		Initialize MDE cross-validation fitter.
 
@@ -65,7 +66,7 @@ class MDEFitterCV(EDMFitter):
 		:param Theta: 				S-Map localization parameter
 		:param stdThreshold:		Stdev threshold below which to ignore variables
 		"""
-		super().__init__()
+		super().__init__(progressBar)
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget

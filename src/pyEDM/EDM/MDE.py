@@ -33,7 +33,7 @@ class MDE:
 				 data: numpy.ndarray,
 				 target: int,
 				 maxD: int = 5,
-				 include_target: bool = True,
+				 include_target: bool = False,
 				 convergent = 'post',
 				 metric: str = "correlation",
 				 batch_size: int = 1000,

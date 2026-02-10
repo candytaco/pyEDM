@@ -15,7 +15,7 @@ class MDEFitter(EDMFitter):
 
 	def __init__(self,
 				 MaxD: int = 5,
-				 IncludeTarget: bool = True,
+				 IncludeTarget: bool = False,
 				 Convergent: Union[str, bool] = 'pre',
 				 Metric: str = "correlation",
 				 BatchSize: int = 1000,
@@ -36,7 +36,8 @@ class MDEFitter(EDMFitter):
 				 MinPredictionThreshold: float = 0.0,
 				 EmbedDimCorrelationMin: float = 0.0,
 				 FirstEMax: bool = False,
-				 TimeDelay: int = 0):
+				 TimeDelay: int = 0,
+				 progressBar: bool = True):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
@@ -57,7 +58,7 @@ class MDEFitter(EDMFitter):
 		:param Theta: 				S-Map localization parameter
 		"""
 
-		super().__init__()
+		super().__init__(progressBar)
 
 		self.MaxD = MaxD
 		self.IncludeTarget = IncludeTarget

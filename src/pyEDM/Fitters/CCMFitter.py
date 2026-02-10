@@ -24,7 +24,9 @@ class CCMFitter(EDMFitter):
 				 KNN: int = 0,
 				 Step: int = -1,
 				 ExclusionRadius: int = 0,
-				 Verbose: bool = False):
+				 Verbose: bool = False,
+				 progressBar: bool = True
+				 ):
 		"""
 		Init.
 
@@ -38,7 +40,7 @@ class CCMFitter(EDMFitter):
 		:param Verbose: 			Print diagnostic messages
 		"""
 
-		super().__init__()
+		super().__init__(progressBar)
 
 		self.TrainSizes = TrainSizes
 		self.Sample = numRepeats

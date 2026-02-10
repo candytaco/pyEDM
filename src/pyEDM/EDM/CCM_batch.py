@@ -34,7 +34,8 @@ class BatchedCCM:
 				 testBlockIndices = None,
 				 device = 'cuda',
 				 batchSize = 10000,
-				 useHalfPrecision = False):
+				 useHalfPrecision = False,
+				 verbose = True):
 		"""
 		Initialize BatchedCCM.
 
