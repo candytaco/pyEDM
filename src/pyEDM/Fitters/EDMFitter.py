@@ -27,7 +27,7 @@ class EDMFitter:
 		self.Result = None
 
 	def Fit(self, XTrain: numpy.ndarray, YTrain: numpy.ndarray, XTest: numpy.ndarray, YTest: numpy.ndarray,
-			TrainStart = 0, TrainEnd = 0, TestStart = 0, TestEnd = 0,
+			TrainStart = 1, TrainEnd = 0, TestStart = 0, TestEnd = 0,
 			TrainTime: Optional[numpy.ndarray] = None, TestTime: Optional[numpy.ndarray] = None):
 		"""
 		Does the fitting and predicting
