@@ -8,6 +8,7 @@ import torch
 from pandas import DataFrame, read_csv
 
 from pyEDM import Functions as EDM
+from pyEDM.EDM.CCM_batch import BatchedCCM
 import pyEDM.EDM.Embed
 from pyEDM.ExampleData import dataFileNames
 import importlib.resources
@@ -617,6 +618,24 @@ class test_EDM( unittest.TestCase ):
         dfv = round(self.ValidationFiles["CCM_Lorenz5D_MV_Space_valid.csv"], 4)
 
         self.assertTrue( dfv.equals( round( df, 4 ) ) )
+
+    def test_batched_CCM( self ):
+        """CCM Multivariate"""
+        df_ = sampleDataFrames['Lorenz5D']
+        data = df_.values
+        col_index1 = df_.columns.get_loc('V3')
+        col_index2 = df_.columns.get_loc('V5')
+        target_index = df_.columns.get_loc('V1')
+        CCM = BatchedCCM(X = data[:, [col_index1, col_index2]], Y = data[:, target_index][:, None],
+                         trainSizes = [20, 200, 500, 950], sample = 30, embedDimensions = 5,
+                         predictionHorizon = 10, knn = 0, step = -5, seed = 777,
+                         embedded = False, validLib = [], includeData = False,
+                         )
+        results = CCM.Run()
+
+        dfv = self.ValidationFiles["CCM_Lorenz5D_MV_valid.csv"].values
+
+        self.assertTrue(numpy.allclose(results.forward_performance_, dfv, rtol = 1e-4))
 
     #------------------------------------------------------------
     # Multiview

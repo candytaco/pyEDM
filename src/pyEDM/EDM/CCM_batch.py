@@ -195,7 +195,7 @@ class BatchedCCM:
 			batchEmbeddings = embeddings[batchStart:batchEnd]
 			batchNumPredictors = len(batchEmbeddings)
 
-			trainEmbeddings = torch.tensor(numpy.array([embedding[libraryIndices, :] for embedding in batchEmbeddings]), dtype = self.dtype, device = self.device)
+			trainEmbeddings = torch.tensor(numpy.array(batchEmbeddings), dtype = self.dtype, device = self.device)
 			for i in range(batchNumPredictors):
 				ElementwisePairwiseDistance(trainEmbeddings[i, :, :], trainEmbeddings[i, :, :], d)
 				fullDistances[i, :, :] = torch.sum(d, dim = 0)

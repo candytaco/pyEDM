@@ -21,7 +21,7 @@ class MDEFitterCV(EDMFitter):
 	def __init__(self,
 				 MaxD: int = 5,
 				 IncludeTarget: bool = True,
-				 Convergent: bool = True,
+				 Convergent: Union[str, bool] = 'pre',
 				 Metric: str = "correlation",
 				 BatchSize: int = 10000,
 				 HalfPrecision: bool = False,
