@@ -1,7 +1,7 @@
 """
 MDE wrapper for sklearn-like API.
 """
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import numpy
 
@@ -16,12 +16,10 @@ class MDEFitter(EDMFitter):
 	def __init__(self,
 				 MaxD: int = 5,
 				 IncludeTarget: bool = True,
-				 Convergent: bool = True,
+				 Convergent: Union[str, bool] = 'pre',
 				 Metric: str = "correlation",
 				 BatchSize: int = 1000,
 				 HalfPrecision: bool = False,
-				 Columns: Optional[List[int]] = None,
-				 Target: Optional[int] = None,
 				 Embed: bool = False,
 				 EmbedDimensions: int = 0,
 				 PredictionHorizon: int = 1,
@@ -30,7 +28,8 @@ class MDEFitter(EDMFitter):
 				 ExclusionRadius: int = 0,
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
-				 Theta: float = 0.0):
+				 Theta: float = 0.0,
+				 stdThreshold: float = 1e-2):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
@@ -40,9 +39,7 @@ class MDEFitter(EDMFitter):
 		:param Metric: 				Metric to use: "correlation" or "MAE"
 		:param BatchSize: 			Number of features to process in each batch
 		:param HalfPrecision: 		Use float16 instead of float32 for GPU tensors
-		:param Columns: 			Column indices to use for embedding
-		:param Target: 				Target column index
-		:param Embde:				whether to embed the data or not
+		:param Embed:				whether to embed the data or not
 		:param EmbedDimensions: 	Embedding dimension (E)
 		:param PredictionHorizon: 	Prediction time horizon (Tp)
 		:param KNN: 				Number of nearest neighbors
@@ -61,8 +58,6 @@ class MDEFitter(EDMFitter):
 		self.Metric = Metric
 		self.BatchSize = BatchSize
 		self.HalfPrecision = HalfPrecision
-		self.Columns = Columns
-		self.Target = Target
 		self.EmbedDimensions = EmbedDimensions
 		self.PredictionHorizon = PredictionHorizon
 		self.KNN = KNN
@@ -72,6 +67,7 @@ class MDEFitter(EDMFitter):
 		self.UseSMap = UseSMap
 		self.Theta = Theta
 		self.Embed = Embed
+		self.stdThreshold = stdThreshold
 
 		self.MDE = None
 
@@ -83,21 +79,12 @@ class MDEFitter(EDMFitter):
 		Data = self.GetEDMData()
 		TrainIndices = self.GetTrainIndices()
 		TestIndices = self.GetTestIndices()
-		YIndex = self.GetYIndex()
+		XStart, XEnd = self.GetXIndices()
+		Columns = list(range(XStart, XEnd + 1))
+		Target = self.GetYIndex()
 		NoTime = not self.HasTime()
 
 		# Determine columns to use
-		XStart, XEnd = self.GetXIndices()
-		if self.Columns is not None:
-			Columns = [XStart + col for col in self.Columns]
-		else:
-			Columns = list(range(XStart, XEnd + 1))
-
-		# Determine target
-		if self.Target is not None:
-			Target = XStart + self.Target
-		else:
-			Target = YIndex
 
 		self.MDE = MDE(
 			data = Data,
@@ -120,7 +107,8 @@ class MDEFitter(EDMFitter):
 			noTime = NoTime,
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
-			theta = self.Theta
+			theta = self.Theta,
+			stdThreshold = self.stdThreshold
 		)
 
 		self.Result = self.MDE.Run()

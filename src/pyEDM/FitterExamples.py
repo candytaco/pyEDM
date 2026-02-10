@@ -38,7 +38,7 @@ def FitterExamples():
 	result = simplexWrapper.Fit(XTrain = XTrain,
 								YTrain = YTrain,
 								XTest = XTest,
-								YTest = YTest,)
+								YTest = YTest, )
 	plot_prediction(result.projection, "Simplex: block_3sp embedded", embedDimensions = 3)
 
 	# Example 2: SimplexWrapper with block_3sp data (embedded = False)
@@ -60,11 +60,11 @@ def FitterExamples():
 	)
 
 	result = simplexWrapper2.Fit(XTrain = XTrain,
-								YTrain = YTrain,
-								XTest = XTest,
-								YTest = YTest,
-								TestStart = 5,	# the first 5 samples are to provide a history for the first real test sample
-								)
+								 YTrain = YTrain,
+								 XTest = XTest,
+								 YTest = YTest,
+								 TestStart = 5,  # the first 5 samples are to provide a history for the first real test sample
+								 )
 	plot_prediction(result.projection, "Simplex: block_3sp", embedDimensions = 3)
 
 	# Example 3: MultiviewWrapper with block_3sp data
@@ -90,9 +90,9 @@ def FitterExamples():
 	)
 
 	result = multiviewWrapper.Fit(XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,)
+								  YTrain = YTrain,
+								  XTest = XTest,
+								  YTest = YTest, )
 	plot_prediction(result.projection, "Multiview: block_3sp", embedDimensions = 3)
 
 	# Example 4: SMapWrapper with circle data
@@ -120,9 +120,9 @@ def FitterExamples():
 	)
 
 	result = smapWrapper.Fit(XTrain = XTrain,
-		YTrain = YTrain,
-		XTest = XTest,
-		YTest = YTest,)
+							 YTrain = YTrain,
+							 XTest = XTest,
+							 YTest = YTest, )
 	plot_prediction(result.projection, "SMap: circle", embedDimensions = 2)
 	plot_smap_coefficients(result.coefficients, "SMap Coefficients", embedDimensions = 2)
 
