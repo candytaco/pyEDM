@@ -173,7 +173,7 @@ class BatchedCCM:
 		fullDistances = torch.zeros([self.batchSize, N_libraryIndices, N_libraryIndices],
 									dtype = self.dtype, device = self.device)
 
-		for batchStart in ProgressBar(range(0, numPredictors, self.batchSize), desc = 'Variable batch'):
+		for batchStart in ProgressBar(range(0, numPredictors, self.batchSize), desc = 'Variable batch', leave = False):
 			batchEnd = min(batchStart + self.batchSize, numPredictors)
 			batchEmbeddings = embeddings[batchStart:batchEnd]
 			batchNumPredictors = len(batchEmbeddings)
