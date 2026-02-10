@@ -1,8 +1,6 @@
 import numpy
 import torch
 from tqdm import tqdm as ProgressBar
-from numpy import zeros, mean
-from numpy.random import default_rng
 
 from pyEDM.EDM.Simplex import Simplex
 from pyEDM.EDM._MDE import ElementwisePairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
@@ -64,7 +62,7 @@ class BatchedCCM:
 		self.numVariables = X.shape[1]
 		self.embedDimensions = embedDimensions
 		self.predictionHorizon = predictionHorizon
-		self.knn = knn
+		self.knn = knn if knn > 0 else embedDimensions + 1
 		self.step = step
 		self.exclusionRadius = exclusionRadius
 		self.embedded = embedded
@@ -85,6 +83,8 @@ class BatchedCCM:
 
 		self.libMeansFwd = None
 		self.libMeansRev = None
+		self.forward_performance_ = None
+		self.reverse_performance_ = None
 		self.PredictStatsFwd = None
 		self.PredictStatsRev = None
 
@@ -96,46 +96,26 @@ class BatchedCCM:
 
 		from .Results import BatchedCCMResult
 		return BatchedCCMResult(
-			libMeansFwd = self.libMeansFwd,
-			libMeansRev = self.libMeansRev,
+			forward_performance = self.forward_performance_,
+			reverse_performance = self.reverse_performance_,
 			embedDimensions = self.embedDimensions,
 			predictionHorizon = self.predictionHorizon,
-			predictStatsFwd = self.PredictStatsFwd if self.includeData else None,
-			predictStatsRev = self.PredictStatsRev if self.includeData else None
+			library_sizes = self.trainSizes
 		)
 
 	def Project(self):
 		"""
 		Execute batched cross-mapping for all predictor variables.
 		"""
-
-		FwdResult = self.CrossMap(self.X, self.Y)
-
-		self.libMeansFwd = zeros([len(self.trainSizes), 1 + self.numVariables])
-		for i, size in enumerate(self.trainSizes):
-			self.libMeansFwd[i, 0] = size
-			for m in range(self.numVariables):
-				self.libMeansFwd[i, 1 + m] = FwdResult['libcorrelation'][size][m]
-
-		if self.includeData:
-			self.PredictStatsFwd = FwdResult['predictStats']
+		self.forward_performance_ = self.CrossMap(self.X, self.Y)
 
 		if self.includeReverse:
-			RevResult = self.CrossMap(self.Y, self.X)
-
-			self.libMeansRev = zeros([len(self.trainSizes), 1 + self.numVariables])
-			for i, size in enumerate(self.trainSizes):
-				self.libMeansRev[i, 0] = size
-				for m in range(self.numVariables):
-					self.libMeansRev[i, 1 + m] = RevResult['libcorrelation'][size][m]
-
-			if self.includeData:
-				self.PredictStatsRev = RevResult['predictStats']
+			self.reverse_performance_ = self.CrossMap(self.Y, self.X)
 
 	def CrossMap(self, X, Y):
 		from .Embed import Embed
 
-		RNG = default_rng(self.seed)
+		RNG = numpy.random.default_rng(self.seed)
 
 		dummy = Simplex(
 			data = X,
@@ -173,15 +153,8 @@ class BatchedCCM:
 								  includeTime = False)
 			embeddings.append(embedding[libraryIndices, :])
 
-		libraryIndices = dummy.trainIndices.copy()
-		N_libraryIndices = len(libraryIndices)
-		targetVector = Y[libraryIndices, 0]
 
-		libcorrelationMap = {libSize: zeros([self.sample, numPredictors]) for libSize in self.trainSizes}
-		libStatMap = {}
-		if self.includeData:
-			for libSize in self.trainSizes:
-				libStatMap[libSize] = [[None] * self.sample for _ in range(numPredictors)]
+		performance = numpy.zeros([len(self.trainSizes), self.sample, numPredictors])
 
 		target = torch.tensor(targetVector, dtype = self.dtype, device = self.device)
 
@@ -218,8 +191,8 @@ class BatchedCCM:
 				for i in range(batchNumPredictors):
 					fullDistances[i, diagIndices, diagIndices] = float('inf')
 
-			for libSize in ProgressBar(self.trainSizes, desc = 'CCM library sizes', leave = False):
-				for s in ProgressBar(range(self.sample), desc = 'Repeats', leave = False):
+			for size_i, libSize in enumerate(ProgressBar(self.trainSizes, desc = 'CCM library sizes', leave = False)):
+				for sample_i in ProgressBar(range(self.sample), desc = 'Repeats', leave = False):
 					subsampleIndices = RNG.choice(N_libraryIndices,
 												  size = min(libSize, N_libraryIndices),
 												  replace = False)
@@ -239,7 +212,7 @@ class BatchedCCM:
 					predictions[:] = ComputePredictions(weights, select, weightSum)
 
 					RowwiseCorrelation(target, predictions, perfs_)
-					libcorrelationMap[libSize][s, batchStart:batchEnd] = perfs_.cpu().numpy()
+					performance[size_i, sample_i, batchStart:batchEnd] = perfs_.cpu().numpy()
 
 			del trainEmbeddings
 			del maskedDistances
@@ -255,10 +228,4 @@ class BatchedCCM:
 			if torch.cuda.is_available():
 				torch.cuda.empty_cache()
 
-		for libSize in self.trainSizes:
-			libcorrelationMap[libSize] = mean(libcorrelationMap[libSize], axis = 0)
-
-		if self.includeData:
-			return {'libcorrelation': libcorrelationMap, 'predictStats': libStatMap}
-		else:
-			return {'libcorrelation': libcorrelationMap}
+		return numpy.mean(performance, axis = 0)
