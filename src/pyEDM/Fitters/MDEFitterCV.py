@@ -34,7 +34,14 @@ class MDEFitterCV(EDMFitter):
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
-				 stdThreshold: float = 1e-2):
+				 stdThreshold: float = 1e-2,
+				 CCMLibraryPercentiles = numpy.linspace(10, 90, 5,),
+				 CCMNumSamples: int = 10,
+				 CCMConvergenceThreshold: float = 0.01,
+				 MinPredictionThreshold: float = 0.0,
+				 EmbedDimCorrelationMin: float = 0.0,
+				 FirstEMax: bool = False,
+				 TimeDelay: int = 0):
 		"""
 		Initialize MDE cross-validation fitter.
 
@@ -79,6 +86,14 @@ class MDEFitterCV(EDMFitter):
 		self.Theta = Theta
 		self.embed = Embed
 		self.stdThreshold = stdThreshold
+
+		self.CCMLibraryPercentiles = CCMLibraryPercentiles
+		self.CCMNumSamples = CCMNumSamples
+		self.CCMConvergenceThreshold = CCMConvergenceThreshold
+		self.MinPredictionThreshold = MinPredictionThreshold
+		self.EmbedDimCorrelationMin = EmbedDimCorrelationMin
+		self.FirstEMax = FirstEMax
+		self.TimeDelay = TimeDelay
 
 		self.trainDataAdapter = None
 		self.cvSplitter = None
@@ -187,7 +202,14 @@ class MDEFitterCV(EDMFitter):
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
 			theta = self.Theta,
-			stdThreshold = self.stdThreshold
+			stdThreshold = self.stdThreshold,
+			CCMLibraryPercentiles = self.CCMLibraryPercentiles,
+			CCMNumSamples = self.CCMNumSamples,
+			CCMConvergenceThreshold = self.CCMConvergenceThreshold,
+			MinPredictionThreshold = self.MinPredictionThreshold,
+			EmbedDimCorrelationMin = self.EmbedDimCorrelationMin,
+			FirstEMax = self.FirstEMax,
+			TimeDelay = self.TimeDelay
 		)
 
 		return mde.Run()
@@ -225,44 +247,7 @@ class MDEFitterCV(EDMFitter):
 		testData = numpy.hstack([XTest, YTest])
 		stackedData = numpy.vstack([trainData, testData])
 
-		trainEnd = trainData.shape[0] - 1
-		testStart = trainData.shape[0]
-		testEnd = stackedData.shape[0] - 1
-
-		mde = MDE(
-			data = stackedData,
-			target = target,
-			maxD = self.MaxD,
-			include_target = self.IncludeTarget,
-			convergent = self.Convergent,
-			metric = self.Metric,
-			batch_size = self.BatchSize,
-			use_half_precision = self.HalfPrecision,
-			columns = features,
-			train = [0, trainEnd],
-			test = [testStart, testEnd],
-			embedDimensions = self.EmbedDimensions,
-			predictionHorizon = self.PredictionHorizon,
-			knn = self.KNN,
-			step = self.Step,
-			exclusionRadius = self.ExclusionRadius,
-			embedded = not self.embed,
-			noTime = not self.trainDataAdapter.HasTime,
-			verbose = self.Verbose,
-			useSMap = self.UseSMap,
-			theta = self.Theta,
-			stdThreshold = self.stdThreshold
-		)
-
-		finalResult = mde.Run()
-
-		return MDECVResult(
-			final_forecast = finalResult.final_forecast,
-			selected_features = features,
-			fold_results = self.foldResults,
-			accuracy = self.foldAccuracies,
-			best_fold = self.bestFold
-		)
+		# TODO: this is a simplex projection
 
 	def GetFrequencyFeatures(self) -> List[int]:
 		"""

@@ -53,10 +53,9 @@ class MDE:
 				 verbose=False,
 				 useSMap: bool = False,
 				 theta: float = 0.0,
-				 solver=None,
 				 stdThreshold: float = 1e-3,
-				 CCMLibrarySizes = numpy.linspace(10, 100, 10, dtype = numpy.int32),
-				 CCMSampleSize: int = 10,
+				 CCMLibraryPercentiles = numpy.linspace(10, 90, 5,),
+				 CCMNumSamples: int = 10,
 				 CCMConvergenceThreshold: float = 0.01,
 				 MinPredictionThreshold: float = 0.0,
 				 EmbedDimCorrelationMin: float = 0.0,
@@ -87,10 +86,9 @@ class MDE:
 		:param verbose: 	Print diagnostic messages
 		:param useSMap: 	Whether to use SMap instead of Simplex
 		:param theta: 	S-Map localization parameter. theta=0 is global linear map, larger values increase localization
-		:param solver: 	Solver to use for S-Map regression. If None, uses numpy.linalg.lstsq. Can be any sklearn-compatible regressor.
 		:param stdThreshold: 	Minimum standard deviation threshold
-		:param CCMLibrarySizes: 	Library sizes for CCM testing
-		:param CCMSampleSize: 	Number of random samples per library size for CCM
+		:param CCMLibraryPercentiles: 	Library sizes for CCM testing as percent of train data size
+		:param CCMNumSamples: 	Number of random samples per library size for CCM
 		:param CCMConvergenceThreshold: 	Minimum slope threshold for CCM convergence
 		:param MinPredictionThreshold: 	Minimum correlation threshold for candidate filtering
 		:param EmbedDimCorrelationMin: 	Minimum correlation for E selection
@@ -119,11 +117,10 @@ class MDE:
 		self.verbose = verbose
 		self.useSMap = useSMap
 		self.theta = theta
-		self.solver = solver
 		self.stdThreshold = stdThreshold
 		self.use_half_precision = use_half_precision
-		self.CCMLibrarySizes = CCMLibrarySizes
-		self.CCMSampleSize = CCMSampleSize
+		self.CCMLibraryPercentiles = CCMLibraryPercentiles
+		self.CCMNumSamples = CCMNumSamples
 		self.CCMConvergenceThreshold = CCMConvergenceThreshold
 		self.MinPredictionThreshold = MinPredictionThreshold
 		self.EmbedDimCorrelationMin = EmbedDimCorrelationMin
@@ -509,7 +506,7 @@ class MDE:
 		if len(candidate_columns) == 0:
 			return []
 
-		lib_sizes = list(self.CCMLibrarySizes)
+		lib_sizes = [int(percentile / 100 * self.data.shape[0]) for percentile in self.CCMLibraryPercentiles]
 
 		if len(lib_sizes) < 2:
 			return candidate_columns
@@ -524,7 +521,7 @@ class MDE:
 			X = X,
 			Y = Y,
 			trainSizes = lib_sizes,
-			sample = self.CCMSampleSize,
+			sample = self.CCMNumSamples,
 			embedDimensions = self.embedDimensions,
 			predictionHorizon = 0,
 			knn = self.knn if self.knn > 0 else self.embedDimensions + 1,
@@ -618,7 +615,7 @@ class MDE:
 			best_e = self.optimalEmbeddingDimensions[column]
 
 		# Compute library sizes for CCM
-		lib_sizes = self.CCMLibrarySizes
+		lib_sizes = self.CCMLibraryPercentiles
 
 		if len(lib_sizes) < 2:
 			if self.verbose:
@@ -634,8 +631,8 @@ class MDE:
 			data = self.data,
 			columns = [column],
 			target = [self.target],
-			trainSizes = self.CCMLibrarySizes,
-			sample = self.CCMSampleSize,
+			trainSizes = self.CCMLibraryPercentiles,
+			sample = self.CCMNumSamples,
 			embedDimensions = best_e,
 			predictionHorizon = self.predictionHorizon,
 			knn = self.knn if self.knn > 0 else best_e + 1,

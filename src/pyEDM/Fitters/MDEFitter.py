@@ -29,7 +29,14 @@ class MDEFitter(EDMFitter):
 				 Verbose: bool = False,
 				 UseSMap: bool = False,
 				 Theta: float = 0.0,
-				 stdThreshold: float = 1e-2):
+				 stdThreshold: float = 1e-2,
+				 CCMLibraryPercentiles = numpy.linspace(10, 90, 5,),
+				 CCMNumSamples: int = 10,
+				 CCMConvergenceThreshold: float = 0.01,
+				 MinPredictionThreshold: float = 0.0,
+				 EmbedDimCorrelationMin: float = 0.0,
+				 FirstEMax: bool = False,
+				 TimeDelay: int = 0):
 		"""
 		Initialize MDE wrapper with sklearn-style separate arrays.
 
@@ -68,6 +75,14 @@ class MDEFitter(EDMFitter):
 		self.Theta = Theta
 		self.Embed = Embed
 		self.stdThreshold = stdThreshold
+
+		self.CCMLibraryPercentiles = CCMLibraryPercentiles
+		self.CCMNumSamples = CCMNumSamples
+		self.CCMConvergenceThreshold = CCMConvergenceThreshold
+		self.MinPredictionThreshold = MinPredictionThreshold
+		self.EmbedDimCorrelationMin = EmbedDimCorrelationMin
+		self.FirstEMax = FirstEMax
+		self.TimeDelay = TimeDelay
 
 		self.MDE = None
 
@@ -108,7 +123,14 @@ class MDEFitter(EDMFitter):
 			verbose = self.Verbose,
 			useSMap = self.UseSMap,
 			theta = self.Theta,
-			stdThreshold = self.stdThreshold
+			stdThreshold = self.stdThreshold,
+			CCMLibraryPercentiles = self.CCMLibraryPercentiles,
+			CCMNumSamples = self.CCMNumSamples,
+			CCMConvergenceThreshold = self.CCMConvergenceThreshold,
+			MinPredictionThreshold = self.MinPredictionThreshold,
+			EmbedDimCorrelationMin = self.EmbedDimCorrelationMin,
+			FirstEMax = self.FirstEMax,
+			TimeDelay = self.TimeDelay
 		)
 
 		self.Result = self.MDE.Run()
