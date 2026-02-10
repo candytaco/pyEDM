@@ -9,7 +9,6 @@ from warnings import warn
 from numpy import argsort, array, column_stack, mean
 
 # local modules
-from . import PoolFunc
 from .Embed import Embed
 from ..Utils import IsNonStringIterable, ComputeError
 from .Results import MultiviewResult
