@@ -1,4 +1,4 @@
-"""Multivariate Delay Embedding (MDE) for pyEDM.
+"""Manifold dimensional expansion (MDE) for pyEDM.
 
 This module provides classes for multivariate feature selection using
 Empirical Dynamic Modeling methods. The MDE class performs iterative
@@ -22,7 +22,7 @@ from .. import FindOptimalEmbeddingDimensionality
 
 
 class MDE:
-	"""Multivariate Delay Embedding for feature selection.
+	"""Manifold dimensional expansion for feature selection.
 
 	This class implements the iterative feature selection algorithm that
 	evaluates combinations of features using EDM methods and selects the

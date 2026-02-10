@@ -1,6 +1,3 @@
-"""
-MDE with cross-validation using flexible CV splitting.
-"""
 from typing import Optional, List, Union
 
 import numpy
