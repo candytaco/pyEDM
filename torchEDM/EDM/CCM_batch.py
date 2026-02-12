@@ -28,7 +28,7 @@ class BatchedCCM:
 				 validLib = None,
 				 includeData = False,
 				 ignoreNan = True,
-				 includeReverse = True,
+				 directions: str = 'both',
 				 trainBlockIndices = None,
 				 testBlockIndices = None,
 				 device = 'cuda',
@@ -52,7 +52,7 @@ class BatchedCCM:
 		:param validLib:			Boolean mask for valid library points
 		:param includeData: 		Whether to include detailed prediction statistics
 		:param ignoreNan: 			Remove NaN values from embedding
-		:param includeReverse: 		Whether to compute reverse direction (target -> columns)
+		:param directions: 			Which directions to compute: forward|reverse|both
 		:param trainBlockIndices: 	Train block index range [start, end]. If None, uses all data.
 		:param testBlockIndices: 	Test block index range [start, end]. If None, uses all data.
 		:param device: 				Device for torch tensors ('cpu', 'cuda', or torch.device object)
@@ -72,7 +72,7 @@ class BatchedCCM:
 		self.embedded = embedded
 		self.validLib = validLib if validLib is not None else []
 		self.ignoreNan = ignoreNan
-		self.includeReverse = includeReverse
+		self.directions = directions
 		self.batchSize = batchSize
 
 		self.trainSizes = trainSizes if trainSizes is not None else []
@@ -118,9 +118,10 @@ class BatchedCCM:
 		"""
 		Execute batched cross-mapping for all predictor variables.
 		"""
-		self.forward_performance_ = self.CrossMap(self.X, self.Y)
+		if self.directions in ['forward', 'both']:
+			self.forward_performance_ = self.CrossMap(self.X, self.Y)
 
-		if self.includeReverse:
+		if self.directions in ['reverse', 'both']:
 			self.reverse_performance_ = self.CrossMap(self.Y, self.X)
 
 	def CrossMap(self, X, Y):
