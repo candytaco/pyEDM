@@ -70,9 +70,11 @@ class PairwiseDistanceNeighborFinder(NeighborFinderBase):
 
 	@staticmethod
 	def find_neighbors(distances: np.ndarray, k: int):
-		neighbors = np.argsort(distances, axis = 0)[:k, :]
-		indices = np.arange(distances.shape[1])[np.newaxis, :]
-		neighbor_distances = distances[neighbors, indices]
+		neighbors = np.argpartition(distances, k, axis = 0)[:k, :]
+		neighbor_distances = np.take_along_axis(distances, neighbors, axis = 0)
+		sorted_order = np.argsort(neighbor_distances, axis = 0)
+		neighbors = np.take_along_axis(neighbors, sorted_order, axis = 0)
+		neighbor_distances = np.take_along_axis(neighbor_distances, sorted_order, axis = 0)
 		return np.sqrt(neighbor_distances).transpose().squeeze(), neighbors.transpose().squeeze()
 
 	def __init__(self, 

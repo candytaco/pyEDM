@@ -222,11 +222,9 @@ class CCM:
                     rng_i = RNG.choice(np.arange(S.neighbor_finder.distanceMatrix.shape[0]),
                                        size = min(libSize, N_lib_i),
                                        replace = False)
-                    d = S.neighbor_finder.distanceMatrix.copy()
-                    mask = np.ones(d.shape[0], dtype = bool)
-                    mask[rng_i] = False
-                    d[mask, :] = np.inf  # artificially make all the other ones far awa
-                    neighbor_distances, raw_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn)
+                    d = S.neighbor_finder.distanceMatrix[rng_i, :]
+                    neighbor_distances, sub_indices = PairwiseDistanceNeighborFinder.find_neighbors(d, S.knn)
+                    raw_indices = rng_i[sub_indices]
                     neighbor_indices = S.map_knn_indices_to_library_indices(raw_indices)
 
                 # Code from Simplex:Project ---------------------------------
