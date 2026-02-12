@@ -8,26 +8,30 @@ Functionality includes:
 * Multivariate embeddings ([Dixon et. al. 1999](https://science.sciencemag.org/content/283/5407/1528))
 * Convergent cross mapping ([Sugihara et. al. 2012](https://science.sciencemag.org/content/338/6106/496))
 * Multiview embedding ([Ye and Sugihara 2016](https://science.sciencemag.org/content/353/6302/922))
+* (experimental) Manifold Dimensional Expansion
 
 ---
 ## API Overview
 
 This is forked from the main pyEDM repo and refactored to:
-- provide a numpy-native API, removing the pandas dependency
-- provide OOP objects that provide a clear train/test and X/Y separation in the arguments
-- 
+- use pyTorch as the backend to vectorize and run on GPUs
+- provide a numpy-native API rather than pandas dataframes
+- provide OOP objects with sklearn-like semantics that separate train/test and X/Y in the arguments
+- some functions have been renamed to be clearer about their functionality
+
 For example usage see:
 - `FitterExamples` for OOP objects
 - `FunctionalExamples` for the functional API
 
-### 1. Object-Oriented API (New)
-The OOP API provides sklearn-like wrappers with explicit train/test separation. These are ideal for machine learning workflows.
+### 1. Object-Oriented API (sklearn-like)
+The OOP API provides sklearn-like wrappers with explicit train/test separation.
 
 ```python
-import pyEDM
+import torchEDM
+from torchEDM import ExampleData
 
 # Load data
-data = pyEDM.sampleData['TentMap']
+data = ExampleData.sampleData['TentMap']
 
 # Split data
 XTrain = data[0:100, 1]
@@ -36,105 +40,70 @@ XTest = data[100:200, 1]
 YTest = data[100:200, 1]
 
 # Create fitter
-fitter = pyEDM.Fitters.SimplexFitter(
-    XTrain = XTrain,
-    YTrain = YTrain,
-    XTest = XTest,
-    YTest = YTest,
-    EmbedDimensions = 3,
-    PredictionHorizon = 1,
-    KNN = 4,
-    Step = -1
+fitter = torchEDM.Fitters.SimplexFitter(
+	EmbedDimensions = 3,
+	PredictionHorizon = 1,
+	KNN = 4,
+	Step = -1
 )
 
 # Run prediction
-result = fitter.Run()
+result = fitter.Fit(
+	XTrain = XTrain,
+	YTrain = YTrain,
+	XTest = XTest,
+	YTest = YTest)
 ```
 
-### 2. Functional API (Traditional)
+### 2. Functional API (pyEDM-like)
 The functional API provides simple functions for EDM analysis. 
 These functions accept numpy arrays and return predictions directly.
 Other than the numpy-nativeness, these functions largely keep the same
 argument syntax as the pyEDM package.
 
 ```python
-import pyEDM
+import torchEDM
+from torchEDM import ExampleData
 
 # Load data
-data = pyEDM.sampleData['TentMap']
+data = ExampleData.sampleData['TentMap']
 
 # Simplex prediction
-result = pyEDM.Functions.FitSimplex(
-    data = data,
-    columns = [1],
-    target = 1,
-    train = (0, 100),
-    test = (100, 200),
-    embedDimensions = 3,
-    predictionHorizon = 1,
-    knn = 4,
-    step = -1
+result = torchEDM.Functions.FitSimplex(
+	data = data,
+	columns = [1],
+	target = 1,
+	train = (1, 100),
+	test = (100, 200),
+	embedDimensions = 3,
+	predictionHorizon = 1,
+	knn = 4,
+	step = -1
 )
 ```
 
 
 ---
-## Architecture Overview
-
 ### Data Interface
-The package now uses a pure NumPy array interface, removing the Pandas dependency. All functions accept and return NumPy arrays, providing better performance and compatibility.
+This package uses a pure NumPy array interface rather than pandas dataframes. 
+This package also does not handle I/O.
 
-### Codebase Organization
-
-```
-src/pyEDM/
-├── __init__.py                # Package initialization with API exports
-├── Functions.py               # Functional API (FitSimplex, FitSMap, etc.)
-├── Fitters/                   # Object-Oriented API wrappers
-│   ├── EDMFitter.py           # Base fitter class
-│   ├── SimplexFitter.py       # Simplex OOP wrapper
-│   ├── SMapFitter.py          # S-Map OOP wrapper
-│   ├── CCMFitter.py           # CCM OOP wrapper
-│   ├── MDEFitter.py           # MDE OOP wrapper
-│   ├── MDEFitterCV.py         # MDE CV OOP wrapper
-│   ├── MultiviewFitter.py     # Multiview OOP wrapper
-│   └── DataAdapter.py         # Data separation adapter
-├── EDM/                       # Core EDM algorithms
-│   ├── Simplex.py             # Simplex projection
-│   ├── SMap.py                # S-Map implementation
-│   ├── CCM.py                 # Convergent Cross Mapping
-│   ├── Multiview.py           # Multiview embedding
-│   ├── MDE.py                 # Multivariate Delay Embedding
-│   ├── MDECV.py               # MDE with cross-validation
-│   ├── Embed.py               # Embedding utilities
-│   ├── Results.py             # Result objects
-│   └── PoolFunc.py            # Parallel processing
-├── Utils.py                   # Utility functions and visualization
-├── Visualization.py           # Plotting functions
-├── ExampleData.py             # Sample datasets
-├── FunctionalExamples.py      # Functional API examples
-└── FitterExamples.py          # OOP API examples
-```
-
-## Available Methods
-
-### Functional API
+### Functional API (similar to pyEDM functions)
 - `FitSimplex()`: Simplex projection
 - `FitSMap()`: S-Map prediction
 - `FitCCM()`: Convergent Cross Mapping
 - `FitMultiview()`: Multiview embedding
-- `FitMDE()`: Multivariate Delay Embedding
 - `FindOptimalEmbeddingDimensionality()`: Embedding dimension optimization
 - `FindOptimalPredictionHorizon()`: Prediction horizon optimization
 - `FindSMapNeighborhood()`: S-Map neighborhood size optimization
 
 ### Object-Oriented API
-- `SimplexFitter`: Simplex projection wrapper
-- `SMapFitter`: S-Map prediction wrapper
-- `CCMFitter`: Convergent Cross Mapping wrapper
-- `MultiviewFitter`: Multiview embedding wrapper
-- `MDEFitter`: MDE wrapper
-- `MDEFitterCV`: MDE with cross-validation wrapper
+- `SimplexFitter`: Simplex projection
+- `SMapFitter`: S-Map prediction
+- `CCMFitter`: Convergent Cross Mapping
+- `MultiviewFitter`: Multiview embedding
+- `MDEFitter`: Manifold Dimensional Expansion
+- `MDEFitterCV`: MDE with cross-validation
 
 
 ---
