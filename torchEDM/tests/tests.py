@@ -677,7 +677,7 @@ class test_EDM( unittest.TestCase ):
         self.assertTrue( dfv.equals( round( df, 4 ) ) )
 
     def test_batched_CCM( self ):
-        """CCM Multivariate"""
+        """PyTorch batched CCM"""
         df_ = sampleDataFrames['sardine_anchovy_sst']
         data = df_.values
         col_index = df_.columns.get_loc('anchovy')
@@ -696,6 +696,9 @@ class test_EDM( unittest.TestCase ):
 
         self.assertTrue(numpy.allclose(results.forward_performance[:, 0], dfv[:, 1], atol = 5e-2))
         self.assertTrue(numpy.allclose(results.forward_performance[:, 1], dfv[:, 1], atol = 5e-2))
+
+        self.assertTrue(numpy.allclose(results.reverse_performance[:, 0], dfv[:, 2], atol = 5e-2))
+        self.assertTrue(numpy.allclose(results.reverse_performance[:, 1], dfv[:, 2], atol = 5e-2))
 
     
     # Multiview

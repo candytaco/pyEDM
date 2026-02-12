@@ -3,8 +3,7 @@ import torch
 from tqdm import tqdm as ProgressBar
 
 from torchEDM.EDM.Simplex import Simplex
-from torchEDM.EDM._MDE import ElementwisePairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1, \
-	ComputePredictions, RowwiseCorrelation
+from torchEDM.EDM._MDE import ElementwisePairwiseDistance, FloorArray, MinAxis1, ComputeWeights, SumAxis1
 
 
 class BatchedCCM:
@@ -61,9 +60,10 @@ class BatchedCCM:
 		"""
 
 		self.name = 'BatchedCCM'
-		self.X = X
+		self.X = X[:, None] if X.ndim == 1 else X
 		self.Y = Y[:, None] if Y.ndim == 1 else Y
-		self.numVariables = X.shape[1]
+		self.numSources = self.X.shape[1]
+		self.numTargets = self.Y.shape[1]
 		self.embedDimensions = embedDimensions
 		self.predictionHorizon = predictionHorizon
 		self.knn = knn if knn > 0 else embedDimensions + 1
@@ -127,11 +127,19 @@ class BatchedCCM:
 	def CrossMap(self, X, Y):
 		from .Embed import Embed
 
+		if X.ndim == 1:
+			X = X[:, None]
+		if Y.ndim == 1:
+			Y = Y[:, None]
+
+		numSources = X.shape[1]
+		numTargets = Y.shape[1]
+
 		RNG = numpy.random.default_rng(self.seed)
 
 		dummy = Simplex(
 			data = X,
-			columns = numpy.arange(X.shape[1]).tolist(),
+			columns = numpy.arange(numSources).tolist(),
 			target = 0,
 			train = self.train,
 			test = self.test,
@@ -148,13 +156,11 @@ class BatchedCCM:
 		)
 		dummy.EmbedData()
 
-		numPredictors = X.shape[1]
 		libraryIndices = dummy.trainIndices.copy()
 		N_libraryIndices = len(libraryIndices)
-		targetVector = Y[libraryIndices, 0]
 
 		embeddings = []
-		for varIndex in range(numPredictors):
+		for varIndex in range(numSources):
 			if self.embedded:
 				embedding = X[:, varIndex].reshape(-1, 1)
 			else:
@@ -165,38 +171,37 @@ class BatchedCCM:
 								  includeTime = False)
 			embeddings.append(embedding[libraryIndices, :])
 
+		performance = numpy.zeros([len(self.trainSizes), self.sample, numSources, numTargets])
 
-		performance = numpy.zeros([len(self.trainSizes), self.sample, numPredictors])
-
-		target = torch.tensor(targetVector, dtype = self.dtype, device = self.device)
+		target = torch.tensor(Y[libraryIndices, :], dtype = self.dtype, device = self.device)
 
 		d = torch.zeros([embeddings[0].shape[1], N_libraryIndices, N_libraryIndices],
 						dtype = self.dtype, device = self.device)
 		fullDistances = torch.zeros([self.batchSize, N_libraryIndices, N_libraryIndices],
 									dtype = self.dtype, device = self.device)
 
-		for batchStart in ProgressBar(range(0, numPredictors, self.batchSize), desc = 'Variable batch', leave = False, disable = not self.showProgress):
-			batchEnd = min(batchStart + self.batchSize, numPredictors)
+		for batchStart in ProgressBar(range(0, numSources, self.batchSize), desc = 'Variable batch', leave = False, disable = not self.showProgress):
+			batchEnd = min(batchStart + self.batchSize, numSources)
 			batchEmbeddings = embeddings[batchStart:batchEnd]
-			batchNumPredictors = len(batchEmbeddings)
+			batchNumSources = len(batchEmbeddings)
 
 			trainEmbeddings = torch.tensor(numpy.array(batchEmbeddings), dtype = self.dtype, device = self.device)
-			for i in range(batchNumPredictors):
+			for i in range(batchNumSources):
 				ElementwisePairwiseDistance(trainEmbeddings[i, :, :], trainEmbeddings[i, :, :], d)
 				fullDistances[i, :, :] = torch.sum(d, dim = 0)
-			fullDistances[:batchNumPredictors, :, :] = torch.sqrt(fullDistances[:batchNumPredictors, :, :])
-			perfs_ = torch.zeros(batchNumPredictors, dtype = self.dtype, device = self.device)
-			distances = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
-			neighbors = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = torch.long, device = self.device)
-			minDistances = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
-			weights = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
-			weightSum = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
-			select = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
-			predictions = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
+			fullDistances[:batchNumSources, :, :] = torch.sqrt(fullDistances[:batchNumSources, :, :])
+			distances = torch.zeros([batchNumSources, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
+			neighbors = torch.zeros([batchNumSources, self.knn, N_libraryIndices], dtype = torch.long, device = self.device)
+			minDistances = torch.zeros([batchNumSources, N_libraryIndices], dtype = self.dtype, device = self.device)
+			weights = torch.zeros([batchNumSources, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
+			weightSum = torch.zeros([batchNumSources, N_libraryIndices], dtype = self.dtype, device = self.device)
+			select = torch.zeros([batchNumSources, self.knn, N_libraryIndices, numTargets], dtype = self.dtype, device = self.device)
+			predictions = torch.zeros([batchNumSources, N_libraryIndices, numTargets], dtype = self.dtype, device = self.device)
+			perfs_ = torch.zeros([batchNumSources, numTargets], dtype = self.dtype, device = self.device)
 
 			if self.exclusionRadius == 0:
 				diagIndices = torch.arange(fullDistances.shape[1], device = self.device)
-				for i in range(batchNumPredictors):
+				for i in range(batchNumSources):
 					fullDistances[i, diagIndices, diagIndices] = float('inf')
 
 			for size_i, libSize in enumerate(ProgressBar(self.trainSizes, desc = 'CCM library sizes', leave = False, disable = not self.showProgress)):
@@ -206,7 +211,7 @@ class BatchedCCM:
 												  replace = False)
 
 					subsampleTorch = torch.as_tensor(subsampleIndices, dtype = torch.long, device = self.device)
-					subsampledDistances = fullDistances[:batchNumPredictors, subsampleTorch, :]
+					subsampledDistances = fullDistances[:batchNumSources, subsampleTorch, :]
 					topkDistances, topkLocalNeighbors = torch.topk(subsampledDistances, self.knn, dim = 1, largest = False)
 					distances[:] = topkDistances
 					neighbors[:] = subsampleTorch[topkLocalNeighbors]
@@ -215,11 +220,16 @@ class BatchedCCM:
 					minDistances[:] = MinAxis1(distances)
 					weights[:] = ComputeWeights(distances, minDistances)
 					weightSum[:] = SumAxis1(weights)
-					select.copy_(target[neighbors])
-					predictions[:] = ComputePredictions(weights, select, weightSum)
+					select[:] = target[neighbors]
+					predictions[:] = (weights.unsqueeze(-1) * select).sum(dim = 1) / weightSum.unsqueeze(-1)
 
-					RowwiseCorrelation(target, predictions, perfs_)
-					performance[size_i, sample_i, batchStart:batchEnd] = perfs_.cpu().numpy()
+					targetCentered = target - target.mean(dim = 0, keepdim = True)
+					targetStd = torch.sqrt((targetCentered ** 2).sum(dim = 0, keepdim = True))
+					predCentered = predictions - predictions.mean(dim = 1, keepdim = True)
+					predStd = torch.sqrt((predCentered ** 2).sum(dim = 1))
+					perfs_[:] = (targetCentered.unsqueeze(0) * predCentered).sum(dim = 1) / (targetStd * predStd)
+
+					performance[size_i, sample_i, batchStart:batchEnd, :] = perfs_.cpu().numpy()
 
 			del trainEmbeddings
 			del perfs_
@@ -233,4 +243,4 @@ class BatchedCCM:
 			if torch.cuda.is_available():
 				torch.cuda.empty_cache()
 
-		return numpy.mean(performance, axis = 1)
+		return numpy.mean(performance, axis = 1).squeeze()
