@@ -186,9 +186,6 @@ class BatchedCCM:
 				fullDistances[i, :, :] = torch.sum(d, dim = 0)
 			fullDistances[:batchNumPredictors, :, :] = torch.sqrt(fullDistances[:batchNumPredictors, :, :])
 			perfs_ = torch.zeros(batchNumPredictors, dtype = self.dtype, device = self.device)
-			maskedDistances = torch.zeros([batchNumPredictors, N_libraryIndices, N_libraryIndices], dtype = self.dtype,
-									device = self.device)
-
 			distances = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
 			neighbors = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = torch.long, device = self.device)
 			minDistances = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
@@ -196,7 +193,6 @@ class BatchedCCM:
 			weightSum = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
 			select = torch.zeros([batchNumPredictors, self.knn, N_libraryIndices], dtype = self.dtype, device = self.device)
 			predictions = torch.zeros([batchNumPredictors, N_libraryIndices], dtype = self.dtype, device = self.device)
-			mask = torch.ones(N_libraryIndices, dtype = torch.bool, device = self.device)
 
 			if self.exclusionRadius == 0:
 				diagIndices = torch.arange(fullDistances.shape[1], device = self.device)
@@ -209,12 +205,11 @@ class BatchedCCM:
 												  size = min(libSize, N_libraryIndices),
 												  replace = False)
 
-					maskedDistances.copy_(fullDistances[:batchNumPredictors, :, :])
-					mask.fill_(True)
-					mask[subsampleIndices] = False
-					maskedDistances[:, mask, :] = float('inf')
-
-					torch.topk(maskedDistances, self.knn, dim = 1, largest = False, out = (distances, neighbors))
+					subsampleTorch = torch.as_tensor(subsampleIndices, dtype = torch.long, device = self.device)
+					subsampledDistances = fullDistances[:batchNumPredictors, subsampleTorch, :]
+					topkDistances, topkLocalNeighbors = torch.topk(subsampledDistances, self.knn, dim = 1, largest = False)
+					distances[:] = topkDistances
+					neighbors[:] = subsampleTorch[topkLocalNeighbors]
 					FloorArray(distances, 1e-6)
 
 					minDistances[:] = MinAxis1(distances)
@@ -227,7 +222,6 @@ class BatchedCCM:
 					performance[size_i, sample_i, batchStart:batchEnd] = perfs_.cpu().numpy()
 
 			del trainEmbeddings
-			del maskedDistances
 			del perfs_
 			del distances
 			del neighbors
@@ -236,7 +230,6 @@ class BatchedCCM:
 			del weightSum
 			del select
 			del predictions
-			del mask
 			if torch.cuda.is_available():
 				torch.cuda.empty_cache()
 
