@@ -531,7 +531,7 @@ class MDE:
 			validLib = self.validLib,
 			includeData = False,
 			ignoreNan = self.ignoreNan,
-			includeReverse = False,
+			directions = 'reverse',
 			trainBlockIndices = self.train,
 			testBlockIndices = self.test,
 			device = self.device,
@@ -549,7 +549,7 @@ class MDE:
 		# Compute linear regression slopes for all columns in parallel
 		# slope = cov(x,y) / var(x) = (mean(xy) - mean(x)*mean(y)) / (mean(x^2) - mean(x)^2)
 		x = torch.tensor(lib_sizes_normalized, dtype = torch.float32, device = self.device)
-		y = torch.tensor(result.forward_performance, dtype = torch.float32, device = self.device)
+		y = torch.tensor(result.reverse_performance, dtype = torch.float32, device = self.device)
 
 		x_mean = x.mean()
 		y_mean = y.mean(dim = 0)
@@ -647,12 +647,12 @@ class MDE:
 
 		ccm_result = ccm.Run()
 
-		# Extract forward correlation values (column 1 of libMeans)
-		forward_correlations = ccm_result.libMeans[:, 1]
+		# Extract reverse correlation values (column 2 of libMeans)
+		reverse_correlations = ccm_result.libMeans[:, 2]
 
 		# Fit linear regression to check convergence slope
 		lr = LinearRegression()
-		lr.fit(lib_sizes_normalized.reshape(-1, 1), forward_correlations)
+		lr.fit(lib_sizes_normalized.reshape(-1, 1), reverse_correlations)
 		slope = lr.coef_[0]
 
 		return (slope > self.CCMConvergenceThreshold, slope)
