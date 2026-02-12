@@ -127,7 +127,7 @@ fitter = MDEFitter(MaxD = 5, PredictionHorizon = 1, Step = -1, Convergent = 'pre
                     CCMNumSamples = 100,
                     CCMConvergenceThreshold = 0.01,
                     stdThreshold = 0, HalfPrecision = False )
-results = fitter1.Fit(XTrain, YTrain, XTest, YTest)
+results = fitter.Fit(XTrain, YTrain, XTest, YTest)
 ```
 
 ---
