@@ -1,6 +1,6 @@
 """
-Functional programming interface to Empirical Dynamic Modeling (EDM) torchEDM.
-While the package has been refactored to take/return numpy arrays, these arrays
+Function API that follows the syntax of the pyEDM API
+While this package has been refactored to take/return numpy arrays, these arrays
 are roughly structured to be similar to the dataframes returned by the original pyEDM functions
 """
 

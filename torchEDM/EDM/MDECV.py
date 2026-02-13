@@ -214,7 +214,6 @@ class MDECV:
 			verbose = self.verbose,
 			useSMap = self.useSMap,
 			theta = self.theta,
-			solver = self.solver,
 			stdThreshold = self.stdThreshold
 		)
 
@@ -266,7 +265,6 @@ class MDECV:
 			verbose = self.verbose,
 			useSMap = self.useSMap,
 			theta = self.theta,
-			solver = self.solver
 		)
 
 		final_result = mde.Run()

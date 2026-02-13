@@ -1,11 +1,3 @@
-"""Manifold dimensional expansion (MDE) for torchEDM.
-
-This module provides classes for multivariate feature selection using
-Empirical Dynamic Modeling methods. The MDE class performs iterative
-feature selection by evaluating combinations of features using Simplex
-or S-Map predictions with parallel processing.
-"""
-
 from typing import List, Tuple
 
 import numpy
@@ -316,10 +308,6 @@ class MDE:
 					print(f"Filtered {original_count - len(metric_results)} candidates below correlation threshold {self.MinPredictionThreshold}")
 
 			# Flatten results and sort
-			# # NOTE: there's nothing about aborting if performance doesn't increase
-			# metric_results = [item for sublist in batch_results for item in sublist]
-			# metric_results.sort(key = lambda x: x[1] if x[1] is not None else -numpy.inf, reverse = True)
-
 			r = numpy.array(metric_results) if len(metric_results) > 0 else numpy.array([]).reshape(0, 2)
 			if len(r) > 0:
 				self.stepwise_performance[i, r[:, 0].astype(int)] = r[:, 1]
