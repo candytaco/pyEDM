@@ -7,10 +7,10 @@ from typing import Optional, Union, Callable
 import torch
 
 
-def _promoteDimensions(score_function: Callable[[torch.tensor, torch.tensor, Optional[torch.tensor]], torch.tensor]):
+def _promoteDimensions(scoringFunction: Callable[[torch.tensor, torch.tensor, Optional[torch.tensor]], torch.tensor]):
 	"""
 	Decorator that reshape score functions inputs to handle multiple prediction targets
-	:param score_function:
+	:param scoringFunction:
 	:return:
 	"""
 	def wrapper(target, predictions, out = None):
@@ -31,7 +31,7 @@ def _promoteDimensions(score_function: Callable[[torch.tensor, torch.tensor, Opt
 			predictions = predictions[:, :, None]
 		if out is not None and out.ndim < 2:
 			out = out.unsqueeze(-1)
-		result = score_function(target, predictions, out)
+		result = scoringFunction(target, predictions, out)
 		if isSingleSeries and isinstance(result, torch.Tensor):
 			return result.reshape(())
 		return result
@@ -109,14 +109,14 @@ def R2(target: torch.tensor, predictions: torch.tensor, out: Optional[torch.tens
 # and a single matrix [nTrain, nTest] go through the same code.
 # ---------------------------------------------------------------------------
 
-def ComputePairwiseDistances(trainStates: torch.Tensor, testStates: torch.Tensor) -> torch.Tensor:
+def ComputePairwiseDistances(X_train: torch.Tensor, X_test: torch.Tensor) -> torch.Tensor:
 	"""
 	Euclidean distance from every training state to every test state.
-	:param trainStates:	[nTrain, stateSize]
-	:param testStates:	[nTest, stateSize]
+	:param X_train:	[nTrain, stateSize]
+	:param X_test:	[nTest, stateSize]
 	:return: [nTrain, nTest]
 	"""
-	return torch.cdist(trainStates, testStates, p = 2)
+	return torch.cdist(X_train, X_test, p = 2)
 
 
 def SelectNearestNeighbors(distanceMatrix: torch.Tensor, numNeighbors: int,
@@ -204,7 +204,7 @@ def ComputeSMapWeights(neighborDistances: torch.Tensor, theta: float) -> torch.T
 
 
 def SolveWeightedLinearMap(weights: torch.Tensor, neighborStates: torch.Tensor,
-						   neighborTargets: torch.Tensor, testStates: torch.Tensor):
+						   neighborTargets: torch.Tensor, X_test: torch.Tensor):
 	"""
 	Per test state, solve the weighted least-squares map from neighbor states to
 	neighbor targets (with an intercept) and apply it to the test state.
@@ -213,7 +213,7 @@ def SolveWeightedLinearMap(weights: torch.Tensor, neighborStates: torch.Tensor,
 	:param weights:			[nTest, k]
 	:param neighborStates:	[nTest, k, stateSize]
 	:param neighborTargets:	[nTest, k, nTargets]
-	:param testStates:		[nTest, stateSize]
+	:param X_test:		[nTest, stateSize]
 	:return: coefficients [nTest, stateSize + 1, nTargets] (intercept first),
 		predictions [nTest, nTargets], variance [nTest, nTargets],
 		singularValues [nTest, stateSize + 1, nTargets] of the weighted design matrices,
@@ -233,7 +233,7 @@ def SolveWeightedLinearMap(weights: torch.Tensor, neighborStates: torch.Tensor,
 	rightHandSide = (weightsByTarget * maskedTargets.permute(0, 2, 1))[..., None]
 
 	coefficients = torch.linalg.lstsq(design, rightHandSide).solution[..., 0]	# [nTest, nTargets, stateSize + 1]
-	predictions = coefficients[..., 0] + (coefficients[..., 1:] * testStates[:, None, :]).sum(dim = -1)
+	predictions = coefficients[..., 0] + (coefficients[..., 1:] * X_test[:, None, :]).sum(dim = -1)
 
 	residuals = maskedTargets - predictions[:, None, :]
 	weightSum = maskedWeights.sum(dim = 1)
@@ -249,46 +249,46 @@ def SolveWeightedLinearMap(weights: torch.Tensor, neighborStates: torch.Tensor,
 
 
 def batch_simplex_predict_and_score(distanceMatrices: torch.tensor, numNeighbors: Union[int, torch.tensor],
-									train_y: torch.tensor, test_y: torch.tensor, score_function: Callable,
+									Y_train: torch.tensor, Y_test: torch.tensor, scoringFunction: Callable,
 									predictions: Optional[torch.tensor] = None,
-									perf_out: Optional[torch.tensor] = None,
-									train_indices: Optional[torch.tensor] = None):
+									performanceOut: Optional[torch.tensor] = None,
+									trainIndices: Optional[torch.tensor] = None):
 	"""
 	Batched multiple predictions and score via simplex. Each distance matrix is used to make a separate prediction on Y.
 	These predictions are then scored
 	:param distanceMatrices:	distance matrices of shape <source, n_train, n_test>
 	:param numNeighbors:		number of nearest neighbors to use
-	:param test_y:				test_y to compare against
-	:param train_y:				train_y to predict from
-	:param score_function:		score function to evaluate performance
+	:param Y_train:				[nTrain] or [nTrain, nTargets] targets of the training rows
+	:param Y_test:				[nTest] or [nTest, nTargets] truth for the test rows
+	:param scoringFunction:		score function to evaluate performance
 	:param predictions:			tensor write prediction into
-	:param perf_out:			array to write the performance into
-	:param train_indices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
+	:param performanceOut:			array to write the performance into
+	:param trainIndices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
 	:return:
 	"""
-	predictions = batch_simplex_predict(distanceMatrices, numNeighbors, train_y, predictions, train_indices)
-	return score_function(test_y, predictions, perf_out)
+	predictions = batch_simplex_predict(distanceMatrices, numNeighbors, Y_train, predictions, trainIndices)
+	return scoringFunction(Y_test, predictions, performanceOut)
 
 
 def batch_simplex_predict(distanceMatrices: torch.tensor, numNeighbors: Union[int, torch.tensor],
-						  train_y: torch.tensor, predictions: Optional[torch.tensor] = None,
-						  train_indices: Optional[torch.tensor] = None) -> torch.tensor:
+						  Y_train: torch.tensor, predictions: Optional[torch.tensor] = None,
+						  trainIndices: Optional[torch.tensor] = None) -> torch.tensor:
 	"""
 	Batched multiple predictions via simplex. Each distance matrix is used to make a separate prediction on Y.
 	:param distanceMatrices:	distance matrices of shape <source, n_train, n_test>
 	:param numNeighbors:		number of nearest neighbors to use, can be a single shared n or one per distance matrix
-	:param train_y:				train_y to predict from
+	:param Y_train:				[nTrain] or [nTrain, nTargets] targets of the training rows
 	:param predictions:			array to write the predictions into
-	:param train_indices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
+	:param trainIndices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
 	:return: predicted Y in <source, n_test, target>
 	"""
-	neighbor_indices, weights = batch_get_simplex_weights(distanceMatrices, numNeighbors, train_indices)
+	neighbor_indices, weights = batch_get_simplex_weights(distanceMatrices, numNeighbors, trainIndices)
 
 	# force columns so we can do multi-target predictions
-	if train_y.ndim < 2:
-		train_y = train_y[:, None]
+	if Y_train.ndim < 2:
+		Y_train = Y_train[:, None]
 
-	select = train_y[neighbor_indices, :]
+	select = Y_train[neighbor_indices, :]
 	if predictions is not None:
 		predictions[:] = torch.sum(weights[:, :, :, None] * select, dim = 1)
 	else:
@@ -296,13 +296,13 @@ def batch_simplex_predict(distanceMatrices: torch.tensor, numNeighbors: Union[in
 	return predictions
 
 
-def batch_get_simplex_weights(distanceMatrices, numNeighbors, train_indices = None):
+def batch_get_simplex_weights(distanceMatrices, numNeighbors, trainIndices = None):
 	"""
 	Given distance matrices, get neighbor indices and weights per timepoint in the test set.
 	Useful for making custom predictions
 	:param distanceMatrices:	distance matrices of shape <source, n_train, n_test>
 	:param numNeighbors:		number of nearest neighbors to use, can be a single shared n or one per distance matrix
-	:param train_indices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
+	:param trainIndices:		actual indices for each entry in the 2nd dim in the distance matrices; for CCM subsampling
 	:return: neighbor_dist and weights <source, k, n_test> nearst neighbors and weights in train for each test point
 	"""
 	sharedNeighbors = isinstance(numNeighbors, int)
@@ -325,6 +325,6 @@ def batch_get_simplex_weights(distanceMatrices, numNeighbors, train_indices = No
 
 	# in CCM, the distance matrices that this function sees are a view into a larger matrix along the train dimension
 	# so we need the actual indices corresponding to the columns to properly index into the data
-	if train_indices is not None:
-		neighbor_indices = train_indices[neighbor_indices]
+	if trainIndices is not None:
+		neighbor_indices = trainIndices[neighbor_indices]
 	return neighbor_indices, weights

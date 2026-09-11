@@ -339,7 +339,7 @@ class MDE:
 
 					batch_simplex_predict_and_score(candidateDistances[:numCandidates], knn,
 													train_y_tensor[:, j], test_y_tensor[:, j],
-													self.ScoreFunction, perf_out = perfs[j, :numCandidates])
+													self.ScoreFunction, performanceOut = perfs[j, :numCandidates])
 
 					perfs_numpy = perfs[j, :numCandidates].cpu().numpy()
 					for v, var in enumerate(theseCandidates):

@@ -16,20 +16,20 @@ from .EDM.Predictors import SimplexPredict, ResolveDevice, _FindNeighbors
 from .Scoring import Correlation, _FilterNonFinite
 
 
-def _ScoreFinitePairs(scoringFunction, observations, predictions):
+def _ScoreFinitePairs(scoringFunction, Y_true, Y_pred):
 	"""Score only the pairs where both values are finite."""
-	observations, predictions = _FilterNonFinite(observations, predictions)
-	return scoringFunction(observations, predictions)
+	Y_true, Y_pred = _FilterNonFinite(Y_true, Y_pred)
+	return scoringFunction(Y_true, Y_pred)
 
 
-def _ScoreColumns(scoringFunction, isScoringFinitePairsOnly, observations, predictions) -> numpy.ndarray:
+def _ScoreColumns(scoringFunction, isScoringFinitePairsOnly, Y_true, Y_pred) -> numpy.ndarray:
 	"""scoringFunction per target column; a declined score is NaN. :return: [nTargets]"""
 	scores = []
-	for column in range(observations.shape[1]):
+	for column in range(Y_true.shape[1]):
 		if isScoringFinitePairsOnly:
-			score = _ScoreFinitePairs(scoringFunction, observations[:, column], predictions[:, column])
+			score = _ScoreFinitePairs(scoringFunction, Y_true[:, column], Y_pred[:, column])
 		else:
-			score = scoringFunction(observations[:, column], predictions[:, column])
+			score = scoringFunction(Y_true[:, column], Y_pred[:, column])
 		scores.append(numpy.nan if score is None else float(score))
 	return numpy.array(scores)
 
@@ -124,30 +124,30 @@ def _FindOptimalEmbeddingDimensionalityBatched(X_train, Y_train, X_test, Y_test,
 	isScored = numpy.isfinite(testTargets).all(axis = 1)
 	device = ResolveDevice(device)
 
-	trainEmbedding = inputs.trainStates
-	testEmbedding = inputs.testStates[isScored]
-	yTrain = torch.as_tensor(inputs.trainTargets, device = device, dtype = dtype).T		# [nTargets, nTrain]
-	yTest = torch.as_tensor(testTargets[isScored], device = device, dtype = dtype).T		# [nTargets, nTest]
+	trainStates = inputs.trainStates
+	testStates = inputs.testStates[isScored]
+	trainTargetTensor = torch.as_tensor(inputs.trainTargets, device = device, dtype = dtype).T		# [nTargets, nTrain]
+	testTargetTensor = torch.as_tensor(testTargets[isScored], device = device, dtype = dtype).T		# [nTargets, nTest]
 	maskTensor = None
 	if inputs.exclusionMask is not None:
 		maskTensor = torch.as_tensor(inputs.exclusionMask[:, isScored], device = device)
-	nVars = trainEmbedding.shape[1] // maxDims
+	nVars = trainStates.shape[1] // maxDims
 
 	if joint:
-		return _BatchedJointPrediction(yTrain, yTest, trainEmbedding, testEmbedding, maxDims, nVars, device, dtype, maskTensor)
-	return _BatchedSeparatePrediction(yTrain, yTest, trainEmbedding, testEmbedding, maxDims, nVars, device, dtype,
+		return _BatchedJointPrediction(trainStates, trainTargetTensor, testStates, testTargetTensor, maxDims, nVars, device, dtype, maskTensor)
+	return _BatchedSeparatePrediction(trainStates, trainTargetTensor, testStates, testTargetTensor, maxDims, nVars, device, dtype,
 									  maskTensor, batchSize)
 
 
-def _ComputeJointEmbeddingDistances(trainEmbedding, testEmbedding, maxDims, nVars, device, dtype):
+def _ComputeJointEmbeddingDistances(X_train, X_test, maxDims, nVars, device, dtype):
 	"""
 	Cumulative squared distances of all columns stacked together, one matrix per depth.
 	Stacked columns arrive variable-major (all lags of column 0, then column 1, ...); they
 	are reordered lag-major so the cumulative sum at position depth * nVars - 1 holds every
 	column through that depth. :return: [maxDims, nTrain, nTest]
 	"""
-	trainTensor = torch.as_tensor(trainEmbedding, device = device, dtype = dtype)
-	testTensor = torch.as_tensor(testEmbedding, device = device, dtype = dtype)
+	trainTensor = torch.as_tensor(X_train, device = device, dtype = dtype)
+	testTensor = torch.as_tensor(X_test, device = device, dtype = dtype)
 	nStacked = trainTensor.shape[1]
 	nTrain, nTest = trainTensor.shape[0], testTensor.shape[0]
 
@@ -167,14 +167,14 @@ def _ComputeJointEmbeddingDistances(trainEmbedding, testEmbedding, maxDims, nVar
 	return perDepth
 
 
-def _ComputePerVariableEmbeddingDistances(trainEmbedding, testEmbedding, maxDims, batchNumVars, colStart, colEnd, device, dtype):
+def _ComputePerVariableEmbeddingDistances(X_train, X_test, maxDims, batchNumVars, colStart, colEnd, device, dtype):
 	"""
 	Cumulative squared distances per column for a batch of columns.
 	:return: [batchNumVars * maxDims, nTrain, nTest], row v * maxDims + d is column v through depth d + 1
 	"""
 	numBatch = batchNumVars * maxDims
-	trainTensor = torch.as_tensor(trainEmbedding[:, colStart:colEnd], device = device, dtype = dtype)
-	testTensor = torch.as_tensor(testEmbedding[:, colStart:colEnd], device = device, dtype = dtype)
+	trainTensor = torch.as_tensor(X_train[:, colStart:colEnd], device = device, dtype = dtype)
+	testTensor = torch.as_tensor(X_test[:, colStart:colEnd], device = device, dtype = dtype)
 	nTrain, nTest = trainTensor.shape[0], testTensor.shape[0]
 
 	distances = torch.zeros(numBatch, nTrain, nTest, device = device, dtype = dtype)
@@ -188,17 +188,25 @@ def _ComputePerVariableEmbeddingDistances(trainEmbedding, testEmbedding, maxDims
 	return cumulative.view(numBatch, nTrain, nTest)
 
 
-def _BatchedJointPrediction(yTrain, yTest, trainEmbedding, testEmbedding, maxDims, nVars, device, dtype, maskTensor):
-	"""All X columns jointly predict each target; depth d uses d * nVars + 1 neighbors. :return: [nTargets, maxDims]"""
-	embeddingDistances = _ComputeJointEmbeddingDistances(trainEmbedding, testEmbedding, maxDims, nVars, device, dtype)
+def _BatchedJointPrediction(X_train, Y_train, X_test, Y_test, maxDims, nVars, device, dtype, maskTensor):
+	"""
+	All X columns jointly predict each target; depth d uses d * nVars + 1 neighbors.
+
+	:param X_train:	stacked training states [nTrain, nVars * maxDims], source-major
+	:param Y_train:	[nTargets, nTrain] tensor
+	:param X_test:	stacked test states [nTest, nVars * maxDims]
+	:param Y_test:	[nTargets, nTest] tensor
+	:return: [nTargets, maxDims]
+	"""
+	embeddingDistances = _ComputeJointEmbeddingDistances(X_train, X_test, maxDims, nVars, device, dtype)
 	if maskTensor is not None:
 		embeddingDistances[:, maskTensor] = float('inf')
 	neighborCounts = torch.arange(1, maxDims + 1, device = device, dtype = torch.long) * nVars + 1
 
-	out = torch.zeros(yTrain.shape[0], maxDims, device = device, dtype = dtype)
-	for targetIndex in range(yTrain.shape[0]):
-		predictions = batch_simplex_predict(embeddingDistances, neighborCounts, yTrain[targetIndex])
-		TorchCorrelation(yTest[targetIndex], predictions, out[targetIndex])
+	out = torch.zeros(Y_train.shape[0], maxDims, device = device, dtype = dtype)
+	for targetIndex in range(Y_train.shape[0]):
+		predictions = batch_simplex_predict(embeddingDistances, neighborCounts, Y_train[targetIndex])
+		TorchCorrelation(Y_test[targetIndex], predictions, out[targetIndex])
 
 	del embeddingDistances
 	if torch.cuda.is_available():
@@ -206,9 +214,13 @@ def _BatchedJointPrediction(yTrain, yTest, trainEmbedding, testEmbedding, maxDim
 	return out.cpu().numpy()
 
 
-def _BatchedSeparatePrediction(yTrain, yTest, trainEmbedding, testEmbedding, maxDims, nVars, device, dtype, maskTensor, batchSize):
-	"""Each X column alone predicts each target, columns in batches. :return: [nTargets, nVars, maxDims]"""
-	nTargets = yTrain.shape[0]
+def _BatchedSeparatePrediction(X_train, Y_train, X_test, Y_test, maxDims, nVars, device, dtype, maskTensor, batchSize):
+	"""
+	Each X column alone predicts each target, columns in batches. Arrays as in
+	_BatchedJointPrediction.
+	:return: [nTargets, nVars, maxDims]
+	"""
+	nTargets = Y_train.shape[0]
 	scores = numpy.zeros((nTargets, nVars, maxDims), dtype = numpy.float32)
 	actualBatchSize = batchSize if batchSize is not None else nVars
 
@@ -216,7 +228,7 @@ def _BatchedSeparatePrediction(yTrain, yTest, trainEmbedding, testEmbedding, max
 		varBatchEnd = min(varBatchStart + actualBatchSize, nVars)
 		batchNumVars = varBatchEnd - varBatchStart
 		embeddingDistances = _ComputePerVariableEmbeddingDistances(
-			trainEmbedding, testEmbedding, maxDims, batchNumVars, varBatchStart * maxDims, varBatchEnd * maxDims, device, dtype)
+			X_train, X_test, maxDims, batchNumVars, varBatchStart * maxDims, varBatchEnd * maxDims, device, dtype)
 		if maskTensor is not None:
 			embeddingDistances[:, maskTensor] = float('inf')
 
@@ -224,8 +236,8 @@ def _BatchedSeparatePrediction(yTrain, yTest, trainEmbedding, testEmbedding, max
 		neighborCounts = torch.arange(2, maxDims + 2, dtype = torch.long, device = device).repeat(batchNumVars)
 		out = torch.zeros(nTargets, batchNumVars * maxDims, device = device, dtype = dtype)
 		for targetIndex in range(nTargets):
-			predictions = batch_simplex_predict(embeddingDistances, neighborCounts, yTrain[targetIndex])
-			TorchCorrelation(yTest[targetIndex], predictions, out[targetIndex])
+			predictions = batch_simplex_predict(embeddingDistances, neighborCounts, Y_train[targetIndex])
+			TorchCorrelation(Y_test[targetIndex], predictions, out[targetIndex])
 		scores[:, varBatchStart:varBatchEnd, :] = out.cpu().numpy().reshape(nTargets, batchNumVars, maxDims)
 
 		del embeddingDistances, out
@@ -376,23 +388,23 @@ def FindOptimalPredictionHorizon(X_train: ArrayOrRuns,
 	if X_test is not None and Y_test is None:
 		raise ValueError('Y_test is needed to score predictions on X_test')
 	horizons = numpy.arange(1, maxTp + 1)
-	Y_reference = Y_test if X_test is not None else Y_train
+	Y_true = Y_test if X_test is not None else Y_train
 
 	if batched:
 		scores = _FindOptimalPredictionHorizonBatched(
-			X_train, Y_train, X_test, Y_reference, horizons, embedDimensions, step, knn, exclusionRadius,
+			X_train, Y_train, X_test, Y_true, horizons, embedDimensions, step, knn, exclusionRadius,
 			trainRowMask, scoringFunction, isScoringFinitePairsOnly, isTieBreakDeterministic, device, dtype)
 	else:
 		scorer = scoringFunction
 		if isScoringFinitePairsOnly:
 			scorer = lambda actual, predicted: _ScoreFinitePairs(scoringFunction, actual, predicted)
-		scores = [SimplexPredict(X_train, Y_train, X_test, Y_reference, embedDimensions, step, int(horizon), knn,
+		scores = [SimplexPredict(X_train, Y_train, X_test, Y_true, embedDimensions, step, int(horizon), knn,
 								 exclusionRadius, trainRowMask, isTieBreakDeterministic, scorer, device, dtype).score
 				  for horizon in horizons]
 	return numpy.column_stack([horizons, numpy.array(scores)])
 
 
-def _FindOptimalPredictionHorizonBatched(X_train, Y_train, X_test, Y_reference, horizons, embedDimensions, step, knn,
+def _FindOptimalPredictionHorizonBatched(X_train, Y_train, X_test, Y_true, horizons, embedDimensions, step, knn,
 										 exclusionRadius, trainRowMask, scoringFunction, isScoringFinitePairsOnly,
 										 isTieBreakDeterministic, device, dtype):
 	"""
@@ -407,12 +419,12 @@ def _FindOptimalPredictionHorizonBatched(X_train, Y_train, X_test, Y_reference, 
 	weights = ComputeSimplexWeights(neighborDistances)
 
 	yTrainRuns = AsRuns(Y_train)
-	yReferenceRuns = AsRuns(Y_reference)
+	yTrueRuns = AsRuns(Y_true)
 	scores = []
 	for horizon in horizons:
 		trainTargets = torch.as_tensor(_GatherAtOffset(yTrainRuns, inputs.trainRows, inputs.trainRuns, int(horizon)),
 									   device = device, dtype = dtype)
-		testTargets = _GatherAtOffset(yReferenceRuns, inputs.testRows, inputs.testRuns, int(horizon))
+		testTargets = _GatherAtOffset(yTrueRuns, inputs.testRows, inputs.testRuns, int(horizon))
 		predictions, _ = ProjectSimplex(weights, trainTargets[neighborIndices])
 		scores.append(_ScoreColumns(scoringFunction, isScoringFinitePairsOnly, testTargets, predictions.cpu().numpy()))
 	return numpy.array(scores)
@@ -452,7 +464,7 @@ def FindSMapNeighborhood(X_train: ArrayOrRuns,
 	if theta is None:
 		theta = [0.01, 0.1, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9]
 	thetaValues = numpy.asarray(theta, dtype = float)
-	Y_reference = Y_test if X_test is not None else Y_train
+	Y_true = Y_test if X_test is not None else Y_train
 
 	inputs = PreparePrediction(X_train, Y_train, X_test, embedDimensions, step, predictionHorizon, exclusionRadius, trainRowMask)
 	knn = ResolveNeighborCount(knn, inputs, isEveryNeighborDefault = True)
@@ -463,7 +475,7 @@ def FindSMapNeighborhood(X_train: ArrayOrRuns,
 	neighborsByTest = neighborIndices.t()
 	neighborStates = trainStates[neighborsByTest]
 	neighborTargets = trainTargets[neighborsByTest]
-	testTargets = TestTargets(Y_reference, inputs)
+	testTargets = TestTargets(Y_true, inputs)
 
 	scores = []
 	for value in thetaValues:

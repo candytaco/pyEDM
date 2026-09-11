@@ -52,7 +52,7 @@ def MultiviewPredict(X_train: ArrayOrRuns, Y_train: ArrayOrRuns,
 	stackedTest = None if X_test is None else [StackHistory(x, embedDimensions, step) for x in AsRuns(X_test)]
 	isTrainList = IsListOfRuns(X_train)
 	isTestList = X_test is not None and IsListOfRuns(X_test)
-	Y_reference = Y_test if X_test is not None else Y_train
+	Y_true = Y_test if X_test is not None else Y_train
 
 	nFeatures = xRuns[0].shape[1]
 	nStacked = stackedTrain[0].shape[1]
@@ -96,7 +96,7 @@ def MultiviewPredict(X_train: ArrayOrRuns, Y_train: ArrayOrRuns,
 	else:
 		Y_pred = numpy.mean([topResults[c].Y_pred for c in topCombos], axis = 0)
 
-	yReferenceColumns = numpy.concatenate(AsRuns(Y_reference))[:, 0]
+	yTrueColumns = numpy.concatenate(AsRuns(Y_true))[:, 0]
 	def firstColumn(prediction):
 		flat = numpy.concatenate(AsRuns(prediction))
 		return flat[:, 0]
@@ -104,8 +104,8 @@ def MultiviewPredict(X_train: ArrayOrRuns, Y_train: ArrayOrRuns,
 	view = []
 	for combo in topCombos:
 		predicted = firstColumn(topResults[combo].Y_pred)
-		stats = [Correlation(yReferenceColumns, predicted), MaxAbsoluteError(yReferenceColumns, predicted),
-				 SumAbsoluteError(yReferenceColumns, predicted), RootMeanSquareError(yReferenceColumns, predicted)]
+		stats = [Correlation(yTrueColumns, predicted), MaxAbsoluteError(yTrueColumns, predicted),
+				 SumAbsoluteError(yTrueColumns, predicted), RootMeanSquareError(yTrueColumns, predicted)]
 		topRankStats[combo] = stats
 		view.append([str(combo)] + stats)
 
@@ -117,4 +117,4 @@ def MultiviewPredict(X_train: ArrayOrRuns, Y_train: ArrayOrRuns,
 		D = D,
 		embedDimensions = embedDimensions,
 		predictionHorizon = predictionHorizon,
-		score = ScorePredictions(scoringFunction, Y_reference, Y_pred))
+		score = ScorePredictions(scoringFunction, Y_true, Y_pred))

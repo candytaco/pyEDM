@@ -65,7 +65,7 @@ def StackHistory(X: numpy.ndarray, embedDimensions: int, step: int) -> numpy.nda
 	return MakeDelays(X, embedDimensions, step)
 
 
-def BuildTrainingPairs(X_run: numpy.ndarray, Y_run: numpy.ndarray, embedDimensions: int, step: int,
+def BuildTrainingPairs(X_train: numpy.ndarray, Y_train: numpy.ndarray, embedDimensions: int, step: int,
 					   predictionHorizon: int, rowMask: Optional[numpy.ndarray] = None):
 	"""
 	Every row of one run whose state is complete and whose horizon-shifted target lies
@@ -74,8 +74,8 @@ def BuildTrainingPairs(X_run: numpy.ndarray, Y_run: numpy.ndarray, embedDimensio
 	:param rowMask:	optional bool [nSamples]; False bars the row from serving as a training state
 	:return: (states [nPairs, stateSize], targets [nPairs, nTargets], stateRows [nPairs])
 	"""
-	states = StackHistory(X_run, embedDimensions, step)
-	nRows = X_run.shape[0]
+	states = StackHistory(X_train, embedDimensions, step)
+	nRows = X_train.shape[0]
 	stateRows = numpy.arange(nRows)
 	targetRows = stateRows + predictionHorizon
 	isUsable = (targetRows >= 0) & (targetRows < nRows) & numpy.isfinite(states).all(axis = 1)
@@ -85,18 +85,18 @@ def BuildTrainingPairs(X_run: numpy.ndarray, Y_run: numpy.ndarray, embedDimensio
 			raise ValueError(f'trainRowMask has {rowMask.shape[0]} entries for a run of {nRows} rows')
 		isUsable &= rowMask
 	stateRows = stateRows[isUsable]
-	return states[stateRows], Y_run[stateRows + predictionHorizon], stateRows
+	return states[stateRows], Y_train[stateRows + predictionHorizon], stateRows
 
 
-def BuildTestStates(X_run: numpy.ndarray, embedDimensions: int, step: int, predictionHorizon: int):
+def BuildTestStates(X_test: numpy.ndarray, embedDimensions: int, step: int, predictionHorizon: int):
 	"""
 	The complete states of one run that predict one of its rows: output row i is predicted
 	from the state at row i - predictionHorizon.
 
 	:return: (states [nStates, stateSize], stateRows [nStates], outputRows [nStates])
 	"""
-	states = StackHistory(X_run, embedDimensions, step)
-	nRows = X_run.shape[0]
+	states = StackHistory(X_test, embedDimensions, step)
+	nRows = X_test.shape[0]
 	outputRows = numpy.arange(nRows)
 	stateRows = outputRows - predictionHorizon
 	isInside = (stateRows >= 0) & (stateRows < nRows)
@@ -259,19 +259,19 @@ def PreparePrediction(X_train: ArrayOrRuns, Y_train: ArrayOrRuns, X_test: Option
 	return inputs
 
 
-def TestTargets(Y: ArrayOrRuns, inputs: PredictionInputs) -> numpy.ndarray:
+def TestTargets(Y_true: ArrayOrRuns, inputs: PredictionInputs) -> numpy.ndarray:
 	"""
-	The target rows that the test states predict, gathered from Y (Y_test, or Y_train
+	The target rows that the test states predict, gathered from Y_true (Y_test, or Y_train
 	in-sample) in the order of inputs.testStates.
 	:return: [nTest, nTargets]
 	"""
-	runs = AsRuns(Y)
+	runs = AsRuns(Y_true)
 	if len(runs) != len(inputs.outputLengths):
-		raise ValueError(f'Y has {len(runs)} runs but the test data has {len(inputs.outputLengths)}')
+		raise ValueError(f'Y_true has {len(runs)} runs but the test data has {len(inputs.outputLengths)}')
 	targets = numpy.empty((inputs.testStates.shape[0], inputs.numTargets))
 	for runIndex, y in enumerate(runs):
 		if y.shape[0] != inputs.outputLengths[runIndex] or y.shape[1] != inputs.numTargets:
-			raise ValueError(f'Run {runIndex}: Y has shape {y.shape}, expected ({inputs.outputLengths[runIndex]}, {inputs.numTargets})')
+			raise ValueError(f'Run {runIndex}: Y_true has shape {y.shape}, expected ({inputs.outputLengths[runIndex]}, {inputs.numTargets})')
 		inRun = inputs.testRuns == runIndex
 		targets[inRun] = y[inputs.outputRows[inRun]]
 	return targets

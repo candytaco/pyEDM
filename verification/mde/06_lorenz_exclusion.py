@@ -58,9 +58,9 @@ def main():
     # reference lib=[1,500], pred=[501,1000]: the test arrays start 70 rows
     # early (15 samples at step -5) so the first scored state (row 500) has
     # complete history; the early targets are NaN so they are never scored
-    y_test = y[430:1000].astype(float).copy()
-    y_test[:71] = np.nan
-    result = fitter.Fit(X[0:500], y[0:500], X[430:1000], y_test)
+    Y_test = y[430:1000].astype(float).copy()
+    Y_test[:71] = np.nan
+    result = fitter.Fit(X[0:500], y[0:500], X[430:1000], Y_test)
     sel = [cols[i] for i in result.selected_variables[0] if i >= 0]
     rho = [round(float(r), 6) for r in result.performance[0] if not np.isnan(r)]
     ccm = [round(float(r), 5) for r in result.ccm_values[0] if not np.isnan(r)]

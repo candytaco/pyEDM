@@ -134,17 +134,17 @@ class ConvergentCrossMap:
 		testTargets = TestTargets(self.Y_test if self.X_test is not None else self.Y_train, inputs)
 		isScored = numpy.isfinite(testTargets).all(axis = 1)
 
-		y_train = torch.as_tensor(inputs.trainTargets, dtype = self.dtype, device = self.device)
-		y_test = torch.as_tensor(testTargets[isScored], dtype = self.dtype, device = self.device)
+		trainTargetTensor = torch.as_tensor(inputs.trainTargets, dtype = self.dtype, device = self.device)
+		testTargetTensor = torch.as_tensor(testTargets[isScored], dtype = self.dtype, device = self.device)
 
 		# kept in CPU RAM: [nSizes, repeats, nSources, nTargets] can be large
 		performance = numpy.zeros([len(self.trainSizes), self.sample, self.numSources, self.numTargets])
 
 		if self.batchMode == 'sample':
-			self.CrossMapSampleBatched(inputs, y_train, performance, RNG, embedDims)
+			self.CrossMapSampleBatched(inputs, trainTargetTensor, performance, RNG, embedDims)
 		else:
 			exclusion = None if inputs.exclusionMask is None else inputs.exclusionMask[:, isScored]
-			self.CrossMapVariableBatched(inputs.trainStates, inputs.testStates[isScored], y_train, y_test,
+			self.CrossMapVariableBatched(inputs.trainStates, trainTargetTensor, inputs.testStates[isScored], testTargetTensor,
 										 performance, RNG, embedDims, exclusion)
 
 		self.forward_performance_ = numpy.mean(performance, axis = 1).squeeze()
@@ -156,16 +156,17 @@ class ConvergentCrossMap:
 			library_sizes = self.trainSizes,
 			forward_embed_dimensions = self.selectedForwardEmbedDimensions)
 
-	def CrossMapVariableBatched(self, trainStates, testStates, y_train, y_test, performance, RNG, embedDims, exclusion = None):
+	def CrossMapVariableBatched(self, X_train, Y_train, X_test, Y_test, performance, RNG, embedDims, exclusion = None):
 		"""
 		Batch over source columns: one distance matrix per source, reused across every
-		(subset size, repeat, target). trainStates/testStates hold every source stacked to
-		the largest depth, source-major.
+		(subset size, repeat, target). X_train/X_test hold every source stacked to
+		the largest depth, source-major; Y_train/Y_test are [nTrain, nTargets] and
+		[nTest, nTargets] tensors.
 		"""
-		numTrain = trainStates.shape[0]
-		numTest = testStates.shape[0]
+		numTrain = X_train.shape[0]
+		numTest = X_test.shape[0]
 		numSources = self.numSources
-		numTargets = y_train.shape[1]
+		numTargets = Y_train.shape[1]
 		maxEmbeddingDims = int(numpy.max(embedDims))
 		embedDimsArray = numpy.asarray(embedDims)
 		if embedDimsArray.ndim == 0:
@@ -223,12 +224,12 @@ class ConvergentCrossMap:
 			for localSourceIndex in range(actualSourceBatchSize):
 				globalSourceIndex = sourceBatchStart + localSourceIndex
 				sourceColumns = slice(globalSourceIndex * maxEmbeddingDims, (globalSourceIndex + 1) * maxEmbeddingDims)
-				trainEmbedding = torch.as_tensor(trainStates[:, sourceColumns], dtype = self.dtype, device = self.device)
-				testEmbedding = torch.as_tensor(testStates[:, sourceColumns], dtype = self.dtype, device = self.device)
+				trainSourceTensor = torch.as_tensor(X_train[:, sourceColumns], dtype = self.dtype, device = self.device)
+				testSourceTensor = torch.as_tensor(X_test[:, sourceColumns], dtype = self.dtype, device = self.device)
 
 				for lagIndex in range(maxEmbeddingDims):
-					perLagSquaredDistances[lagIndex] = trainEmbedding[:, lagIndex].unsqueeze(1) - testEmbedding[:, lagIndex].unsqueeze(0)
-				del trainEmbedding, testEmbedding
+					perLagSquaredDistances[lagIndex] = trainSourceTensor[:, lagIndex].unsqueeze(1) - testSourceTensor[:, lagIndex].unsqueeze(0)
+				del trainSourceTensor, testSourceTensor
 
 				perLagSquaredDistances.square_()
 				torch.cumsum(perLagSquaredDistances, dim = 0, out = perLagSquaredDistances)
@@ -259,12 +260,12 @@ class ConvergentCrossMap:
 						targetBatchEnd = min(targetBatchStart + targetBatchSize, numTargets)
 						actualTargetBatchSize = targetBatchEnd - targetBatchStart
 
-						yBatch = y_train[:, targetBatchStart:targetBatchEnd]
+						yBatch = Y_train[:, targetBatchStart:targetBatchEnd]
 						valuesForBmm = yBatch[flatIndices]
 						predictions = torch.bmm(weightsForBmm, valuesForBmm).view(actualSourceBatchSize, numTest, actualTargetBatchSize)
 						del valuesForBmm
 
-						CorrelationInPlace(y_test[:, targetBatchStart:targetBatchEnd], predictions,
+						CorrelationInPlace(Y_test[:, targetBatchStart:targetBatchEnd], predictions,
 						                   out = performanceBuffer[:, :actualTargetBatchSize])
 						performance[size_i, sample_i, sourceBatchStart:sourceBatchEnd,
 									targetBatchStart:targetBatchEnd] = performanceBuffer[:, :actualTargetBatchSize].cpu().numpy()
@@ -275,7 +276,7 @@ class ConvergentCrossMap:
 			if torch.cuda.is_available():
 				torch.cuda.empty_cache()
 
-	def CrossMapSampleBatched(self, inputs, target, performance, RNG, embedDims):
+	def CrossMapSampleBatched(self, inputs, Y_train, performance, RNG, embedDims):
 		"""
 		Batch over subsets per size; the training rows predict themselves. Efficient when
 		there are few source columns. Cumulative per-lag squared distances are built once per
@@ -285,7 +286,7 @@ class ConvergentCrossMap:
 		"""
 		numSamplesInBatch = self.sampleBatchSize if self.sampleBatchSize is not None else self.sample
 		numSources = self.numSources
-		numTargets = target.shape[1]
+		numTargets = Y_train.shape[1]
 		dims = int(numpy.max(embedDims))
 		N_libraryIndices = inputs.numTrainingPairs
 
@@ -351,7 +352,7 @@ class ConvergentCrossMap:
 					weights = ComputeSimplexWeights(distances)
 					weightSum = weights.sum(dim = 2)
 
-					targetT = target[:, t]
+					targetT = Y_train[:, t]
 					selectedTargets = targetT[globalNeighbors]
 					predictions = (weights * selectedTargets).sum(dim = 2) / weightSum
 
